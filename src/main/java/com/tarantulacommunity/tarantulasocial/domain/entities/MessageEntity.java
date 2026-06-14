@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.domain.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,12 +32,13 @@ public class MessageEntity {
     private UserEntity recipient;
 
     @NotBlank
-    @Column(nullable = false)
+    @Size(max = 2000)
+    @Column(nullable = false, length = 2000)
     private String content;
 
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
-    private LocalDateTime timestamp;
+    private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private boolean deletedBySender = false;

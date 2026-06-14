@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 public class UserEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -55,6 +56,7 @@ public class UserEntity {
     private String favoriteImageUrl;
 
     @Size(max = 255)
+    @Column(length = 255)
     private String favoriteCaption;
 
     @CreationTimestamp

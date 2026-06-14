@@ -64,9 +64,11 @@ CREATE TABLE messages (
     sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    "timestamp" TIMESTAMP NOT NULL DEFAULT now(),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
     deleted_by_sender BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_by_recipient BOOLEAN NOT NULL DEFAULT FALSE
+    deleted_by_recipient BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT chk_content_max_length CHECK (char_length(content) <= 2000)
 );
 
 CREATE INDEX idx_collections_species ON tarantula_collections(species_id);

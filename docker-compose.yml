@@ -1,11 +1,15 @@
-version: '3.8'
-
 services:
-
   db:
     image: postgres:17
     ports:
       - "5432:5432"
     restart: always
     environment:
+      POSTGRES_DB: tarantula_db
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: changemeinprod!
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
