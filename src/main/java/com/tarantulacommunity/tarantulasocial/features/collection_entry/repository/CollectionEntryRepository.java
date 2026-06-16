@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.collection_entry.repository;
 
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.springframework.data.domain.Page;

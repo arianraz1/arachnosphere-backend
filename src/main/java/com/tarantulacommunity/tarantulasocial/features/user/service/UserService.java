@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
@@ -41,7 +42,6 @@ public class UserService {
         return userMapper.toSignupResponse(userRepository.save(user));
     }
 
-    @Transactional(readOnly = true)
     public UserProfileResponse getProfile(Long userId) {
         return userMapper.toProfileResponse(findUserOrThrow(userId));
     }

@@ -16,6 +16,10 @@ public interface SpeciesRepository extends JpaRepository<SpeciesEntity, Long> {
 
     Optional<SpeciesEntity> findByScientificName(String scientificName);
 
+    boolean existsByGbifNubKey(Long gbifNubKey);
+
+    boolean existsByScientificName(String scientificName);
+
     // used by both home page sections with the same search term
     Page<SpeciesEntity> findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
             String scientificName, String commonName, Pageable pageable);

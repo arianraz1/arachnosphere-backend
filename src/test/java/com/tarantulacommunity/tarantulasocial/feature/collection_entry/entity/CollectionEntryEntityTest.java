@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.feature.collection_entry.entity;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import jakarta.validation.ConstraintViolation;

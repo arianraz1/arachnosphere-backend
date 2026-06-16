@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial;
 
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;

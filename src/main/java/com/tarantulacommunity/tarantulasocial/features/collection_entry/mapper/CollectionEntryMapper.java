@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper;
 
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
