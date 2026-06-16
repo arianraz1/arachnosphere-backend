@@ -1,8 +1,8 @@
-package com.tarantulacommunity.tarantulasocial.repositories;
+package com.tarantulacommunity.tarantulasocial.repository;
 
-import com.tarantulacommunity.tarantulasocial.domain.entities.CollectionEntryEntity;
-import com.tarantulacommunity.tarantulasocial.domain.entities.SpeciesEntity;
-import com.tarantulacommunity.tarantulasocial.domain.entities.UserEntity;
+import com.tarantulacommunity.tarantulasocial.domain.collection_entry.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.domain.species.SpeciesEntity;
+import com.tarantulacommunity.tarantulasocial.domain.user.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

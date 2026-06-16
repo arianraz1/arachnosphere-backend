@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.species;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;

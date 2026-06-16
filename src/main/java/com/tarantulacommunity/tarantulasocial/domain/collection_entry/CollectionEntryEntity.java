@@ -1,5 +1,7 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.collection_entry;
 
+import com.tarantulacommunity.tarantulasocial.domain.species.SpeciesEntity;
+import com.tarantulacommunity.tarantulasocial.domain.user.UserEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -76,4 +78,7 @@ public class CollectionEntryEntity {
     @Size(max = 1000)
     @Column(length = 1000)
     private String customInfo;
+
+    @Version
+    private Long version;
 }

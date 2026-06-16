@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.user;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import jakarta.validation.ConstraintViolation;
@@ -177,3 +177,4 @@ class UserEntityTest {
         assertEquals(0L, savedUser.getVersion());
     }
 }
+

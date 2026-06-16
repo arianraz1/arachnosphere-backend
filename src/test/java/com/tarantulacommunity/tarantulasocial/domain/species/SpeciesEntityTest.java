@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.species;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import jakarta.validation.ConstraintViolation;

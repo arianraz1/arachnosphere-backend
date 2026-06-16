@@ -1,6 +1,7 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.message;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
+import com.tarantulacommunity.tarantulasocial.domain.user.UserEntity;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

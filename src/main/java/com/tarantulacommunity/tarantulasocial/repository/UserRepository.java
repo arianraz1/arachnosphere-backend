@@ -1,6 +1,6 @@
-package com.tarantulacommunity.tarantulasocial.repositories;
+package com.tarantulacommunity.tarantulasocial.repository;
 
-import com.tarantulacommunity.tarantulasocial.domain.entities.UserEntity;
+import com.tarantulacommunity.tarantulasocial.domain.user.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

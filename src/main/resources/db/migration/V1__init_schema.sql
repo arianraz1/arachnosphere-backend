@@ -49,6 +49,7 @@ CREATE TABLE tarantula_collections (
 
     custom_info VARCHAR(1000),
     featured_image_url VARCHAR(2048),
+    version BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT uq_user_species UNIQUE (user_id, species_id), -- prevent a user from having multiple entries of the same species
     CONSTRAINT chk_counts_non_negative CHECK (

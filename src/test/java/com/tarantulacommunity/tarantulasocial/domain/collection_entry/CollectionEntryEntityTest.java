@@ -1,6 +1,8 @@
-package com.tarantulacommunity.tarantulasocial.domain.entities;
+package com.tarantulacommunity.tarantulasocial.domain.collection_entry;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
+import com.tarantulacommunity.tarantulasocial.domain.species.SpeciesEntity;
+import com.tarantulacommunity.tarantulasocial.domain.user.UserEntity;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -167,5 +169,20 @@ class CollectionEntryEntityTest {
         // species left null
 
         assertThrows(Exception.class, () -> em.persistAndFlush(entry));
+    }
+
+    @Test
+    void version_incrementsOnUpdate() {
+        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
+
+        Long versionBefore = entry.getVersion();
+
+        entry.setAdultMale(3);
+        CollectionEntryEntity updated = em.persistFlushFind(entry);
+
+        assertNotNull(updated.getVersion());
+        assertEquals(versionBefore + 1, updated.getVersion());
     }
 }
