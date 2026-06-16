@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial;
 
-import com.tarantulacommunity.tarantulasocial.domain.entities.*;
+import com.tarantulacommunity.tarantulasocial.domain.entity.*;
 
 public class TestUtilities {
 
