@@ -50,14 +50,14 @@ public class UserService {
     public UserProfileResponse updateProfile(Long userId, UpdateUserProfileRequest request) {
         UserEntity user = findUserOrThrow(userId);
         userMapper.updateProfileFromRequest(request, user);
-        return userMapper.toProfileResponse(user);
+        return userMapper.toProfileResponse(userRepository.save(user));
     }
 
     @Transactional
     public UserProfileResponse updateFavorite(Long userId, UpdateUserFavoriteTarantulaRequest request) {
         UserEntity user = findUserOrThrow(userId);
         userMapper.updateFavoriteFromRequest(request, user);
-        return userMapper.toProfileResponse(user);
+        return userMapper.toProfileResponse(userRepository.save(user));
     }
 
     private UserEntity findUserOrThrow(Long userId) {
