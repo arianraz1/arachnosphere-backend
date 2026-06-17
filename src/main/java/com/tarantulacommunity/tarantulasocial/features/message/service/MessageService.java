@@ -19,13 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class MessageService {
 
     private final MessageRepository messageRepository;
     private final MessageMapper messageMapper;
     private final UserRepository userRepository;
 
+    @Transactional
     public MessageResponse sendMessage(Long senderId, SendMessageRequest request) {
         UserEntity sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new UserNotFoundException(senderId));
@@ -63,6 +64,7 @@ public class MessageService {
                 .map(messageMapper::toResponse);
     }
 
+    @Transactional
     public void deleteFromInbox(Long messageId, Long userId) {
         MessageEntity message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new MessageNotFoundException(messageId));
@@ -75,6 +77,7 @@ public class MessageService {
         messageRepository.save(message);
     }
 
+    @Transactional
     public void deleteFromSent(Long messageId, Long userId) {
         MessageEntity message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new MessageNotFoundException(messageId));
