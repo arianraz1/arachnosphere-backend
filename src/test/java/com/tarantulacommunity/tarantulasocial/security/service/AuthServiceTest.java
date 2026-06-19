@@ -61,7 +61,7 @@ class AuthServiceTest {
         // given
         given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .willReturn(authentication);
-        given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user));
+        given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user, 1L));
         given(jwtUtil.generateAccessToken(1L, "user@example.com")).willReturn("access-token");
         given(refreshTokenService.issue(user)).willReturn("refresh-raw");
         given(cookieUtil.accessTokenCookie("access-token")).willReturn(ResponseCookie.from("access", "val").build());
