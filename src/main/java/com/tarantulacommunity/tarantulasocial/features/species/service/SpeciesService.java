@@ -58,4 +58,9 @@ public class SpeciesService {
                     return speciesMapper.toResponse(speciesRepository.save(species));
                 });
     }
+
+    public Page<SpeciesSummaryResponse> searchAllSpecies(String query, Pageable pageable) {
+        return speciesRepository.searchAllSpecies(query, pageable)
+                .map(speciesMapper::toSummaryResponse);
+    }
 }

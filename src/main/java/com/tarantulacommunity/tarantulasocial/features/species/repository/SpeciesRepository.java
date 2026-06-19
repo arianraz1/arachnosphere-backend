@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -29,12 +30,18 @@ public interface SpeciesRepository extends JpaRepository<SpeciesEntity, Long> {
             "(SELECT c FROM CollectionEntryEntity c WHERE c.species = s) " +
             "AND (LOWER(s.scientificName) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(s.commonName) LIKE LOWER(CONCAT('%', :query, '%')))")
-    Page<SpeciesEntity> findOwnedSpeciesByQuery(String query, Pageable pageable);
+    Page<SpeciesEntity> findOwnedSpeciesByQuery(@Param("query") String query, Pageable pageable);
 
     // home page: unowned species section with search
     @Query("SELECT s FROM SpeciesEntity s WHERE NOT EXISTS " +
             "(SELECT c FROM CollectionEntryEntity c WHERE c.species = s) " +
             "AND (LOWER(s.scientificName) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(s.commonName) LIKE LOWER(CONCAT('%', :query, '%')))")
-    Page<SpeciesEntity> findUnownedSpeciesByQuery(String query, Pageable pageable);
+    Page<SpeciesEntity> findUnownedSpeciesByQuery(@Param("query") String query, Pageable pageable);
+
+    // search all species section with search
+    @Query("SELECT s FROM SpeciesEntity s " +
+            "WHERE LOWER(s.scientificName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(s.commonName) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<SpeciesEntity> searchAllSpecies(@Param("query") String query, Pageable pageable);
 }
