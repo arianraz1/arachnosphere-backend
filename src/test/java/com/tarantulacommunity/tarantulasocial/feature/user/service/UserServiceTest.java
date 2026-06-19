@@ -1,8 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.feature.user.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.EmailAlreadyTakenException;
-import com.tarantulacommunity.tarantulasocial.exception.UserNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.UsernameAlreadyTakenException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
@@ -73,7 +71,7 @@ public class UserServiceTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
 
-        assertThrows(EmailAlreadyTakenException.class, () -> userService.registerUser(request));
+        assertThrows(GlobalExceptionHandler.EmailAlreadyTakenException.class, () -> userService.registerUser(request));
         verify(userRepository, never()).save(any(UserEntity.class));
         verify(passwordEncoder, never()).encode("password123");
     }
@@ -84,7 +82,7 @@ public class UserServiceTest {
 
         when(userRepository.existsByUsername(request.getUsername())).thenReturn(true);
 
-        assertThrows(UsernameAlreadyTakenException.class, () -> userService.registerUser(request));
+        assertThrows(GlobalExceptionHandler.UsernameAlreadyTakenException.class, () -> userService.registerUser(request));
         verify(userRepository, never()).save(any(UserEntity.class));
         verify(passwordEncoder, never()).encode("password123");
     }
@@ -115,7 +113,7 @@ public class UserServiceTest {
     void getProfile_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> userService.getProfile(99L));
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () -> userService.getProfile(99L));
         verify(userRepository).findById(99L);
         verify(userMapper, never()).toProfileResponse(any());
     }
@@ -145,7 +143,7 @@ public class UserServiceTest {
     void updateProfile_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 userService.updateProfile(99L, new UpdateUserProfileRequest(null, null)));
     }
 
@@ -175,7 +173,7 @@ public class UserServiceTest {
     void updateFavorite_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 userService.updateFavorite(99L, new UpdateUserFavoriteTarantulaRequest(null, null)));
     }
 }

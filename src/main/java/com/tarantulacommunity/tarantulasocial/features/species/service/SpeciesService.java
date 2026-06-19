@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.species.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.SpeciesNotFoundException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
@@ -23,13 +23,13 @@ public class SpeciesService {
     public SpeciesResponse getSpeciesById(Long id) {
         return speciesRepository.findById(id)
                 .map(speciesMapper::toResponse)
-                .orElseThrow(() -> new SpeciesNotFoundException(id));
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(id));
     }
 
     public SpeciesResponse getSpeciesByGbifNubKey(Long gbifKey) {
         return speciesRepository.findByGbifNubKey(gbifKey)
                 .map(speciesMapper::toResponse)
-                .orElseThrow(() -> new SpeciesNotFoundException(gbifKey));
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(gbifKey));
     }
 
     public Page<SpeciesSummaryResponse> searchOwnedSpecies(String query, Pageable pageable) {

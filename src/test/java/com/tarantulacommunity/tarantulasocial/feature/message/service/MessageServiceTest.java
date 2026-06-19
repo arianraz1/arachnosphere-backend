@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.feature.message.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.*;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
@@ -27,7 +27,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class MessageServiceTest {
@@ -95,7 +95,7 @@ public class MessageServiceTest {
     void sendMessage_shouldThrowUserNotFoundException_whenSenderNotFound() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 messageService.sendMessage(1L, new SendMessageRequest(2L, "hello")));
     }
 
@@ -104,7 +104,7 @@ public class MessageServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 messageService.sendMessage(1L, new SendMessageRequest(2L, "hello")));
     }
 
@@ -112,7 +112,7 @@ public class MessageServiceTest {
     void sendMessage_shouldThrowInvalidMessageException_whenSenderAndRecipientAreSameUser() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
 
-        assertThrows(InvalidMessageException.class, () ->
+        assertThrows(GlobalExceptionHandler.InvalidMessageException.class, () ->
                 messageService.sendMessage(1L, new SendMessageRequest(1L, "hello")));
     }
 
@@ -142,7 +142,7 @@ public class MessageServiceTest {
     void getInbox_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 messageService.getInbox(1L, PageRequest.of(0, 10)));
     }
 
@@ -172,7 +172,7 @@ public class MessageServiceTest {
     void getSent_shouldThrowUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 messageService.getSent(1L, PageRequest.of(0, 10)));
     }
 
@@ -189,7 +189,7 @@ public class MessageServiceTest {
     void deleteFromInbox_shouldThrowMessageNotFoundException_whenMessageNotFound() {
         when(messageRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(MessageNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class, () ->
                 messageService.deleteFromInbox(1L, 2L));
     }
 
@@ -197,7 +197,7 @@ public class MessageServiceTest {
     void deleteFromInbox_shouldThrowUnauthorizedException_whenUserIsNotRecipient() {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
 
-        assertThrows(UnauthorizedException.class, () ->
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 messageService.deleteFromInbox(1L, 99L));
     }
 
@@ -214,7 +214,7 @@ public class MessageServiceTest {
     void deleteFromSent_shouldThrowMessageNotFoundException_whenMessageNotFound() {
         when(messageRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(MessageNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class, () ->
                 messageService.deleteFromSent(1L, 1L));
     }
 
@@ -222,7 +222,7 @@ public class MessageServiceTest {
     void deleteFromSent_shouldThrowUnauthorizedException_whenUserIsNotSender() {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
 
-        assertThrows(UnauthorizedException.class, () ->
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 messageService.deleteFromSent(1L, 99L));
     }
 }

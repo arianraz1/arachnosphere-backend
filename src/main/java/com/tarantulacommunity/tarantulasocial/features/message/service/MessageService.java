@@ -1,9 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.message.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.InvalidMessageException;
-import com.tarantulacommunity.tarantulasocial.exception.MessageNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.UnauthorizedException;
-import com.tarantulacommunity.tarantulasocial.exception.UserNotFoundException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
@@ -29,13 +26,13 @@ public class MessageService {
     @Transactional
     public MessageResponse sendMessage(Long senderId, SendMessageRequest request) {
         UserEntity sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new UserNotFoundException(senderId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(senderId));
 
         UserEntity recipient = userRepository.findById(request.getRecipientId())
-                .orElseThrow(() -> new UserNotFoundException(request.getRecipientId()));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(request.getRecipientId()));
 
         if (sender.getId().equals(recipient.getId())) {
-            throw new InvalidMessageException("You cannot send a message to yourself");
+            throw new GlobalExceptionHandler.InvalidMessageException("You cannot send a message to yourself");
         }
 
         MessageEntity message = new MessageEntity();
@@ -48,7 +45,7 @@ public class MessageService {
 
     public Page<MessageResponse> getInbox(Long userId, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         return messageRepository
                 .findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(user, pageable)
@@ -57,7 +54,7 @@ public class MessageService {
 
     public Page<MessageResponse> getSent(Long userId, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         return messageRepository
                 .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(user, pageable)
@@ -67,10 +64,10 @@ public class MessageService {
     @Transactional
     public void deleteFromInbox(Long messageId, Long userId) {
         MessageEntity message = messageRepository.findById(messageId)
-                .orElseThrow(() -> new MessageNotFoundException(messageId));
+                .orElseThrow(() -> new GlobalExceptionHandler.MessageNotFoundException(messageId));
 
         if (!message.getRecipient().getId().equals(userId)) {
-            throw new UnauthorizedException("You do not own this message");
+            throw new GlobalExceptionHandler.UnauthorizedException("You do not own this message");
         }
 
         message.setDeletedByRecipient(true);
@@ -80,10 +77,10 @@ public class MessageService {
     @Transactional
     public void deleteFromSent(Long messageId, Long userId) {
         MessageEntity message = messageRepository.findById(messageId)
-                .orElseThrow(() -> new MessageNotFoundException(messageId));
+                .orElseThrow(() -> new GlobalExceptionHandler.MessageNotFoundException(messageId));
 
         if (!message.getSender().getId().equals(userId)) {
-            throw new UnauthorizedException("You do not own this message");
+            throw new GlobalExceptionHandler.UnauthorizedException("You do not own this message");
         }
 
         message.setDeletedBySender(true);

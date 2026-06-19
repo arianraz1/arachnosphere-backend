@@ -1,10 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.feature.collection_entry.service;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
-import com.tarantulacommunity.tarantulasocial.exception.CollectionEntryNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.SpeciesNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.UnauthorizedException;
-import com.tarantulacommunity.tarantulasocial.exception.UserNotFoundException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
@@ -87,7 +84,7 @@ class CollectionEntryServiceTest {
     void getEntriesByUser_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> collectionEntryService.getEntriesByUser(99L));
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () -> collectionEntryService.getEntriesByUser(99L));
     }
 
     @Test
@@ -120,7 +117,7 @@ class CollectionEntryServiceTest {
     void searchEntriesByUser_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 collectionEntryService.searchEntriesByUser(99L, "Chromato", PageRequest.of(0, 10)));
     }
 
@@ -140,7 +137,7 @@ class CollectionEntryServiceTest {
     void getEntriesBySpecies_throwsSpeciesNotFoundException_whenSpeciesNotFound() {
         when(speciesRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(SpeciesNotFoundException.class, () -> collectionEntryService.getEntriesBySpecies(99L));
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class, () -> collectionEntryService.getEntriesBySpecies(99L));
     }
 
     @Test
@@ -197,7 +194,7 @@ class CollectionEntryServiceTest {
     void createEntry_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 collectionEntryService.createEntry(99L, new CreateCollectionEntryRequest()));
     }
 
@@ -209,7 +206,7 @@ class CollectionEntryServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(speciesRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(SpeciesNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class, () ->
                 collectionEntryService.createEntry(1L, request));
     }
 
@@ -233,7 +230,7 @@ class CollectionEntryServiceTest {
     void updateEntry_throwsCollectionEntryNotFoundException_whenNotFound() {
         when(collectionEntryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(CollectionEntryNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class, () ->
                 collectionEntryService.updateEntry(99L, 1L, new UpdateCollectionEntryRequest()));
     }
 
@@ -241,7 +238,7 @@ class CollectionEntryServiceTest {
     void updateEntry_throwsUnauthorizedException_whenUserDoesNotOwnEntry() {
         when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
 
-        assertThrows(UnauthorizedException.class, () ->
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 collectionEntryService.updateEntry(1L, 99L, new UpdateCollectionEntryRequest()));
     }
 
@@ -258,7 +255,7 @@ class CollectionEntryServiceTest {
     void deleteEntry_throwsCollectionEntryNotFoundException_whenNotFound() {
         when(collectionEntryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(CollectionEntryNotFoundException.class, () ->
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class, () ->
                 collectionEntryService.deleteEntry(99L, 1L));
     }
 
@@ -266,7 +263,7 @@ class CollectionEntryServiceTest {
     void deleteEntry_throwsUnauthorizedException_whenUserDoesNotOwnEntry() {
         when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
 
-        assertThrows(UnauthorizedException.class, () ->
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 collectionEntryService.deleteEntry(1L, 99L));
     }
 }

@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.feature.species.service;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
-import com.tarantulacommunity.tarantulasocial.exception.SpeciesNotFoundException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
@@ -55,7 +55,7 @@ class SpeciesServiceTest {
     void getSpeciesById_throwsSpeciesNotFoundException_whenNotFound() {
         when(speciesRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(SpeciesNotFoundException.class, () -> speciesService.getSpeciesById(99L));
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class, () -> speciesService.getSpeciesById(99L));
     }
 
     @Test
@@ -76,7 +76,7 @@ class SpeciesServiceTest {
     void getSpeciesByNubGbifKey_throwsSpeciesNotFoundException_whenNotFound() {
         when(speciesRepository.findByGbifNubKey(99L)).thenReturn(Optional.empty());
 
-        assertThrows(SpeciesNotFoundException.class, () -> speciesService.getSpeciesByGbifNubKey(99L));
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class, () -> speciesService.getSpeciesByGbifNubKey(99L));
     }
 
     @Test

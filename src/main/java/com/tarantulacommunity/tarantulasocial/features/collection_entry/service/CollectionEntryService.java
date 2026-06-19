@@ -1,9 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.collection_entry.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.CollectionEntryNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.SpeciesNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.UnauthorizedException;
-import com.tarantulacommunity.tarantulasocial.exception.UserNotFoundException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
@@ -35,7 +32,7 @@ public class CollectionEntryService {
 
     public List<CollectionEntryResponse> getEntriesByUser(Long userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         return collectionEntryRepository.findByUser(user)
                 .stream()
@@ -45,7 +42,7 @@ public class CollectionEntryService {
 
     public List<CollectionEntryResponse> getEntriesBySpecies(Long speciesId) {
         SpeciesEntity species = speciesRepository.findById(speciesId)
-                .orElseThrow(() -> new SpeciesNotFoundException(speciesId));
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(speciesId));
 
         return collectionEntryRepository.findBySpecies(species)
                 .stream()
@@ -55,7 +52,7 @@ public class CollectionEntryService {
 
     public Page<CollectionEntryResponse> searchEntriesByUser(Long userId, String query, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         return collectionEntryRepository
                 .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, query, pageable)
@@ -65,10 +62,10 @@ public class CollectionEntryService {
     @Transactional
     public CollectionEntryResponse createEntry(Long userId, CreateCollectionEntryRequest request) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         SpeciesEntity species = speciesRepository.findById(request.getSpeciesId())
-                .orElseThrow(() -> new SpeciesNotFoundException(request.getSpeciesId()));
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(request.getSpeciesId()));
 
         Optional<CollectionEntryEntity> existing = collectionEntryRepository
                 .findByUserAndSpecies(user, species);
@@ -89,7 +86,7 @@ public class CollectionEntryService {
     public CollectionEntryResponse updateEntry(Long entryId, Long userId,
                                                UpdateCollectionEntryRequest request) {
         CollectionEntryEntity entry = collectionEntryRepository.findById(entryId)
-                .orElseThrow(() -> new CollectionEntryNotFoundException(entryId));
+                .orElseThrow(() -> new GlobalExceptionHandler.CollectionEntryNotFoundException(entryId));
 
         assertOwnership(entry, userId);
 
@@ -99,7 +96,7 @@ public class CollectionEntryService {
     @Transactional
     public void deleteEntry(Long entryId, Long userId) {
         CollectionEntryEntity entry = collectionEntryRepository.findById(entryId)
-                .orElseThrow(() -> new CollectionEntryNotFoundException(entryId));
+                .orElseThrow(() -> new GlobalExceptionHandler.CollectionEntryNotFoundException(entryId));
 
         assertOwnership(entry, userId);
 
@@ -108,7 +105,7 @@ public class CollectionEntryService {
 
     private void assertOwnership(CollectionEntryEntity entry, Long userId) {
         if (!entry.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("You do not own this collection entry");
+            throw new GlobalExceptionHandler.UnauthorizedException("You do not own this collection entry");
         }
     }
 

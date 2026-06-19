@@ -1,8 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.user.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.EmailAlreadyTakenException;
-import com.tarantulacommunity.tarantulasocial.exception.UserNotFoundException;
-import com.tarantulacommunity.tarantulasocial.exception.UsernameAlreadyTakenException;
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
@@ -28,10 +26,10 @@ public class UserService {
     @Transactional
     public UserSignupResponse registerUser(UserRegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyTakenException(request.getEmail());
+            throw new GlobalExceptionHandler.EmailAlreadyTakenException(request.getEmail());
         }
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new UsernameAlreadyTakenException(request.getUsername());
+            throw new GlobalExceptionHandler.UsernameAlreadyTakenException(request.getUsername());
         }
 
         UserEntity user = new UserEntity();
@@ -62,6 +60,6 @@ public class UserService {
 
     private UserEntity findUserOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
     }
 }
