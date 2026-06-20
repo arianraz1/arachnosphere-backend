@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,25 +19,27 @@ import java.util.List;
 public class SpeciesSyncService {
 
     private static final String FAMILY_NAME = "Theraphosidae";
+    private static final Long FALLBACK_FAMILY_KEY = 5650L; // Stable fallback
 
     private final GbifClient gbifClient;
     private final SpeciesRepository speciesRepository;
 
     /**
-     * Fetches all accepted Theraphosidae species from GBIF and upserts them
-     * into the local species_entries table.
-     *
-     * Safe to run multiple times — existing records are updated, not duplicated.
-     * Triggered manually via the admin endpoint, not on a schedule.
+     * Fetches all accepted Theraphosidae species from GBIF and upserts them.
+     * Resolves the family key dynamically, with a fallback to the hardcoded key.
      */
     @Transactional
     public int syncAllTarantulas() {
-        Long familyKey = gbifClient.getFamilyKey(FAMILY_NAME)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Could not resolve GBIF family key for: " + FAMILY_NAME));
+        Long familyKey = resolveFamilyKey()
+                .orElseGet(() -> {
+                    log.warn("Falling back to hardcoded family key: {}", FALLBACK_FAMILY_KEY);
+                    return FALLBACK_FAMILY_KEY;
+                });
+
+        log.info("Syncing species for family: {} (key: {})", FAMILY_NAME, familyKey);
 
         List<GbifTaxon> taxa = gbifClient.fetchAllSpeciesByFamily(familyKey);
-        log.info("Fetched {} taxa from GBIF for syncing", taxa.size());
+        log.info("Fetched {} taxa from GBIF", taxa.size());
 
         int saved = 0;
         int skipped = 0;
@@ -55,14 +58,9 @@ public class SpeciesSyncService {
             entity.setScientificName(taxon.getScientificName());
             entity.setCommonName(taxon.getVernacularName());
 
-            // Only overwrite imageUrl if we don't already have one —
-            // lets you manually set better images without them being clobbered on re-sync
             if (entity.getImageUrl() == null) {
                 entity.setImageUrl(extractImageUrl(taxon));
             }
-
-            // Only overwrite description if we don't already have one —
-            // preserves any custom descriptions you've written for notable species
             if (entity.getDescription() == null) {
                 entity.setDescription(extractDescription(taxon));
             }
@@ -73,6 +71,19 @@ public class SpeciesSyncService {
 
         log.info("Sync complete — saved: {}, skipped: {}", saved, skipped);
         return saved;
+    }
+
+    /**
+     * Resolves the GBIF usageKey for Theraphosidae.
+     * Returns empty if the API call fails or returns no key.
+     */
+    private Optional<Long> resolveFamilyKey() {
+        try {
+            return gbifClient.getFamilyKey(FAMILY_NAME);
+        } catch (Exception e) {
+            log.error("Exception while resolving family key: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private String extractDescription(GbifTaxon taxon) {

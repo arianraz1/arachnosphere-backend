@@ -6,6 +6,7 @@ import com.tarantulacommunity.tarantulasocial.features.admin.gbif.data.GbifTaxon
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,29 +34,25 @@ public class GbifClient {
      */
     public Optional<Long> getFamilyKey(String familyName) {
         try {
+            String uri = UriComponentsBuilder.fromUriString(GBIF_API_URL + "/species/match")
+                    .queryParam("name", familyName)
+                    .queryParam("verbose", true) // more info
+                    .toUriString();
+
             GbifMatchResponse response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/species/match")
-                            .queryParam("name", familyName)
-                            .queryParam("rank", "FAMILY")
-                            .queryParam("verbose", false)
-                            .build())
+                    .uri(uri)
                     .retrieve()
                     .body(GbifMatchResponse.class);
 
-            if (response == null || response.getUsageKey() == null
-                    || "NONE".equals(response.getMatchType())) {
-                log.warn("No GBIF match found for family: {}", familyName);
-                return Optional.empty();
+            log.debug("GBIF match response: {}", response);
+            if (response != null && response.getUsageKey() != null) {
+                return Optional.of(response.getUsageKey());
             }
-
-            log.info("Resolved family key {} for '{}'", response.getUsageKey(), familyName);
-            return Optional.of(response.getUsageKey());
-
+            log.warn("No usageKey found in match response for family: {}", familyName);
         } catch (Exception e) {
-            log.error("Failed to resolve family key for '{}': {}", familyName, e.getMessage());
-            return Optional.empty();
+            log.error("Failed to resolve family key for '{}': {}", familyName, e.getMessage(), e);
         }
+        return Optional.empty();
     }
 
     /**
