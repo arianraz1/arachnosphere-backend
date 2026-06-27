@@ -30,7 +30,8 @@ class CookieUtilTest {
         assertThat(cookie.getPath()).isEqualTo("/");
         assertThat(cookie.isHttpOnly()).isTrue();
         assertThat(cookie.isSecure()).isFalse();
-        assertThat(cookie.getSameSite()).isEqualTo("Strict");
+
+        assertThat(cookie.getSameSite()).isEqualTo("Lax");
     }
 
     @Test

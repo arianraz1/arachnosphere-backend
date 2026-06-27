@@ -1,5 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.security.filter;
 
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -32,7 +33,7 @@ class JwtAuthFilterTest {
     @BeforeEach
     void setUp() {
         // Manually create the filter with the mock and a known cookie name
-        filter = new JwtAuthFilter(jwtUtil, "access_token");
+        filter = new JwtAuthFilter(jwtUtil, "access_token", 1L);
 
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
@@ -43,14 +44,22 @@ class JwtAuthFilterTest {
     void shouldSetAuthenticationForValidToken() throws Exception {
         Cookie cookie = new Cookie("access_token", "valid.jwt.token");
         request.setCookies(cookie);
+
         given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
         given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
+        given(jwtUtil.extractEmail("valid.jwt.token")).willReturn("user@example.com");
 
         filter.doFilterInternal(request, response, chain);
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
-        assertThat(auth.getPrincipal()).isEqualTo(5L);
+
+        assertThat(auth.getPrincipal()).isInstanceOf(CustomUserDetails.class);
+
+        CustomUserDetails principal = (CustomUserDetails) auth.getPrincipal();
+        assertThat(principal.getId()).isEqualTo(5L);
+        assertThat(principal.getUsername()).isEqualTo("user@example.com");
+
         verify(chain).doFilter(request, response);
     }
 

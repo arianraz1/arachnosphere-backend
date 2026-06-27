@@ -7,7 +7,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "app.cookie")
 public record CookieProperties(
-        @NotBlank String domain,
+        String domain,
         boolean secure,
         @NotBlank String accessTokenName,
         @NotBlank String refreshTokenName

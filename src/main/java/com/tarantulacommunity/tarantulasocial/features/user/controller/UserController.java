@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUs
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,27 +31,25 @@ public class UserController {
     @PutMapping("/{userId}/profile")
     public ResponseEntity<UserProfileResponse> updateProfile(
             @PathVariable Long userId,
-            @AuthenticationPrincipal Long authenticatedUserId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateUserProfileRequest request) {
 
-        assertSelf(userId, authenticatedUserId);
+        assertSelf(userId, userDetails);
         return ResponseEntity.ok(userService.updateProfile(userId, request));
     }
 
     @PutMapping("/{userId}/favorite")
     public ResponseEntity<UserProfileResponse> updateFavorite(
             @PathVariable Long userId,
-            @AuthenticationPrincipal Long authenticatedUserId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateUserFavoriteTarantulaRequest request) {
 
-        assertSelf(userId, authenticatedUserId);
+        assertSelf(userId, userDetails);
         return ResponseEntity.ok(userService.updateFavorite(userId, request));
     }
 
-    // ---------- HELPERS ----------
-
-    private void assertSelf(Long userId, Long authenticatedUserId) {
-        if (!userId.equals(authenticatedUserId)) {
+    private void assertSelf(Long userId, CustomUserDetails userDetails) {
+        if (userDetails == null || !userId.equals(userDetails.getId())) {
             throw new AccessDeniedException("You can only modify your own profile");
         }
     }

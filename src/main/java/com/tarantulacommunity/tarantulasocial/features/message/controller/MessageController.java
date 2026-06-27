@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,50 +21,41 @@ public class MessageController {
 
     private final MessageService messageService;
 
-    // ---------- PROTECTED — all message endpoints require authentication ----------
-
-    // Send a message — recipient is specified in the request body
-    // Frontend populates recipientId from the profile page the user is visiting
     @PostMapping
     public ResponseEntity<MessageResponse> send(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody SendMessageRequest request) {
-
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(messageService.sendMessage(userId, request));
+                .body(messageService.sendMessage(userDetails.getId(), request));
     }
 
     @GetMapping("/inbox")
     public ResponseEntity<Page<MessageResponse>> inbox(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
-
-        return ResponseEntity.ok(messageService.getInbox(userId, pageable));
+        return ResponseEntity.ok(messageService.getInbox(userDetails.getId(), pageable));
     }
 
     @GetMapping("/sent")
     public ResponseEntity<Page<MessageResponse>> sent(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
-
-        return ResponseEntity.ok(messageService.getSent(userId, pageable));
+        return ResponseEntity.ok(messageService.getSent(userDetails.getId(), pageable));
     }
 
     @DeleteMapping("/inbox/{messageId}")
     public ResponseEntity<Void> deleteFromInbox(
             @PathVariable Long messageId,
-            @AuthenticationPrincipal Long userId) {
-
-        messageService.deleteFromInbox(messageId, userId);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        messageService.deleteFromInbox(messageId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/sent/{messageId}")
     public ResponseEntity<Void> deleteFromSent(
             @PathVariable Long messageId,
-            @AuthenticationPrincipal Long userId) {
-
-        messageService.deleteFromSent(messageId, userId);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        messageService.deleteFromSent(messageId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 }

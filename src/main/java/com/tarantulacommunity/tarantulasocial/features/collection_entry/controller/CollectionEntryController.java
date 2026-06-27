@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,61 +24,53 @@ public class CollectionEntryController {
 
     private final CollectionEntryService collectionEntryService;
 
-    // ---------- PUBLIC (Nested under User) ----------
-    // Returns a simple list (no pagination) — fine for small collections
+    // ---------- PUBLIC ----------
+
     @GetMapping("/users/{userId}/collection")
     public ResponseEntity<List<CollectionEntryResponse>> getByUser(
             @PathVariable Long userId) {
-
         return ResponseEntity.ok(collectionEntryService.getEntriesByUser(userId));
     }
 
-    // ---------- PUBLIC (Nested under User with Search + Pagination) ----------
-    // For large collections or filtered searches — supports pagination
     @GetMapping("/users/{userId}/collection/search")
     public ResponseEntity<Page<CollectionEntryResponse>> searchByUser(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "") String query,
             @PageableDefault(size = 20, sort = "species.scientificName") Pageable pageable) {
-
         return ResponseEntity.ok(
                 collectionEntryService.searchEntriesByUser(userId, query, pageable));
     }
 
-    // ---------- PUBLIC (Who owns this species?) ----------
     @GetMapping("/collection/species/{speciesId}")
     public ResponseEntity<List<CollectionEntryResponse>> getBySpecies(
             @PathVariable Long speciesId) {
-
         return ResponseEntity.ok(collectionEntryService.getEntriesBySpecies(speciesId));
     }
 
-    // ---------- PROTECTED (Authenticated user manages their own entries) ----------
+    // ---------- PROTECTED ----------
+
     @PostMapping("/collection")
     public ResponseEntity<CollectionEntryResponse> create(
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCollectionEntryRequest request) {
-
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(collectionEntryService.createEntry(userId, request));
+                .body(collectionEntryService.createEntry(userDetails.getId(), request));
     }
 
     @PutMapping("/collection/{entryId}")
     public ResponseEntity<CollectionEntryResponse> update(
             @PathVariable Long entryId,
-            @AuthenticationPrincipal Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateCollectionEntryRequest request) {
-
         return ResponseEntity.ok(
-                collectionEntryService.updateEntry(entryId, userId, request));
+                collectionEntryService.updateEntry(entryId, userDetails.getId(), request));
     }
 
     @DeleteMapping("/collection/{entryId}")
     public ResponseEntity<Void> delete(
             @PathVariable Long entryId,
-            @AuthenticationPrincipal Long userId) {
-
-        collectionEntryService.deleteEntry(entryId, userId);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        collectionEntryService.deleteEntry(entryId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 }

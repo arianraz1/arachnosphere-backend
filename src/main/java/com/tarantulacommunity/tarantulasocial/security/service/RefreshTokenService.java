@@ -29,13 +29,13 @@ public class RefreshTokenService {
 
     @Transactional
     public String issue(UserEntity user) {
-        // No cleanup – user may have multiple active sessions
         String raw = UUID.randomUUID().toString();
 
         RefreshTokenEntity entity = new RefreshTokenEntity();
         entity.setUser(user);
         entity.setTokenHash(hash(raw));
         entity.setExpiresAt(Instant.now().plus(jwtProperties.refreshTokenExpiration()));
+        entity.setRevoked(false); // Explicit initialization best practice
 
         refreshTokenRepository.save(entity);
         return raw;
@@ -46,25 +46,24 @@ public class RefreshTokenService {
         String tokenHash = hash(rawToken);
         RefreshTokenEntity stored = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> {
-                    log.warn("Refresh token not found – invalid or already cleaned up");
+                    log.warn("Refresh token signature lookup failed");
                     return new InvalidRefreshTokenException("Invalid refresh token");
                 });
 
-        // Token reuse detection
+        UserEntity user = stored.getUser();
+
         if (stored.isRevoked()) {
-            log.warn("Reused refresh token detected for user {}", stored.getUser().getId());
-            refreshTokenRepository.deleteAllByUser(stored.getUser());
-            refreshTokenRepository.flush();
+            log.error("CRITICAL: Reused refresh token detected! Wiping all active sessions.");
+            refreshTokenRepository.deleteAllByUser(user);
+            refreshTokenRepository.flush(); // Commit instantly to block attacker concurrency
             throw new TokenReusedException();
         }
 
-        if (stored.isExpired()) {
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
             refreshTokenRepository.delete(stored);
             throw new InvalidRefreshTokenException("Refresh token has expired");
         }
 
-        // Normal rotation: revoke this token, then issue a new one
-        UserEntity user = stored.getUser();
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
 
@@ -81,7 +80,7 @@ public class RefreshTokenService {
     @Transactional
     public void purgeExpired() {
         refreshTokenRepository.deleteAllExpired(Instant.now());
-        log.info("Purged expired refresh tokens");
+        log.info("Purged expired refresh tokens from persistence store");
     }
 
     private String hash(String raw) {
@@ -90,7 +89,7 @@ public class RefreshTokenService {
             byte[] encoded = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(encoded);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
+            throw new IllegalStateException("SHA-256 algorithm unavailable on host JVM", e);
         }
     }
 

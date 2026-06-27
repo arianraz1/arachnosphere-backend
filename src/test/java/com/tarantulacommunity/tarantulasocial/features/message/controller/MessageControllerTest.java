@@ -4,6 +4,8 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,10 +20,10 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageControllerTest {
@@ -31,6 +33,12 @@ class MessageControllerTest {
 
     @InjectMocks
     private MessageController messageController;
+
+    private CustomUserDetails userDetailsOf(Long id) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        return new CustomUserDetails(user, null);
+    }
 
     @Test
     void send_shouldReturnCreatedMessageResponse() {
@@ -42,7 +50,7 @@ class MessageControllerTest {
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<MessageResponse> response = messageController.send(1L, request);
+        ResponseEntity<MessageResponse> response = messageController.send(userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
@@ -55,10 +63,8 @@ class MessageControllerTest {
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(1L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.send(1L, request)
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageController.send(userDetailsOf(1L), request));
     }
 
     @Test
@@ -68,10 +74,8 @@ class MessageControllerTest {
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(2L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.send(1L, request)
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageController.send(userDetailsOf(1L), request));
     }
 
     @Test
@@ -81,10 +85,8 @@ class MessageControllerTest {
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.InvalidMessageException("You cannot send a message to yourself"));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.InvalidMessageException.class,
-                () -> messageController.send(1L, request)
-        );
+        assertThrows(GlobalExceptionHandler.InvalidMessageException.class,
+                () -> messageController.send(userDetailsOf(1L), request));
     }
 
     @Test
@@ -96,7 +98,8 @@ class MessageControllerTest {
 
         when(messageService.getInbox(eq(1L), any(PageRequest.class))).thenReturn(page);
 
-        ResponseEntity<Page<MessageResponse>> response = messageController.inbox(1L, PageRequest.of(0, 20));
+        ResponseEntity<Page<MessageResponse>> response =
+                messageController.inbox(userDetailsOf(1L), PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
@@ -108,10 +111,8 @@ class MessageControllerTest {
         when(messageService.getInbox(eq(99L), any(PageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.inbox(99L, PageRequest.of(0, 20))
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageController.inbox(userDetailsOf(99L), PageRequest.of(0, 20)));
     }
 
     @Test
@@ -123,7 +124,8 @@ class MessageControllerTest {
 
         when(messageService.getSent(eq(1L), any(PageRequest.class))).thenReturn(page);
 
-        ResponseEntity<Page<MessageResponse>> response = messageController.sent(1L, PageRequest.of(0, 20));
+        ResponseEntity<Page<MessageResponse>> response =
+                messageController.sent(userDetailsOf(1L), PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
@@ -135,15 +137,13 @@ class MessageControllerTest {
         when(messageService.getSent(eq(99L), any(PageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.sent(99L, PageRequest.of(0, 20))
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageController.sent(userDetailsOf(99L), PageRequest.of(0, 20)));
     }
 
     @Test
     void deleteFromInbox_shouldReturnNoContent() {
-        ResponseEntity<Void> response = messageController.deleteFromInbox(1L, 1L);
+        ResponseEntity<Void> response = messageController.deleteFromInbox(1L, userDetailsOf(1L));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(messageService).deleteFromInbox(1L, 1L);
@@ -151,29 +151,25 @@ class MessageControllerTest {
 
     @Test
     void deleteFromInbox_shouldThrowWhenMessageNotFound() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
+        doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
                 .when(messageService).deleteFromInbox(99L, 1L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.MessageNotFoundException.class,
-                () -> messageController.deleteFromInbox(99L, 1L)
-        );
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
+                () -> messageController.deleteFromInbox(99L, userDetailsOf(1L)));
     }
 
     @Test
     void deleteFromInbox_shouldThrowWhenUnauthorized() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
+        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
                 .when(messageService).deleteFromInbox(1L, 99L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.deleteFromInbox(1L, 99L)
-        );
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.deleteFromInbox(1L, userDetailsOf(99L)));
     }
 
     @Test
     void deleteFromSent_shouldReturnNoContent() {
-        ResponseEntity<Void> response = messageController.deleteFromSent(1L, 1L);
+        ResponseEntity<Void> response = messageController.deleteFromSent(1L, userDetailsOf(1L));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(messageService).deleteFromSent(1L, 1L);
@@ -181,23 +177,19 @@ class MessageControllerTest {
 
     @Test
     void deleteFromSent_shouldThrowWhenMessageNotFound() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
+        doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
                 .when(messageService).deleteFromSent(99L, 1L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.MessageNotFoundException.class,
-                () -> messageController.deleteFromSent(99L, 1L)
-        );
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
+                () -> messageController.deleteFromSent(99L, userDetailsOf(1L)));
     }
 
     @Test
     void deleteFromSent_shouldThrowWhenUnauthorized() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
+        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
                 .when(messageService).deleteFromSent(1L, 99L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.deleteFromSent(1L, 99L)
-        );
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.deleteFromSent(1L, userDetailsOf(99L)));
     }
 }

@@ -1,5 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.filter;
 
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -9,26 +11,30 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
+
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final String accessTokenCookieName;
+    private final Long adminUserId;
 
-    // Spring will inject both parameters – the first from the bean container, the second via @Value
+    // Use clean constructor injection to map configuration properties
     public JwtAuthFilter(JwtUtil jwtUtil,
-                         @Value("${app.cookie.access-token-name}") String accessTokenCookieName) {
+                         @Value("${app.cookie.access-token-name}") String accessTokenCookieName,
+                         @Value("${app.admin.user-id:1}") Long adminUserId) { // Defaults to 1 if missing
         this.jwtUtil = jwtUtil;
         this.accessTokenCookieName = accessTokenCookieName;
+        this.adminUserId = adminUserId;
     }
 
     @Override
@@ -37,21 +43,39 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        extractToken(request)
-                .filter(jwtUtil::isValid)
-                .ifPresent(token -> {
-                    Long userId = jwtUtil.extractUserId(token);
-                    UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(userId, null, List.of());
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                });
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            extractToken(request)
+                    .filter(jwtUtil::isValid)
+                    .ifPresent(token -> {
+                        Long userId = jwtUtil.extractUserId(token);
+                        String email = jwtUtil.extractEmail(token);
+
+                        UserEntity userEntity = new UserEntity();
+                        userEntity.setId(userId);
+                        userEntity.setEmail(email);
+                        userEntity.setPassword("[STATELESS]"); // Stubbed since JWT handles authentication
+
+                        CustomUserDetails userDetails = new CustomUserDetails(userEntity, adminUserId);
+
+                        UsernamePasswordAuthenticationToken auth =
+                                UsernamePasswordAuthenticationToken.authenticated(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                );
+
+                        auth.setDetails(new WebAuthenticationDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    });
+        }
 
         chain.doFilter(request, response);
     }
 
     private Optional<String> extractToken(HttpServletRequest request) {
-        if (request.getCookies() == null) return Optional.empty();
+        if (request.getCookies() == null) {
+            return Optional.empty();
+        }
         return Arrays.stream(request.getCookies())
                 .filter(c -> accessTokenCookieName.equals(c.getName()))
                 .map(Cookie::getValue)

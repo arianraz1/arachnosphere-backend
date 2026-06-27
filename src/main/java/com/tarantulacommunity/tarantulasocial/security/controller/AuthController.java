@@ -1,16 +1,27 @@
 package com.tarantulacommunity.tarantulasocial.security.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.service.AuthService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -18,47 +29,108 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final CookieProperties cookieProps;
+
+    @Value("${app.cookie.refresh-token-name}")
+    private String refreshTokenName;
+
+    @GetMapping("/csrf")
+    public CsrfToken csrf(CsrfToken csrfToken) {
+        return csrfToken;
+    }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody UserRegisterRequest request,
-                                      HttpServletResponse response) {
+    public ResponseEntity<?> register(@Valid @RequestBody UserRegisterRequest request, HttpServletResponse response) {
         AuthService.AuthResult result = authService.register(request);
         setCookies(response, result.tokens());
+
+        rotateCsrfToken(response);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(result.responseBody());
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
-                                   HttpServletResponse response) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
         AuthService.AuthResult result = authService.login(request);
         setCookies(response, result.tokens());
+
+        rotateCsrfToken(response);
+
         return ResponseEntity.ok(result.responseBody());
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Void> refresh(
-            @CookieValue(name = "${app.cookie.refresh-token-name}", required = false)
-            String rawRefreshToken,
-            HttpServletResponse response) {
-        if (rawRefreshToken == null) {
+    public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
+        String rawRefreshToken = null;
+        if (request.getCookies() != null) {
+            rawRefreshToken = Arrays.stream(request.getCookies())
+                    .filter(cookie -> refreshTokenName.equals(cookie.getName()))
+                    .map(Cookie::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
         AuthService.TokenPair tokens = authService.refresh(rawRefreshToken);
         setCookies(response, tokens);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal Long userId,
-                                       HttpServletResponse response) {
-        authService.logout(userId);
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) {
+        if (userDetails != null) {
+            authService.logout(userDetails.getId());
+        }
+
         AuthService.TokenPair clearCookies = authService.clearCookies();
         setCookies(response, clearCookies);
+
+        ResponseCookie clearCsrf = ResponseCookie.from("XSRF-TOKEN", "")
+                .path("/")
+                .maxAge(0)
+                .secure(cookieProps.secure())
+                .sameSite("Lax")
+                .build();
+
+        if (cookieProps.domain() != null && !cookieProps.domain().isBlank()) {
+            clearCsrf = ResponseCookie.from("XSRF-TOKEN", "")
+                    .path("/")
+                    .maxAge(0)
+                    .domain(cookieProps.domain())
+                    .secure(cookieProps.secure())
+                    .sameSite("Lax")
+                    .build();
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, clearCsrf.toString());
         return ResponseEntity.noContent().build();
     }
 
     private void setCookies(HttpServletResponse response, AuthService.TokenPair tokens) {
-        response.addHeader(HttpHeaders.SET_COOKIE, tokens.accessTokenCookie());
-        response.addHeader(HttpHeaders.SET_COOKIE, tokens.refreshTokenCookie());
+        response.addHeader(HttpHeaders.SET_COOKIE, tokens.accessTokenCookie().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, tokens.refreshTokenCookie().toString());
+    }
+
+    /**
+     * Helper method to generate and write a completely fresh, authenticated CSRF session token.
+     * This bypasses the custom repository freeze guard via explicit response line insertion.
+     */
+    private void rotateCsrfToken(HttpServletResponse response) {
+        String freshTokenValue = UUID.randomUUID().toString();
+
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from("XSRF-TOKEN", freshTokenValue)
+                .path("/")
+                .httpOnly(false) // JavaScript readable for React Axios extraction mapping
+                .secure(cookieProps.secure())
+                .sameSite("Lax");
+
+        if (cookieProps.domain() != null && !cookieProps.domain().isBlank()) {
+            cookieBuilder.domain(cookieProps.domain());
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieBuilder.build().toString());
     }
 }

@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Maven build output
+target/
+
+# Maven wrapper logs
+.mvn/wrapper/maven-wrapper.jar
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Temporary files
+*.tmp
+*.swp

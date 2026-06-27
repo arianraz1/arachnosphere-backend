@@ -6,10 +6,16 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 
-@Validated // Keeps @NotBlank checking active!
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+import java.time.Duration;
+
+@Validated
 @ConfigurationProperties(prefix = "app.jwt")
 public record JwtProperties(
         @NotBlank String secret,
-        Duration accessTokenExpiration,
-        Duration refreshTokenExpiration
+        @NotNull Duration accessTokenExpiration,
+        @NotNull Duration refreshTokenExpiration
 ) {}

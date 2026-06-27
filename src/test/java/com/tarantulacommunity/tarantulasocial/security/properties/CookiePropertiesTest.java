@@ -29,18 +29,21 @@ class CookiePropertiesTest {
     }
 
     @Test
-    void shouldFailOnBlankDomain() {
+    void shouldSucceedOnBlankDomain() {
         runner.withPropertyValues(
                 "app.cookie.domain=",
+                "app.cookie.secure=false",
                 "app.cookie.access-token-name=access",
                 "app.cookie.refresh-token-name=refresh"
         ).run(ctx -> {
-            assertThat(ctx).hasFailed();
-            assertThat(ctx.getStartupFailure())
-                    .rootCause()
-                    .hasMessageContaining("domain");
+            assertThat(ctx).hasNotFailed();
+
+            CookieProperties props = ctx.getBean(CookieProperties.class);
+            assertThat(props.domain()).isNullOrEmpty();
+            assertThat(props.accessTokenName()).isEqualTo("access");
         });
     }
+
 
     @EnableConfigurationProperties(CookieProperties.class)
     static class TestConfig {}

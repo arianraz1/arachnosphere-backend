@@ -78,16 +78,6 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginShouldThrowIfPrincipalNotCustomUserDetails() {
-        given(authManager.authenticate(any())).willReturn(authentication);
-        given(authentication.getPrincipal()).willReturn("plain string");
-
-        assertThatThrownBy(() -> authService.login(loginRequest))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Unexpected principal type");
-    }
-
-    @Test
     void registerShouldReturnSignupResponseAndTokens() {
         UserRegisterRequest regReq = new UserRegisterRequest();
         regReq.setEmail("new@example.com");

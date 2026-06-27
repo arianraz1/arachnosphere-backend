@@ -44,11 +44,26 @@ public class CookieUtil {
     }
 
     private ResponseCookie.ResponseCookieBuilder base(String name, String value, String path) {
-        return ResponseCookie.from(name, value)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
                 .secure(cookieProps.secure())
-                .sameSite("Strict")
-                .domain(cookieProps.domain())
+                .sameSite("Lax")
                 .path(path);
+
+        if (cookieProps.domain() != null && !cookieProps.domain().isBlank()) {
+            builder.domain(cookieProps.domain());
+        }
+
+        return builder;
+    }
+
+    public ResponseCookie clearCsrfToken() {
+        return ResponseCookie.from("XSRF-TOKEN", "")
+                .httpOnly(false)
+                .secure(cookieProps.secure())
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
     }
 }

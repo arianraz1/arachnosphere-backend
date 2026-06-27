@@ -4,7 +4,9 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,6 +30,12 @@ class UserControllerTest {
 
     @InjectMocks
     private UserController userController;
+
+    private CustomUserDetails userDetailsOf(Long id) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        return new CustomUserDetails(user, null);
+    }
 
     @Test
     void getProfile_shouldReturnUserProfileResponse() {
@@ -63,7 +71,8 @@ class UserControllerTest {
         when(userService.updateProfile(eq(1L), any(UpdateUserProfileRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<UserProfileResponse> response = userController.updateProfile(1L, 1L, request);
+        ResponseEntity<UserProfileResponse> response =
+                userController.updateProfile(1L, userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
@@ -73,7 +82,7 @@ class UserControllerTest {
     void updateProfile_shouldThrowAccessDeniedWhenUserIsNotSelf() {
         UpdateUserProfileRequest request = new UpdateUserProfileRequest(null, null);
 
-        assertThatThrownBy(() -> userController.updateProfile(1L, 2L, request))
+        assertThatThrownBy(() -> userController.updateProfile(1L, userDetailsOf(2L), request))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("You can only modify your own profile");
     }
@@ -85,7 +94,7 @@ class UserControllerTest {
         when(userService.updateProfile(eq(99L), any(UpdateUserProfileRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        assertThatThrownBy(() -> userController.updateProfile(99L, 99L, request))
+        assertThatThrownBy(() -> userController.updateProfile(99L, userDetailsOf(99L), request))
                 .isInstanceOf(GlobalExceptionHandler.UserNotFoundException.class);
     }
 
@@ -100,7 +109,8 @@ class UserControllerTest {
         when(userService.updateFavorite(eq(1L), any(UpdateUserFavoriteTarantulaRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<UserProfileResponse> response = userController.updateFavorite(1L, 1L, request);
+        ResponseEntity<UserProfileResponse> response =
+                userController.updateFavorite(1L, userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
@@ -110,7 +120,7 @@ class UserControllerTest {
     void updateFavorite_shouldThrowAccessDeniedWhenUserIsNotSelf() {
         UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest(null, null);
 
-        assertThatThrownBy(() -> userController.updateFavorite(1L, 2L, request))
+        assertThatThrownBy(() -> userController.updateFavorite(1L, userDetailsOf(2L), request))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("You can only modify your own profile");
     }
@@ -122,7 +132,7 @@ class UserControllerTest {
         when(userService.updateFavorite(eq(99L), any(UpdateUserFavoriteTarantulaRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        assertThatThrownBy(() -> userController.updateFavorite(99L, 99L, request))
+        assertThatThrownBy(() -> userController.updateFavorite(99L, userDetailsOf(99L), request))
                 .isInstanceOf(GlobalExceptionHandler.UserNotFoundException.class);
     }
 }

@@ -5,6 +5,8 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,10 +22,10 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CollectionEntryControllerTest {
@@ -33,6 +35,12 @@ class CollectionEntryControllerTest {
 
     @InjectMocks
     private CollectionEntryController collectionEntryController;
+
+    private CustomUserDetails userDetailsOf(Long id) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        return new CustomUserDetails(user, null);
+    }
 
     @Test
     void getByUser_shouldReturnListOfEntries() {
@@ -54,10 +62,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.getEntriesByUser(99L))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> collectionEntryController.getByUser(99L)
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> collectionEntryController.getByUser(99L));
     }
 
     @Test
@@ -69,7 +75,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.searchEntriesByUser(eq(1L), eq("Chromato"), any(PageRequest.class)))
                 .thenReturn(page);
 
-        ResponseEntity<Page<CollectionEntryResponse>> response = collectionEntryController.searchByUser(1L, "Chromato", PageRequest.of(0, 20));
+        ResponseEntity<Page<CollectionEntryResponse>> response =
+                collectionEntryController.searchByUser(1L, "Chromato", PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
@@ -81,10 +88,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.searchEntriesByUser(eq(99L), eq("query"), any(PageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> collectionEntryController.searchByUser(99L, "query", PageRequest.of(0, 20))
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> collectionEntryController.searchByUser(99L, "query", PageRequest.of(0, 20)));
     }
 
     @Test
@@ -107,10 +112,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.getEntriesBySpecies(99L))
                 .thenThrow(new GlobalExceptionHandler.SpeciesNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.SpeciesNotFoundException.class,
-                () -> collectionEntryController.getBySpecies(99L)
-        );
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class,
+                () -> collectionEntryController.getBySpecies(99L));
     }
 
     @Test
@@ -122,7 +125,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.createEntry(eq(1L), any(CreateCollectionEntryRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<CollectionEntryResponse> response = collectionEntryController.create(1L, request);
+        ResponseEntity<CollectionEntryResponse> response =
+                collectionEntryController.create(userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
@@ -135,10 +139,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.createEntry(eq(99L), any(CreateCollectionEntryRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UserNotFoundException.class,
-                () -> collectionEntryController.create(99L, request)
-        );
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> collectionEntryController.create(userDetailsOf(99L), request));
     }
 
     @Test
@@ -148,10 +150,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.createEntry(eq(1L), any(CreateCollectionEntryRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.SpeciesNotFoundException(1L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.SpeciesNotFoundException.class,
-                () -> collectionEntryController.create(1L, request)
-        );
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class,
+                () -> collectionEntryController.create(userDetailsOf(1L), request));
     }
 
     @Test
@@ -163,7 +163,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.updateEntry(eq(1L), eq(1L), any(UpdateCollectionEntryRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<CollectionEntryResponse> response = collectionEntryController.update(1L, 1L, request);
+        ResponseEntity<CollectionEntryResponse> response =
+                collectionEntryController.update(1L, userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
@@ -176,10 +177,8 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.updateEntry(eq(99L), eq(1L), any(UpdateCollectionEntryRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.CollectionEntryNotFoundException(99L));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.CollectionEntryNotFoundException.class,
-                () -> collectionEntryController.update(99L, 1L, request)
-        );
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class,
+                () -> collectionEntryController.update(99L, userDetailsOf(1L), request));
     }
 
     @Test
@@ -189,15 +188,13 @@ class CollectionEntryControllerTest {
         when(collectionEntryService.updateEntry(eq(1L), eq(99L), any(UpdateCollectionEntryRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this collection entry"));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UnauthorizedException.class,
-                () -> collectionEntryController.update(1L, 99L, request)
-        );
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> collectionEntryController.update(1L, userDetailsOf(99L), request));
     }
 
     @Test
     void delete_shouldReturnNoContent() {
-        ResponseEntity<Void> response = collectionEntryController.delete(1L, 1L);
+        ResponseEntity<Void> response = collectionEntryController.delete(1L, userDetailsOf(1L));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(collectionEntryService).deleteEntry(1L, 1L);
@@ -205,33 +202,31 @@ class CollectionEntryControllerTest {
 
     @Test
     void delete_shouldThrowWhenEntryNotFound() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.CollectionEntryNotFoundException(99L))
+        doThrow(new GlobalExceptionHandler.CollectionEntryNotFoundException(99L))
                 .when(collectionEntryService).deleteEntry(99L, 1L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.CollectionEntryNotFoundException.class,
-                () -> collectionEntryController.delete(99L, 1L)
-        );
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class,
+                () -> collectionEntryController.delete(99L, userDetailsOf(1L)));
     }
 
     @Test
     void delete_shouldThrowWhenUnauthorized() {
-        org.mockito.Mockito.doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this collection entry"))
+        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this collection entry"))
                 .when(collectionEntryService).deleteEntry(1L, 99L);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                GlobalExceptionHandler.UnauthorizedException.class,
-                () -> collectionEntryController.delete(1L, 99L)
-        );
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> collectionEntryController.delete(1L, userDetailsOf(99L)));
     }
 
     @Test
     void searchByUser_shouldReturnEmptyPage_whenNoResults() {
         Page<CollectionEntryResponse> emptyPage = Page.empty();
+
         when(collectionEntryService.searchEntriesByUser(eq(1L), eq("nonexistent"), any(Pageable.class)))
                 .thenReturn(emptyPage);
 
-        ResponseEntity<Page<CollectionEntryResponse>> response = collectionEntryController.searchByUser(1L, "nonexistent", PageRequest.of(0, 20));
+        ResponseEntity<Page<CollectionEntryResponse>> response =
+                collectionEntryController.searchByUser(1L, "nonexistent", PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEmpty();

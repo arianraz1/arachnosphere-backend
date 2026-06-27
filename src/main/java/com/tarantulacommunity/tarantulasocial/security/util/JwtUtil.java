@@ -41,6 +41,10 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String extractEmail(String token) {
+        return parseClaims(token).get("email", String.class);
+    }
+
     public Long extractUserId(String token) {
         return Long.valueOf(parseClaims(token).getSubject());
     }

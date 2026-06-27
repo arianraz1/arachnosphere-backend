@@ -45,6 +45,7 @@ public class SpeciesSyncService {
         int skipped = 0;
 
         for (GbifTaxon taxon : taxa) {
+
             if (taxon.getKey() == null || taxon.getScientificName() == null) {
                 skipped++;
                 continue;
@@ -56,13 +57,10 @@ public class SpeciesSyncService {
 
             entity.setGbifNubKey(taxon.getKey());
             entity.setScientificName(taxon.getScientificName());
-            entity.setCommonName(taxon.getVernacularName());
 
-            if (entity.getImageUrl() == null) {
-                entity.setImageUrl(extractImageUrl(taxon));
-            }
-            if (entity.getDescription() == null) {
-                entity.setDescription(extractDescription(taxon));
+            List<String> names = gbifClient.getVernacularNames(taxon.getKey());
+            if (!names.isEmpty()) {
+                entity.setCommonName(names.getFirst());
             }
 
             speciesRepository.save(entity);

@@ -1,8 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.admin.gbif;
 
-import com.tarantulacommunity.tarantulasocial.features.admin.gbif.data.GbifMatchResponse;
-import com.tarantulacommunity.tarantulasocial.features.admin.gbif.data.GbifSearchResponse;
-import com.tarantulacommunity.tarantulasocial.features.admin.gbif.data.GbifTaxon;
+import com.tarantulacommunity.tarantulasocial.features.admin.gbif.data.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -98,5 +96,29 @@ public class GbifClient {
         }
 
         return all;
+    }
+
+    public GbifTaxon getSpecies(Long key) {
+        return restClient.get()
+                .uri("/species/{key}", key)
+                .retrieve()
+                .body(GbifTaxon.class);
+    }
+
+    public List<String> getVernacularNames(Long key) {
+
+        GbifVernacularResponse response = restClient.get()
+                .uri("/species/{key}/vernacularNames", key)
+                .retrieve()
+                .body(GbifVernacularResponse.class);
+
+        if (response == null || response.getResults() == null) {
+            return List.of();
+        }
+
+        return response.getResults()
+                .stream()
+                .map(GbifVernacular::getVernacularName)
+                .toList();
     }
 }

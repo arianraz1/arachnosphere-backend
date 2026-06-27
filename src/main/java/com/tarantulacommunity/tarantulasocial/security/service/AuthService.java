@@ -7,19 +7,19 @@ import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepos
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginResponse;
 import com.tarantulacommunity.tarantulasocial.security.mapper.AuthMapper;
 import com.tarantulacommunity.tarantulasocial.security.util.CookieUtil;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class AuthService {
 
@@ -31,6 +31,7 @@ public class AuthService {
     private final CookieUtil cookieUtil;
     private final AuthMapper authMapper;
 
+    @Transactional
     public AuthResult register(UserRegisterRequest request) {
         UserSignupResponse signupResponse = userService.registerUser(request);
 
@@ -41,53 +42,59 @@ public class AuthService {
         return new AuthResult(signupResponse, tokens);
     }
 
+    @Transactional
     public AuthResult login(LoginRequest request) {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
+
         if (!(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {
-            throw new IllegalStateException("Unexpected principal type");
+            throw new BadCredentialsException("Invalid user principal state");
         }
+
         UserEntity user = userDetails.getUser();
         TokenPair tokens = issueTokens(user);
-        LoginResponse loginResponse = authMapper.toLoginResponse(user);
+        var loginResponse = authMapper.toLoginResponse(user);
+
         return new AuthResult(loginResponse, tokens);
     }
 
+    @Transactional
     public TokenPair refresh(String rawRefreshToken) {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(rawRefreshToken);
         UserEntity user = result.user();
+
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String newRefreshRaw = result.newRawToken();
 
         return new TokenPair(
-                cookieUtil.accessTokenCookie(newAccessToken).toString(),
-                cookieUtil.refreshTokenCookie(newRefreshRaw).toString()
+                cookieUtil.accessTokenCookie(newAccessToken),
+                cookieUtil.refreshTokenCookie(newRefreshRaw)
         );
     }
 
+    @Transactional
     public void logout(Long userId) {
-        if (userId != null) {
-            userRepository.findById(userId).ifPresent(refreshTokenService::revokeAll);
-        }
+        userRepository.findById(userId).ifPresent(refreshTokenService::revokeAll);
     }
 
     public TokenPair clearCookies() {
         return new TokenPair(
-                cookieUtil.clearAccessToken().toString(),
-                cookieUtil.clearRefreshToken().toString()
+                cookieUtil.clearAccessToken(),
+                cookieUtil.clearRefreshToken()
         );
     }
 
     private TokenPair issueTokens(UserEntity user) {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = refreshTokenService.issue(user);
+
         return new TokenPair(
-                cookieUtil.accessTokenCookie(accessToken).toString(),
-                cookieUtil.refreshTokenCookie(refreshToken).toString()
+                cookieUtil.accessTokenCookie(accessToken),
+                cookieUtil.refreshTokenCookie(refreshToken)
         );
     }
 
     public record AuthResult(Object responseBody, TokenPair tokens) {}
-    public record TokenPair(String accessTokenCookie, String refreshTokenCookie) {}
+    public record TokenPair(ResponseCookie accessTokenCookie, ResponseCookie refreshTokenCookie) {}
 }
