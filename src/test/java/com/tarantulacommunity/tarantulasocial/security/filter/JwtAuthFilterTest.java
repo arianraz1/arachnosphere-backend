@@ -77,4 +77,54 @@ class JwtAuthFilterTest {
         filter.doFilterInternal(request, response, chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
+
+    @Test
+    void shouldNotAuthenticateWhenAuthenticationAlreadyExists() throws Exception {
+        // Pre-set authentication
+        SecurityContextHolder.getContext().setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "existing", null, java.util.Collections.emptyList()
+            )
+        );
+
+        filter.doFilterInternal(request, response, chain);
+
+        // Should not overwrite existing authentication
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isInstanceOf(String.class); // Still the existing one
+    }
+
+    @Test
+    void shouldNotAuthenticateWithWrongCookieName() throws Exception {
+        request.setCookies(new Cookie("wrong_cookie", "valid.jwt.token"));
+
+        filter.doFilterInternal(request, response, chain);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void shouldNotAuthenticateWithMultipleCookies() throws Exception {
+        Cookie wrongCookie = new Cookie("wrong_cookie", "token");
+        Cookie rightCookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(wrongCookie, rightCookie);
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
+        given(jwtUtil.extractEmail("valid.jwt.token")).willReturn("user@example.com");
+
+        filter.doFilterInternal(request, response, chain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isInstanceOf(CustomUserDetails.class);
+    }
+
+    @Test
+    void shouldNotAuthenticateWithNullCookies() throws Exception {
+        request.setCookies((jakarta.servlet.http.Cookie[]) null);
+
+        filter.doFilterInternal(request, response, chain);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
 }

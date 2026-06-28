@@ -192,4 +192,30 @@ class MessageControllerTest {
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageController.deleteFromSent(1L, userDetailsOf(99L)));
     }
+
+    @Test
+    void inbox_shouldReturnEmptyPageWhenNoMessages() {
+        Page<MessageResponse> emptyPage = Page.empty();
+
+        when(messageService.getInbox(eq(1L), any(PageRequest.class))).thenReturn(emptyPage);
+
+        ResponseEntity<Page<MessageResponse>> response =
+                messageController.inbox(userDetailsOf(1L), PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
+    void sent_shouldReturnEmptyPageWhenNoMessages() {
+        Page<MessageResponse> emptyPage = Page.empty();
+
+        when(messageService.getSent(eq(1L), any(PageRequest.class))).thenReturn(emptyPage);
+
+        ResponseEntity<Page<MessageResponse>> response =
+                messageController.sent(userDetailsOf(1L), PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
 }

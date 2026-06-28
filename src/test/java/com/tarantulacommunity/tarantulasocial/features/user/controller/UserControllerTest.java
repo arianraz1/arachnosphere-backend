@@ -135,4 +135,22 @@ class UserControllerTest {
         assertThatThrownBy(() -> userController.updateFavorite(99L, userDetailsOf(99L), request))
                 .isInstanceOf(GlobalExceptionHandler.UserNotFoundException.class);
     }
+
+    @Test
+    void updateProfile_shouldThrowAccessDeniedWhenUserDetailsIsNull() {
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest(null, null);
+
+        assertThatThrownBy(() -> userController.updateProfile(1L,null, request))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("You can only modify your own profile");
+    }
+
+    @Test
+    void updateFavorite_shouldThrowAccessDeniedWhenUserDetailsIsNull() {
+        UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest(null, null);
+
+        assertThatThrownBy(() -> userController.updateFavorite(1L, null, request))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("You can only modify your own profile");
+    }
 }

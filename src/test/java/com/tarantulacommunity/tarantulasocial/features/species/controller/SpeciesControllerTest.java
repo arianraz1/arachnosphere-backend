@@ -133,4 +133,44 @@ class SpeciesControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEmpty();
     }
+
+    @Test
+    void searchOwned_shouldReturnEmptyPageWhenNoResults() {
+        Page<SpeciesSummaryResponse> emptyPage = Page.empty();
+
+        when(speciesService.searchOwnedSpecies(eq("nonexistent"), any(PageRequest.class))).thenReturn(emptyPage);
+
+        ResponseEntity<Page<SpeciesSummaryResponse>> response = speciesController.searchOwned("nonexistent", PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
+    void searchUnowned_shouldReturnEmptyPageWhenNoResults() {
+        Page<SpeciesSummaryResponse> emptyPage = Page.empty();
+
+        when(speciesService.searchUnownedSpecies(eq("nonexistent"), any(PageRequest.class))).thenReturn(emptyPage);
+
+        ResponseEntity<Page<SpeciesSummaryResponse>> response = speciesController.searchUnowned("nonexistent", PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
+    void getDetail_shouldReturnDetailWithEmptyOwners() {
+        SpeciesResponse speciesResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        List<CollectionEntryResponse> emptyOwners = List.of();
+        SpeciesDetailResponse expectedDetail = new SpeciesDetailResponse(speciesResponse, emptyOwners);
+
+        when(speciesService.getSpeciesById(1L)).thenReturn(speciesResponse);
+        when(collectionEntryService.getEntriesBySpecies(1L)).thenReturn(emptyOwners);
+        when(speciesMapper.toDetailResponse(speciesResponse, emptyOwners)).thenReturn(expectedDetail);
+
+        ResponseEntity<SpeciesDetailResponse> response = speciesController.getDetail(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expectedDetail);
+    }
 }

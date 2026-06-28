@@ -42,6 +42,10 @@ public class SpeciesEntity {
     @Column(length = 2048)
     private String imageUrl;
 
+    @Size(max = 512)
+    @Column(length = 512)
+    private String imageAttribution;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

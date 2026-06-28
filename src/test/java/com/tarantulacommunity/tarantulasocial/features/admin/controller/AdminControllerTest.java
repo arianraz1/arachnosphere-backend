@@ -1,6 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.features.admin.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.admin.gbif.SpeciesSyncService;
+import com.tarantulacommunity.tarantulasocial.features.admin.inat.PhotoSyncService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,9 @@ class AdminControllerTest {
 
     @Mock
     private SpeciesSyncService speciesSyncService;
+
+    @Mock
+    private PhotoSyncService photoSyncService;
 
     @InjectMocks
     private AdminController adminController;
@@ -52,5 +56,23 @@ class AdminControllerTest {
                 IllegalStateException.class,
                 () -> adminController.syncSpecies()
         );
+    }
+
+    @Test
+    void syncPhotos_shouldReturnSuccessMessage() {
+        ResponseEntity<String> response = adminController.syncPhotos();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("Photo sync complete.");
+        verify(photoSyncService).syncPhotos();
+    }
+
+    @Test
+    void syncAllPhotos_shouldReturnSuccessMessage() {
+        ResponseEntity<String> response = adminController.syncAllPhotos();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("Full photo sync complete.");
+        verify(photoSyncService).syncAllPhotos();
     }
 }

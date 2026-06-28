@@ -347,4 +347,195 @@ class SpeciesSyncServiceTest {
 
         assertThat(result).isEqualTo(1);
     }
+
+    @Test
+    void extractBareName_stripsAuthorAndYear() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Ischnocolus rubropilosus Keyserling, 1891");
+
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.getVernacularNames(any())).thenReturn(List.of());
+        when(speciesRepository.findByGbifNubKey(any())).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getScientificName()).isEqualTo("Ischnocolus rubropilosus");
+    }
+
+    @Test
+    void extractBareName_handlesSingleWordName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Theraphosidae");
+
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.getVernacularNames(any())).thenReturn(List.of());
+        when(speciesRepository.findByGbifNubKey(any())).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getScientificName()).isEqualTo("Theraphosidae");
+    }
+
+    @Test
+    void syncAllTarantulas_onlySetsEnglishCommonName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.getVernacularNames(any())).thenReturn(List.of("Mexican Red Knee"));
+        when(speciesRepository.findByGbifNubKey(any())).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isEqualTo("Mexican Red Knee");
+    }
+
+    @Test
+    void syncAllTarantulas_skipsNullKey() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(null);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+
+        int result = speciesSyncService.syncAllTarantulas();
+
+        verify(speciesRepository, never()).save(any());
+        assertThat(result).isZero();
+    }
+
+    @Test
+    void syncAllTarantulas_DoesNotOverrideInatCommonNameWithGbifName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        SpeciesEntity existing = new SpeciesEntity();
+        existing.setGbifNubKey(1L);
+        existing.setScientificName("Brachypelma hamorii");
+        existing.setCommonName("Mexican Red Knee"); // already set by iNat
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("Some GBIF Name"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.of(existing));
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isEqualTo("Mexican Red Knee");
+    }
+
+    @Test
+    void syncAllTarantulas_excludesGenericFamilyCommonNames() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("tarantula spiders"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isNull();
+    }
+
+    @Test
+    void syncAllTarantulas_excludesTarantulasCommonName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("tarantulas"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isNull();
+    }
+
+    @Test
+    void syncAllTarantulas_excludesTarantulaCommonName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("tarantula"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isNull();
+    }
+
+    @Test
+    void syncAllTarantulas_excludesIsCaseInsensitive() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("Tarantula Spiders"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isNull();
+    }
+
+    @Test
+    void syncAllTarantulas_allowsLegitimateCommonName() {
+        GbifTaxon taxon = new GbifTaxon();
+        taxon.setKey(1L);
+        taxon.setScientificName("Brachypelma hamorii");
+
+        when(gbifClient.getFamilyKey(any())).thenReturn(Optional.of(5650L));
+        when(gbifClient.fetchAllSpeciesByFamily(any())).thenReturn(List.of(taxon));
+        when(gbifClient.getVernacularNames(1L)).thenReturn(List.of("Mexican Red Knee"));
+        when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
+        when(speciesRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        speciesSyncService.syncAllTarantulas();
+
+        ArgumentCaptor<SpeciesEntity> captor = ArgumentCaptor.forClass(SpeciesEntity.class);
+        verify(speciesRepository).save(captor.capture());
+        assertThat(captor.getValue().getCommonName()).isEqualTo("Mexican Red Knee");
+    }
 }

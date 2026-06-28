@@ -106,7 +106,6 @@ public class GbifClient {
     }
 
     public List<String> getVernacularNames(Long key) {
-
         GbifVernacularResponse response = restClient.get()
                 .uri("/species/{key}/vernacularNames", key)
                 .retrieve()
@@ -118,6 +117,7 @@ public class GbifClient {
 
         return response.getResults()
                 .stream()
+                .filter(v -> "eng".equals(v.getLanguage()))
                 .map(GbifVernacular::getVernacularName)
                 .toList();
     }

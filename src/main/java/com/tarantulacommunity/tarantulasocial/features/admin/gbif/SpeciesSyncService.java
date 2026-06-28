@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,10 @@ public class SpeciesSyncService {
 
     private final GbifClient gbifClient;
     private final SpeciesRepository speciesRepository;
+
+    private static final Set<String> EXCLUDED_COMMON_NAMES = Set.of(
+            "tarantula spiders", "tarantulas", "tarantula"
+    );
 
     /**
      * Fetches all accepted Theraphosidae species from GBIF and upserts them.
@@ -56,11 +61,14 @@ public class SpeciesSyncService {
                     .orElseGet(SpeciesEntity::new);
 
             entity.setGbifNubKey(taxon.getKey());
-            entity.setScientificName(taxon.getScientificName());
+            entity.setScientificName(extractBareName(taxon.getScientificName()));
 
             List<String> names = gbifClient.getVernacularNames(taxon.getKey());
-            if (!names.isEmpty()) {
-                entity.setCommonName(names.getFirst());
+            if (!names.isEmpty() && entity.getCommonName() == null) {
+                String name = names.getFirst();
+                if (!EXCLUDED_COMMON_NAMES.contains(name.toLowerCase())) {
+                    entity.setCommonName(name);
+                }
             }
 
             speciesRepository.save(entity);
@@ -100,5 +108,11 @@ public class SpeciesSyncService {
                 .map(GbifMedia::getIdentifier)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private String extractBareName(String scientificName) {
+        String[] parts = scientificName.split("\\s+");
+        if (parts.length < 2) return scientificName;
+        return parts[0] + " " + parts[1];
     }
 }

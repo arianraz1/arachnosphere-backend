@@ -43,7 +43,7 @@ public class SpeciesController {
     @GetMapping("/search/owned")
     public ResponseEntity<Page<SpeciesSummaryResponse>> searchOwned(
             @RequestParam(defaultValue = "") String query,
-            @PageableDefault(size = 20, sort = "scientificName") Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(speciesService.searchOwnedSpecies(query, pageable));
     }
 

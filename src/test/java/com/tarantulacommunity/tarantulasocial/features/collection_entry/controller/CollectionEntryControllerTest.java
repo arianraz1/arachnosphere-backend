@@ -231,4 +231,30 @@ class CollectionEntryControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEmpty();
     }
+
+    @Test
+    void searchByUser_shouldUseDefaultQueryWhenEmpty() {
+        CollectionEntryResponse entry = new CollectionEntryResponse();
+        entry.setId(1L);
+        Page<CollectionEntryResponse> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+
+        when(collectionEntryService.searchEntriesByUser(eq(1L), eq(""), any(PageRequest.class)))
+                .thenReturn(page);
+
+        ResponseEntity<Page<CollectionEntryResponse>> response =
+                collectionEntryController.searchByUser(1L, "", PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+    }
+
+    @Test
+    void getBySpecies_shouldReturnEmptyListWhenNoEntries() {
+        when(collectionEntryService.getEntriesBySpecies(99L)).thenReturn(List.of());
+
+        ResponseEntity<List<CollectionEntryResponse>> response = collectionEntryController.getBySpecies(99L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
 }

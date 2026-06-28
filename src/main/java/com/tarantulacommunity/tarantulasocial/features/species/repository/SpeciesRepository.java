@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,6 +21,8 @@ public interface SpeciesRepository extends JpaRepository<SpeciesEntity, Long> {
     boolean existsByGbifNubKey(Long gbifNubKey);
 
     boolean existsByScientificName(String scientificName);
+
+    List<SpeciesEntity> findAllByImageUrlIsNull();
 
     // used by both home page sections with the same search term
     Page<SpeciesEntity> findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
@@ -44,4 +47,13 @@ public interface SpeciesRepository extends JpaRepository<SpeciesEntity, Long> {
             "WHERE LOWER(s.scientificName) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(s.commonName) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<SpeciesEntity> searchAllSpecies(@Param("query") String query, Pageable pageable);
+
+    @Query("SELECT s FROM SpeciesEntity s " +
+            "LEFT JOIN CollectionEntryEntity c ON c.species = s " +
+            "WHERE (LOWER(s.scientificName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(s.commonName) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+            "GROUP BY s " +
+            "HAVING COUNT(c) > 0 " +
+            "ORDER BY COUNT(c) DESC")
+    Page<SpeciesEntity> findOwnedSpeciesByQueryOrderByOwnerCount(@Param("query") String query, Pageable pageable);
 }

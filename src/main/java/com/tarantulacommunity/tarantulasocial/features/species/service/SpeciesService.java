@@ -33,7 +33,7 @@ public class SpeciesService {
     }
 
     public Page<SpeciesSummaryResponse> searchOwnedSpecies(String query, Pageable pageable) {
-        return speciesRepository.findOwnedSpeciesByQuery(query, pageable)
+        return speciesRepository.findOwnedSpeciesByQueryOrderByOwnerCount(query, pageable)
                 .map(speciesMapper::toSummaryResponse);
     }
 
