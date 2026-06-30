@@ -2,7 +2,7 @@ name: CI/CD Pipeline for Spring Boot
 
 on:
   push:
-    branches: [ "main" ] # Triggers on push to the main branch[reference:14]
+    branches: [ "master" ] # Triggers on push to the main branch[reference:14]
   workflow_dispatch: # Allows you to run this workflow manually from the GitHub Actions tab[reference:15]
 
 jobs:
