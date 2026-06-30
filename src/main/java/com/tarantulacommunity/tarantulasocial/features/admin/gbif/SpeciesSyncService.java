@@ -26,7 +26,7 @@ public class SpeciesSyncService {
     private final SpeciesRepository speciesRepository;
 
     private static final Set<String> EXCLUDED_COMMON_NAMES = Set.of(
-            "tarantula spiders", "tarantulas", "tarantula"
+            "tarantula spiders", "tarantulas", "tarantula", "brushed trapdoor spiders", "fossorial tarantula"
     );
 
     /**

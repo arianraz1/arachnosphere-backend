@@ -10,16 +10,23 @@ import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -46,8 +53,21 @@ class AuthControllerIntegrationTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // ---------- NEW CSRF ENDPOINT TEST ----------
     @Test
-    void shouldLoginAndReceiveCookies() throws Exception {
+    void shouldGetCsrfTokenAndSetCookie() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andReturn();
+
+        String setCookieHeader = result.getResponse().getHeader("Set-Cookie");
+        assert setCookieHeader != null && setCookieHeader.contains("XSRF-TOKEN");
+    }
+
+    // ---------- LOGIN ----------
+    @Test
+    void shouldLoginAndReceiveCookiesAndCsrfToken() throws Exception {
         createUser("login@test.com", "loginuser", "pass123");
 
         LoginRequest request = new LoginRequest("login@test.com", "pass123");
@@ -58,11 +78,15 @@ class AuthControllerIntegrationTest {
 
         result.andExpect(status().isOk())
                 .andExpect(cookie().exists("access_token"))
-                .andExpect(cookie().exists("refresh_token"));
+                .andExpect(cookie().exists("refresh_token"))
+                .andExpect(jsonPath("$.user.id").exists())
+                .andExpect(jsonPath("$.user.email").value("login@test.com"))
+                .andExpect(jsonPath("$.csrfToken").exists());
     }
 
+    // ---------- REFRESH (now returns 200 + csrfToken) ----------
     @Test
-    void shouldRefreshTokenAndGetNewCookies() throws Exception {
+    void shouldRefreshTokenAndGetNewCookiesAndCsrfToken() throws Exception {
         UserEntity user = createUser("refresh@test.com", "refresh", "pass");
         String rawRefresh = refreshTokenService.issue(user);
 
@@ -70,11 +94,13 @@ class AuthControllerIntegrationTest {
                 .cookie(buildRefreshCookie(rawRefresh))
                 .with(csrf()));
 
-        result.andExpect(status().isNoContent())
+        result.andExpect(status().isOk())
                 .andExpect(cookie().exists("access_token"))
-                .andExpect(cookie().exists("refresh_token"));
+                .andExpect(cookie().exists("refresh_token"))
+                .andExpect(jsonPath("$.csrfToken").exists());
     }
 
+    // ---------- LOGOUT ----------
     @Test
     void shouldLogoutAndClearCookies() throws Exception {
         UserEntity user = createUser("logout@test.com", "logout", "pass");
@@ -89,6 +115,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(cookie().value("refresh_token", ""));
     }
 
+    // ---------- HELPERS ----------
     private UserEntity createUser(String email, String username, String rawPassword) {
         UserEntity user = new UserEntity();
         user.setEmail(email);

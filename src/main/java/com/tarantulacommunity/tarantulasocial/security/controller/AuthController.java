@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -44,9 +46,13 @@ public class AuthController {
         AuthService.AuthResult result = authService.register(request);
         setCookies(response, result.tokens());
 
-        rotateCsrfToken(response);
+        String newCsrf = rotateCsrfToken(response);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(result.responseBody());
+        Map<String, Object> responseBody = new LinkedHashMap<>();
+        responseBody.put("user", result.responseBody());
+        responseBody.put("csrfToken", newCsrf);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
     }
 
     @PostMapping("/login")
@@ -54,13 +60,17 @@ public class AuthController {
         AuthService.AuthResult result = authService.login(request);
         setCookies(response, result.tokens());
 
-        rotateCsrfToken(response);
+        String newCsrf = rotateCsrfToken(response);
 
-        return ResponseEntity.ok(result.responseBody());
+        Map<String, Object> responseBody = new LinkedHashMap<>();
+        responseBody.put("user", result.responseBody());
+        responseBody.put("csrfToken", newCsrf);
+
+        return ResponseEntity.ok(responseBody);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
         String rawRefreshToken = null;
         if (request.getCookies() != null) {
             rawRefreshToken = Arrays.stream(request.getCookies())
@@ -76,11 +86,14 @@ public class AuthController {
 
         AuthService.TokenPair tokens = authService.refresh(rawRefreshToken);
         setCookies(response, tokens);
-        return ResponseEntity.noContent().build();
+
+        String newCsrf = rotateCsrfToken(response);
+
+        return ResponseEntity.ok(Map.of("csrfToken", newCsrf));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) {
+    public ResponseEntity<?> logout(@AuthenticationPrincipal CustomUserDetails userDetails, HttpServletResponse response) {
         if (userDetails != null) {
             authService.logout(userDetails.getId());
         }
@@ -118,7 +131,7 @@ public class AuthController {
      * Helper method to generate and write a completely fresh, authenticated CSRF session token.
      * This bypasses the custom repository freeze guard via explicit response line insertion.
      */
-    private void rotateCsrfToken(HttpServletResponse response) {
+    private String rotateCsrfToken(HttpServletResponse response) {
         String freshTokenValue = UUID.randomUUID().toString();
 
         ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from("XSRF-TOKEN", freshTokenValue)
@@ -132,5 +145,6 @@ public class AuthController {
         }
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookieBuilder.build().toString());
+        return freshTokenValue;
     }
 }
