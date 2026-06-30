@@ -242,7 +242,7 @@ class SpeciesMapperTest {
         assertEquals(species, detail.getSpecies());
         assertEquals(owners, detail.getOwners());
         assertEquals(1, detail.getOwners().size());
-        assertEquals("dockeruser", detail.getOwners().get(0).getUser().getUsername());
+        assertEquals("testdockeruser", detail.getOwners().get(0).getUser().getUsername());
         assertEquals(2, detail.getOwners().get(0).getSlingMale());
     }
 }

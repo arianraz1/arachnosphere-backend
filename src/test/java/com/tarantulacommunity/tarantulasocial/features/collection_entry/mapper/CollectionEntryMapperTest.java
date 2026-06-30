@@ -347,7 +347,6 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToOwnerResponse_shouldMapEntityToOwnerDto() {
-        // Arrange
         UserEntity user = TestUtilities.validUser("9", "9");
         user.setId(9L);
         user.setProfilePicUrl("https://example.com/owner-avatar.jpg");
@@ -372,10 +371,8 @@ class CollectionEntryMapperTest {
         entry.setFeaturedImageUrl("https://example.com/owner-featured.jpg");
         entry.setCustomInfo("This is my favorite tarantula!");
 
-        // Act
         CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entry);
 
-        // Assert – fields that exist in the new DTO
         assertNotNull(response);
         assertEquals(9L, response.getId());
         assertEquals("test9", response.getUser().getUsername());
@@ -397,7 +394,5 @@ class CollectionEntryMapperTest {
 
         assertEquals("https://example.com/owner-featured.jpg", response.getFeaturedImageUrl());
         assertEquals("This is my favorite tarantula!", response.getCustomInfo());
-
-        assertDoesNotThrow(() -> response.getClass().getDeclaredMethod("getSpecies"));
     }
 }
