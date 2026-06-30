@@ -10,8 +10,8 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# 2. Download all dependencies (this layer is cached until pom.xml changes)
-RUN ./mvnw dependency:go-offline -B
+# 2. Make mvnw executable and download dependencies
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 # 3. Copy the actual source code and build the JAR
 COPY src src
