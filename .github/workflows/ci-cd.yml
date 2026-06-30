@@ -22,7 +22,7 @@ jobs:
 
       # 3. Build the project with Maven
       - name: Build with Maven
-        run: mvn clean package -DskipTests # -DskipTests skips unit tests for speed[reference:19]
+        run: mvn clean package # -DskipTests skips unit tests for speed[reference:19]
 
       # 4. Log in to Docker Hub
       - name: Log in to Docker Hub
@@ -35,3 +35,5 @@ jobs:
       # 6. Push the Docker image to the registry
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_IMAGE_NAME }}:latest[reference:22]
+
+      # NEXT STEP - will add CD later
