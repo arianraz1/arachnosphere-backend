@@ -53,8 +53,11 @@ public class CollectionEntryController {
     public ResponseEntity<CollectionEntryResponse> create(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCollectionEntryRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(collectionEntryService.createEntry(userDetails.getId(), request));
+
+        CollectionEntryService.EntryResult result = collectionEntryService.createEntry(userDetails.getId(), request);
+
+        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.entry());
     }
 
     @PutMapping("/collection/{entryId}")

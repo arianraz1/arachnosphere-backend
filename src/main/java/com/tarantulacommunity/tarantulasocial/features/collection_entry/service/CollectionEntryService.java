@@ -60,7 +60,7 @@ public class CollectionEntryService {
     }
 
     @Transactional
-    public CollectionEntryResponse createEntry(Long userId, CreateCollectionEntryRequest request) {
+    public EntryResult createEntry(Long userId, CreateCollectionEntryRequest request) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
@@ -71,15 +71,16 @@ public class CollectionEntryService {
                 .findByUserAndSpecies(user, species);
 
         if (existing.isPresent()) {
-            return applyUpdate(existing.get(),
+            CollectionEntryResponse updatedResponse = applyUpdate(existing.get(),
                     collectionEntryMapper.toUpdateRequest(existing.get(), request));
+            return new EntryResult(updatedResponse, false);
         }
 
         CollectionEntryEntity entry = collectionEntryMapper.toEntity(request);
         entry.setUser(user);
         entry.setSpecies(species);
-
-        return collectionEntryMapper.toResponse(collectionEntryRepository.save(entry));
+        CollectionEntryEntity saved = collectionEntryRepository.save(entry);
+        return new EntryResult(collectionEntryMapper.toResponse(saved), true);
     }
 
     @Transactional
@@ -114,4 +115,6 @@ public class CollectionEntryService {
         collectionEntryMapper.updateEntityFromRequest(request, entry);
         return collectionEntryMapper.toResponse(collectionEntryRepository.save(entry));
     }
+
+    public record EntryResult(CollectionEntryResponse entry, boolean created) {}
 }

@@ -8,7 +8,6 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.resp
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.repository.CollectionEntryRepository;
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.repository.SpeciesRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -150,8 +148,9 @@ class CollectionEntryServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    // ---------- CREATE (INSERT) ----------
     @Test
-    void createEntry_savesAndReturnsResponse_whenNoDuplicate() {
+    void createEntry_savesAndReturnsEntryResult_whenNoDuplicate() {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
 
@@ -162,14 +161,16 @@ class CollectionEntryServiceTest {
         when(collectionEntryRepository.save(entry)).thenReturn(entry);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        CollectionEntryResponse result = collectionEntryService.createEntry(1L, request);
+        CollectionEntryService.EntryResult result = collectionEntryService.createEntry(1L, request);
 
-        assertEquals(entryResponse, result);
+        assertEquals(entryResponse, result.entry());
+        assertTrue(result.created(), "Entry should be marked as created (insert)");
         verify(collectionEntryRepository).save(entry);
     }
 
+    // ---------- CREATE (UPDATE) ----------
     @Test
-    void createEntry_updatesExistingEntry_whenDuplicateFound() {
+    void createEntry_updatesExistingAndReturnsEntryResult_whenDuplicateFound() {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
         request.setAdultMale(2);
@@ -184,10 +185,11 @@ class CollectionEntryServiceTest {
         when(collectionEntryRepository.save(entry)).thenReturn(entry);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        CollectionEntryResponse result = collectionEntryService.createEntry(1L, request);
+        CollectionEntryService.EntryResult result = collectionEntryService.createEntry(1L, request);
 
-        assertEquals(entryResponse, result);
-        verify(collectionEntryRepository, never()).save(argThat(e -> e.getId() == null));
+        assertEquals(entryResponse, result.entry());
+        assertFalse(result.created(), "Entry should be marked as not created (update)");
+        verify(collectionEntryRepository).save(entry);
     }
 
     @Test

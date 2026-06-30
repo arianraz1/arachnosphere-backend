@@ -116,19 +116,43 @@ class CollectionEntryControllerTest {
                 () -> collectionEntryController.getBySpecies(99L));
     }
 
+    // ---------- CREATE (INSERT) ----------
     @Test
-    void create_shouldReturnCreatedEntry() {
+    void create_shouldReturnCreatedEntry_whenNewEntry() {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         CollectionEntryResponse expectedResponse = new CollectionEntryResponse();
         expectedResponse.setId(1L);
 
+        CollectionEntryService.EntryResult result =
+                new CollectionEntryService.EntryResult(expectedResponse, true);
+
         when(collectionEntryService.createEntry(eq(1L), any(CreateCollectionEntryRequest.class)))
-                .thenReturn(expectedResponse);
+                .thenReturn(result);
 
         ResponseEntity<CollectionEntryResponse> response =
                 collectionEntryController.create(userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(expectedResponse);
+    }
+
+    // ---------- CREATE (UPDATE) ----------
+    @Test
+    void create_shouldReturnOkEntry_whenUpdatingExistingEntry() {
+        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
+        CollectionEntryResponse expectedResponse = new CollectionEntryResponse();
+        expectedResponse.setId(1L);
+
+        CollectionEntryService.EntryResult result =
+                new CollectionEntryService.EntryResult(expectedResponse, false);
+
+        when(collectionEntryService.createEntry(eq(1L), any(CreateCollectionEntryRequest.class)))
+                .thenReturn(result);
+
+        ResponseEntity<CollectionEntryResponse> response =
+                collectionEntryController.create(userDetailsOf(1L), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
     }
 

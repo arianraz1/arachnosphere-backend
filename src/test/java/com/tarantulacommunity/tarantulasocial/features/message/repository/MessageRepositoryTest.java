@@ -137,7 +137,7 @@ public class MessageRepositoryTest {
                 .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(sender, PageRequest.of(0, 10));
 
         assertEquals(2, result.getTotalElements());
-        assertEquals(second, result.getContent().get(0));
-        assertEquals(first, result.getContent().get(1));
+        assertEquals(second.getId(), result.getContent().get(0).getId());
+        assertEquals(first.getId(), result.getContent().get(1).getId());
     }
 }
