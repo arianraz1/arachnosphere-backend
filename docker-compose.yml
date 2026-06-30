@@ -3,7 +3,7 @@ services:
     image: postgres:17
     ports:
       - "5432:5432"
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: tarantula_db
       POSTGRES_USER: postgres
@@ -15,12 +15,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    container_name: tarantula-db
 
   app:
     build: .
     ports:
       - "8080:8080"
-    restart: always
+    restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tarantula_db
@@ -33,6 +34,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    container_name: tarantula-backend
 
 volumes:
   pgdata:
