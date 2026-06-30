@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
@@ -267,5 +268,28 @@ class CollectionEntryServiceTest {
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 collectionEntryService.deleteEntry(1L, 99L));
+    }
+
+    @Test
+    void getOwnersBySpecies_returnsOwnerDtos() {
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
+        when(collectionEntryRepository.findBySpecies(species)).thenReturn(List.of(entry));
+
+        CollectionEntryOwnerResponse ownerResponse = new CollectionEntryOwnerResponse();
+        ownerResponse.setId(1L);
+        when(collectionEntryMapper.toOwnerResponse(entry)).thenReturn(ownerResponse);
+
+        List<CollectionEntryOwnerResponse> result = collectionEntryService.getOwnersBySpecies(1L);
+
+        assertEquals(1, result.size());
+        assertEquals(ownerResponse, result.getFirst());
+    }
+
+    @Test
+    void getOwnersBySpecies_throwsSpeciesNotFoundException_whenSpeciesNotFound() {
+        when(speciesRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class,
+                () -> collectionEntryService.getOwnersBySpecies(99L));
     }
 }

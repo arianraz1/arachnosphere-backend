@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.collection_entry.service
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +116,16 @@ public class CollectionEntryService {
                                                 UpdateCollectionEntryRequest request) {
         collectionEntryMapper.updateEntityFromRequest(request, entry);
         return collectionEntryMapper.toResponse(collectionEntryRepository.save(entry));
+    }
+
+    public List<CollectionEntryOwnerResponse> getOwnersBySpecies(Long speciesId) {
+        SpeciesEntity species = speciesRepository.findById(speciesId)
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(speciesId));
+
+        return collectionEntryRepository.findBySpecies(species)
+                .stream()
+                .map(collectionEntryMapper::toOwnerResponse)
+                .collect(Collectors.toList());
     }
 
     public record EntryResult(CollectionEntryResponse entry, boolean created) {}

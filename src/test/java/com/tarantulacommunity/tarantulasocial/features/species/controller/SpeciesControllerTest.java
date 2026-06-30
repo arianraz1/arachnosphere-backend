@@ -1,6 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.features.species.controller;
 
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
@@ -66,12 +67,15 @@ class SpeciesControllerTest {
     @Test
     void getDetail_shouldReturnSpeciesDetailResponse() {
         SpeciesResponse speciesResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
-        CollectionEntryResponse entryResponse = new CollectionEntryResponse();
-        List<CollectionEntryResponse> owners = List.of(entryResponse);
+        // Use the new DTO for owners
+        CollectionEntryOwnerResponse ownerResponse = new CollectionEntryOwnerResponse();
+        ownerResponse.setId(1L);
+        List<CollectionEntryOwnerResponse> owners = List.of(ownerResponse);
         SpeciesDetailResponse expectedDetail = new SpeciesDetailResponse(speciesResponse, owners);
 
         when(speciesService.getSpeciesById(1L)).thenReturn(speciesResponse);
-        when(collectionEntryService.getEntriesBySpecies(1L)).thenReturn(owners);
+        // Mock the new service method
+        when(collectionEntryService.getOwnersBySpecies(1L)).thenReturn(owners);
         when(speciesMapper.toDetailResponse(speciesResponse, owners)).thenReturn(expectedDetail);
 
         ResponseEntity<SpeciesDetailResponse> response = speciesController.getDetail(1L);
@@ -161,11 +165,11 @@ class SpeciesControllerTest {
     @Test
     void getDetail_shouldReturnDetailWithEmptyOwners() {
         SpeciesResponse speciesResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
-        List<CollectionEntryResponse> emptyOwners = List.of();
+        List<CollectionEntryOwnerResponse> emptyOwners = List.of();
         SpeciesDetailResponse expectedDetail = new SpeciesDetailResponse(speciesResponse, emptyOwners);
 
         when(speciesService.getSpeciesById(1L)).thenReturn(speciesResponse);
-        when(collectionEntryService.getEntriesBySpecies(1L)).thenReturn(emptyOwners);
+        when(collectionEntryService.getOwnersBySpecies(1L)).thenReturn(emptyOwners);
         when(speciesMapper.toDetailResponse(speciesResponse, emptyOwners)).thenReturn(expectedDetail);
 
         ResponseEntity<SpeciesDetailResponse> response = speciesController.getDetail(1L);

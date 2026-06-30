@@ -1,5 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper;
 
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
@@ -14,6 +15,8 @@ import org.mapstruct.MappingTarget;
 public interface CollectionEntryMapper {
 
     CollectionEntryResponse toResponse(CollectionEntryEntity entry);
+
+    CollectionEntryOwnerResponse toOwnerResponse(CollectionEntryEntity entity);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)

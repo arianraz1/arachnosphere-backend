@@ -1,13 +1,20 @@
 package com.tarantulacommunity.tarantulasocial.features.species.mapper;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.mapper.SpeciesMapper;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -169,6 +176,74 @@ class SpeciesMapperTest {
         assertNotEquals(response1.getId(), response2.getId());
         assertNotEquals(response1.getGbifNubKey(), response2.getGbifNubKey());
         assertNotEquals(response1.getScientificName(), response2.getScientificName());
+    }
+
+    @Test
+    void testToDetailResponse_shouldCombineSpeciesAndOwners() {
+        // 1. Create SpeciesEntity using TestUtilities
+        SpeciesEntity speciesEntity = TestUtilities.validSpecies(123456L, "Brachypelma smithi");
+        speciesEntity.setId(1L);
+        speciesEntity.setCommonName("Mexican Red Knee");
+        speciesEntity.setImageUrl("https://example.com/smithi.jpg");
+        speciesEntity.setDescription("A beautiful tarantula species from Mexico.");
+
+        SpeciesResponse species = speciesMapper.toResponse(speciesEntity);
+
+        UserEntity user = TestUtilities.validUser("1", "dockeruser");
+        user.setId(1L);
+        user.setProfilePicUrl("https://example.com/avatar.jpg");
+
+        CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, speciesEntity);
+        entry.setId(10L);
+        entry.setSlingMale(2);
+        entry.setSlingFemale(3);
+        entry.setSlingUnsexed(1);
+        entry.setJuvenileMale(0);
+        entry.setJuvenileFemale(1);
+        entry.setJuvenileUnsexed(0);
+        entry.setSubadultMale(0);
+        entry.setSubadultFemale(0);
+        entry.setSubadultUnsexed(0);
+        entry.setAdultMale(1);
+        entry.setAdultFemale(1);
+        entry.setAdultUnsexed(0);
+        entry.setFeaturedImageUrl("https://example.com/owner-featured.jpg");
+        entry.setCustomInfo("This is my favorite tarantula!");
+
+        CollectionEntryOwnerResponse owner = new CollectionEntryOwnerResponse();
+        owner.setId(entry.getId());
+
+        UserSummaryResponse userSummary = new UserSummaryResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getProfilePicUrl()
+        );
+        owner.setUser(userSummary);
+        owner.setSlingMale(entry.getSlingMale());
+        owner.setSlingFemale(entry.getSlingFemale());
+        owner.setSlingUnsexed(entry.getSlingUnsexed());
+        owner.setJuvenileMale(entry.getJuvenileMale());
+        owner.setJuvenileFemale(entry.getJuvenileFemale());
+        owner.setJuvenileUnsexed(entry.getJuvenileUnsexed());
+        owner.setSubadultMale(entry.getSubadultMale());
+        owner.setSubadultFemale(entry.getSubadultFemale());
+        owner.setSubadultUnsexed(entry.getSubadultUnsexed());
+        owner.setAdultMale(entry.getAdultMale());
+        owner.setAdultFemale(entry.getAdultFemale());
+        owner.setAdultUnsexed(entry.getAdultUnsexed());
+        owner.setFeaturedImageUrl(entry.getFeaturedImageUrl());
+        owner.setCustomInfo(entry.getCustomInfo());
+
+        List<CollectionEntryOwnerResponse> owners = List.of(owner);
+
+        SpeciesDetailResponse detail = speciesMapper.toDetailResponse(species, owners);
+
+        assertNotNull(detail);
+        assertEquals(species, detail.getSpecies());
+        assertEquals(owners, detail.getOwners());
+        assertEquals(1, detail.getOwners().size());
+        assertEquals("dockeruser", detail.getOwners().get(0).getUser().getUsername());
+        assertEquals(2, detail.getOwners().get(0).getSlingMale());
     }
 }
 

@@ -3,9 +3,9 @@ package com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper;
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
@@ -82,7 +82,6 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToResponseWithAllZeroCounts() {
-        // Arrange
         UserEntity user = TestUtilities.validUser("2", "2");
         user.setId(2L);
 
@@ -91,12 +90,9 @@ class CollectionEntryMapperTest {
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
         entry.setId(2L);
-        // All counts default to 0
 
-        // Act
         CollectionEntryResponse response = collectionEntryMapper.toResponse(entry);
 
-        // Assert
         assertEquals(0, response.getSlingMale());
         assertEquals(0, response.getSlingFemale());
         assertEquals(0, response.getSlingUnsexed());
@@ -133,7 +129,6 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToEntity() {
-        // Arrange
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
         request.setSlingMale(1);
@@ -349,5 +344,60 @@ class CollectionEntryMapperTest {
         assertEquals(2, response.getAdultFemale());
         assertEquals(1, response.getAdultUnsexed());
     }
-}
 
+    @Test
+    void testToOwnerResponse_shouldMapEntityToOwnerDto() {
+        // Arrange
+        UserEntity user = TestUtilities.validUser("9", "9");
+        user.setId(9L);
+        user.setProfilePicUrl("https://example.com/owner-avatar.jpg");
+
+        SpeciesEntity species = TestUtilities.validSpecies(901234L, "Lasiodora parahybana");
+        species.setId(9L);
+
+        CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
+        entry.setId(9L);
+        entry.setSlingMale(10);
+        entry.setSlingFemale(5);
+        entry.setSlingUnsexed(2);
+        entry.setJuvenileMale(1);
+        entry.setJuvenileFemale(3);
+        entry.setJuvenileUnsexed(0);
+        entry.setSubadultMale(0);
+        entry.setSubadultFemale(0);
+        entry.setSubadultUnsexed(0);
+        entry.setAdultMale(0);
+        entry.setAdultFemale(1);
+        entry.setAdultUnsexed(0);
+        entry.setFeaturedImageUrl("https://example.com/owner-featured.jpg");
+        entry.setCustomInfo("This is my favorite tarantula!");
+
+        // Act
+        CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entry);
+
+        // Assert – fields that exist in the new DTO
+        assertNotNull(response);
+        assertEquals(9L, response.getId());
+        assertEquals("test9", response.getUser().getUsername());
+        assertEquals(9L, response.getUser().getId());
+        assertEquals("https://example.com/owner-avatar.jpg", response.getUser().getProfilePicUrl());
+
+        assertEquals(10, response.getSlingMale());
+        assertEquals(5, response.getSlingFemale());
+        assertEquals(2, response.getSlingUnsexed());
+        assertEquals(1, response.getJuvenileMale());
+        assertEquals(3, response.getJuvenileFemale());
+        assertEquals(0, response.getJuvenileUnsexed());
+        assertEquals(0, response.getSubadultMale());
+        assertEquals(0, response.getSubadultFemale());
+        assertEquals(0, response.getSubadultUnsexed());
+        assertEquals(0, response.getAdultMale());
+        assertEquals(1, response.getAdultFemale());
+        assertEquals(0, response.getAdultUnsexed());
+
+        assertEquals("https://example.com/owner-featured.jpg", response.getFeaturedImageUrl());
+        assertEquals("This is my favorite tarantula!", response.getCustomInfo());
+
+        assertDoesNotThrow(() -> response.getClass().getDeclaredMethod("getSpecies"));
+    }
+}

@@ -1,5 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.species.mapper;
 
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
@@ -17,7 +18,5 @@ public interface SpeciesMapper {
 
     SpeciesSummaryResponse toSummaryResponse(SpeciesEntity species);
 
-    default SpeciesDetailResponse toDetailResponse(SpeciesResponse species, List<CollectionEntryResponse> owners) {
-        return new SpeciesDetailResponse(species, owners);
-    }
+    SpeciesDetailResponse toDetailResponse(SpeciesResponse species, List<CollectionEntryOwnerResponse> owners);
 }

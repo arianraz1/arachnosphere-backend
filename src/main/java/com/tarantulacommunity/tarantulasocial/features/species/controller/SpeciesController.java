@@ -1,6 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.features.species.controller;
 
 
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
@@ -35,7 +36,7 @@ public class SpeciesController {
     @GetMapping("/{id}/detail")
     public ResponseEntity<SpeciesDetailResponse> getDetail(@PathVariable Long id) {
         SpeciesResponse species = speciesService.getSpeciesById(id);
-        List<CollectionEntryResponse> owners = collectionEntryService.getEntriesBySpecies(id);
+        List<CollectionEntryOwnerResponse> owners = collectionEntryService.getOwnersBySpecies(id);
         return ResponseEntity.ok(speciesMapper.toDetailResponse(species, owners));
     }
 
