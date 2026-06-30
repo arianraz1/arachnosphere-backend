@@ -1,0 +1,37 @@
+name: CI/CD Pipeline for Spring Boot
+
+on:
+  push:
+    branches: [ "main" ] # Triggers on push to the main branch[reference:14]
+  workflow_dispatch: # Allows you to run this workflow manually from the GitHub Actions tab[reference:15]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # Uses a fresh Ubuntu runner[reference:16]
+    steps:
+      # 1. Checkout the code
+      - name: Checkout source code
+        uses: actions/checkout@v4[reference:17]
+
+      # 2. Set up Java (JDK 25)
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4[reference:18]
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      # 3. Build the project with Maven
+      - name: Build with Maven
+        run: mvn clean package -DskipTests # -DskipTests skips unit tests for speed[reference:19]
+
+      # 4. Log in to Docker Hub
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin[reference:20]
+
+      # 5. Build the Docker image
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_IMAGE_NAME }}:latest .[reference:21]
+
+      # 6. Push the Docker image to the registry
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_IMAGE_NAME }}:latest[reference:22]
