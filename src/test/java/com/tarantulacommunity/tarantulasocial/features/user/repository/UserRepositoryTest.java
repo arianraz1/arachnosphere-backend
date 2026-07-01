@@ -2,7 +2,6 @@ package com.tarantulacommunity.tarantulasocial.features.user.repository;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;

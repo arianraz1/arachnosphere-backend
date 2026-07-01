@@ -7,7 +7,6 @@ import com.tarantulacommunity.tarantulasocial.features.species.dto.response.Spec
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
-import com.tarantulacommunity.tarantulasocial.features.species.mapper.SpeciesMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,6 @@ package com.tarantulacommunity.tarantulasocial.features.species.repository;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
-import com.tarantulacommunity.tarantulasocial.features.species.repository.SpeciesRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

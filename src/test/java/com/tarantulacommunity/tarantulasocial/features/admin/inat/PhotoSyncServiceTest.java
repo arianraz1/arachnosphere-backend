@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.features.admin.inat;
 import com.tarantulacommunity.tarantulasocial.features.admin.inat.data.InatTaxon;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.repository.SpeciesRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

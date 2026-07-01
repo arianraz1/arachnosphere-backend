@@ -3,16 +3,16 @@ package com.tarantulacommunity.tarantulasocial.features.user.service;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
-import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
-import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSignupResponse;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor

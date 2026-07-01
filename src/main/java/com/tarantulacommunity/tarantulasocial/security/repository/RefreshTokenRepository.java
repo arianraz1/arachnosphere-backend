@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.repository;
 
-import com.tarantulacommunity.tarantulasocial.security.entity.RefreshTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.security.entity.RefreshTokenEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

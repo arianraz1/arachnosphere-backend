@@ -6,7 +6,6 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.response.Mess
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.mapper.MessageMapper;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.MessageRepository;
-import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;

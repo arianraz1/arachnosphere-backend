@@ -1,13 +1,11 @@
 package com.tarantulacommunity.tarantulasocial.features.species.mapper;
 
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
-import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
+import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 import java.util.List;
 

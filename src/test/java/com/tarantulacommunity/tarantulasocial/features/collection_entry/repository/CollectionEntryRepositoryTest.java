@@ -2,7 +2,6 @@ package com.tarantulacommunity.tarantulasocial.features.collection_entry.reposit
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
-import com.tarantulacommunity.tarantulasocial.features.collection_entry.repository.CollectionEntryRepository;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;

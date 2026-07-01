@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.features.message.mapper;
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
-import com.tarantulacommunity.tarantulasocial.features.message.mapper.MessageMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

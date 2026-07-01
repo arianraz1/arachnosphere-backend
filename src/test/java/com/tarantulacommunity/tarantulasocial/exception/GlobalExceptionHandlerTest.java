@@ -1,20 +1,15 @@
 package com.tarantulacommunity.tarantulasocial.exception;
 
-import org.hibernate.exception.AuthException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
-import java.nio.file.AccessDeniedException;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GlobalExceptionHandlerTest {
 
@@ -198,9 +193,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void testHandleAccessDenied() {
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleAccessDenied();
-        
+
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals("Forbidden", response.getBody().message());
     }

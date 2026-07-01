@@ -7,7 +7,6 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserPro
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

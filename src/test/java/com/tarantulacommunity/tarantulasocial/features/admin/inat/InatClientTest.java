@@ -1,13 +1,11 @@
 package com.tarantulacommunity.tarantulasocial.features.admin.inat;
 
-import com.tarantulacommunity.tarantulasocial.features.admin.inat.data.InatSearchResponse;
 import com.tarantulacommunity.tarantulasocial.features.admin.inat.data.InatTaxon;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class InatClientTest {
 

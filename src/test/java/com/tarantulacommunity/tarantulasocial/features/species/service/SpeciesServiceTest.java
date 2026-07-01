@@ -7,7 +7,6 @@ import com.tarantulacommunity.tarantulasocial.features.species.dto.response.Spec
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.mapper.SpeciesMapper;
 import com.tarantulacommunity.tarantulasocial.features.species.repository.SpeciesRepository;
-import com.tarantulacommunity.tarantulasocial.features.species.service.SpeciesService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
