@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class MessageResponse {
 
     private Long id;
+    private Long threadId;
     private UserSummaryResponse sender;
     private UserSummaryResponse recipient;
     private String content;

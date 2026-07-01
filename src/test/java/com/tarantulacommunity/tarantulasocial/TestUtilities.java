@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial;
 
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 
@@ -29,11 +30,19 @@ public class TestUtilities {
         return entry;
     }
 
-    public static MessageEntity validMessage(UserEntity sender, UserEntity recipient, String content) {
+    public static ThreadEntity validThread(UserEntity createdBy) {
+        ThreadEntity thread = new ThreadEntity();
+        thread.setCreatedBy(createdBy);
+        thread.setSubject("Test subject");
+        return thread;
+    }
+
+    public static MessageEntity validMessage(UserEntity sender, UserEntity recipient, String content, ThreadEntity thread) {
         MessageEntity message = new MessageEntity();
         message.setSender(sender);
         message.setRecipient(recipient);
         message.setContent(content);
+        message.setThread(thread);
         return message;
     }
 }

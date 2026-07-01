@@ -5,6 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -22,12 +23,20 @@ class MessageEntityTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
+    private UserEntity sender;
+    private UserEntity recipient;
+    private ThreadEntity thread;
+
+    @BeforeEach
+    void setUp() {
+        sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        thread = em.persistFlushFind(TestUtilities.validThread(sender));
+    }
+
     @Test
     void validMessagePersistsWithTimestampAndDefaults() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
-
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hey, nice GBB!");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hey, nice GBB!", thread);
         MessageEntity saved = em.persistFlushFind(message);
 
         assertNotNull(saved.getId());
@@ -39,45 +48,35 @@ class MessageEntityTest {
 
     @Test
     void blankContentFailsBeanValidation() {
-        UserEntity sender = TestUtilities.validUser("3", "3");
-        UserEntity recipient = TestUtilities.validUser("4", "4");
-
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "", thread);
 
         Set<ConstraintViolation<MessageEntity>> violations = validator.validate(message);
         assertEquals(1, violations.size());
     }
 
     @Test
-    void nullSenderFailsBeanValidationOrConstraint() {
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("5", "5"));
-
+    void nullSenderFailsConstraint() {
         MessageEntity message = new MessageEntity();
         message.setRecipient(recipient);
         message.setContent("Hello");
-        // sender left null
+        message.setThread(thread);
 
         assertThrows(Exception.class, () -> em.persistAndFlush(message));
     }
 
     @Test
-    void nullRecipientFailsBeanValidationOrConstraint() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("6", "6"));
-
+    void nullRecipientFailsConstraint() {
         MessageEntity message = new MessageEntity();
         message.setSender(sender);
         message.setContent("Hello");
-        // recipient left null
+        message.setThread(thread);
 
         assertThrows(Exception.class, () -> em.persistAndFlush(message));
     }
 
     @Test
     void deletedFlagsCanBeUpdatedIndependently() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("7", "7"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("8", "8"));
-
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test message");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test message", thread);
         MessageEntity saved = em.persistFlushFind(message);
 
         saved.setDeletedBySender(true);
@@ -89,12 +88,41 @@ class MessageEntityTest {
 
     @Test
     void contentTooLongFailsBeanValidation() {
-        UserEntity sender = TestUtilities.validUser("9", "9");
-        UserEntity recipient = TestUtilities.validUser("10", "10");
-
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "a".repeat(2001));
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "a".repeat(2001), thread);
 
         Set<ConstraintViolation<MessageEntity>> violations = validator.validate(message);
         assertEquals(1, violations.size());
+    }
+
+    @Test
+    void nullThreadFailsConstraint() {
+        MessageEntity message = new MessageEntity();
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setContent("Hello");
+
+        assertThrows(Exception.class, () -> em.persistAndFlush(message));
+    }
+
+    @Test
+    void messageCorrectlyAssociatedWithThread() {
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        MessageEntity saved = em.persistFlushFind(message);
+
+        assertNotNull(saved.getThread());
+        assertEquals(thread.getId(), saved.getThread().getId());
+    }
+
+    @Test
+    void bothDeletedFlagsCanBeSetToTrue() {
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test", thread);
+        MessageEntity saved = em.persistFlushFind(message);
+
+        saved.setDeletedBySender(true);
+        saved.setDeletedByRecipient(true);
+        MessageEntity updated = em.persistFlushFind(saved);
+
+        assertTrue(updated.isDeletedBySender());
+        assertTrue(updated.isDeletedByRecipient());
     }
 }

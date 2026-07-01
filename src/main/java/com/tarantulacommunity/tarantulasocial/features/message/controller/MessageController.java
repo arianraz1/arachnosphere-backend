@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class MessageController {
 
     private final MessageService messageService;
 
+    // Send a new message or reply to an existing thread
     @PostMapping
     public ResponseEntity<MessageResponse> send(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -29,33 +33,28 @@ public class MessageController {
                 .body(messageService.sendMessage(userDetails.getId(), request));
     }
 
+    // Inbox: list of threads
     @GetMapping("/inbox")
-    public ResponseEntity<Page<MessageResponse>> inbox(
+    public ResponseEntity<Page<ThreadSummaryResponse>> inbox(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(messageService.getInbox(userDetails.getId(), pageable));
+        return ResponseEntity.ok(messageService.getThreadsForUser(userDetails.getId(), pageable));
     }
 
-    @GetMapping("/sent")
-    public ResponseEntity<Page<MessageResponse>> sent(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(messageService.getSent(userDetails.getId(), pageable));
+    // Open a thread: all messages in it
+    @GetMapping("/inbox/thread/{threadId}")
+    public ResponseEntity<List<MessageResponse>> getThread(
+            @PathVariable Long threadId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(messageService.getThreadMessages(threadId, userDetails.getId()));
     }
 
-    @DeleteMapping("/inbox/{messageId}")
-    public ResponseEntity<Void> deleteFromInbox(
+    // Soft delete a message from your view
+    @DeleteMapping("/{messageId}")
+    public ResponseEntity<Void> deleteMessage(
             @PathVariable Long messageId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        messageService.deleteFromInbox(messageId, userDetails.getId());
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/sent/{messageId}")
-    public ResponseEntity<Void> deleteFromSent(
-            @PathVariable Long messageId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        messageService.deleteFromSent(messageId, userDetails.getId());
+        messageService.deleteMessage(messageId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 }

@@ -2,7 +2,9 @@ package com.tarantulacommunity.tarantulasocial.features.message.repository;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -10,133 +12,153 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 public class MessageRepositoryTest {
 
-    @Autowired
-    private TestEntityManager em;
+    @Autowired private TestEntityManager em;
+    @Autowired private MessageRepository messageRepository;
 
-    @Autowired
-    private MessageRepository messageRepository;
+    private ThreadEntity thread;
+    private UserEntity sender;
+    private UserEntity recipient;
 
-    @Test
-    void findByRecipientAndDeletedByRecipientFalse_returnsMessages() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
-
-        MessageEntity message = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hey!"));
-
-        Page<MessageEntity> result = messageRepository
-                .findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(recipient, PageRequest.of(0, 10));
-
-        assertEquals(1, result.getTotalElements());
-        assertEquals(message, result.getContent().getFirst());
+    @BeforeEach
+    void setUp() {
+        sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        thread = em.persistFlushFind(TestUtilities.validThread(sender));
     }
 
     @Test
-    void findByRecipientAndDeletedByRecipientFalse_doesNotReturnDeletedMessages() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+    void findByThreadIdOrderByCreatedAtAsc_returnsMessagesInOrder() {
+        MessageEntity first = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
+        MessageEntity second = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second", thread));
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hey!");
-        message.setDeletedByRecipient(true);
-        em.persistFlushFind(message);
+        List<MessageEntity> result = messageRepository.findByThreadIdOrderByCreatedAtAsc(thread.getId());
 
-        Page<MessageEntity> result = messageRepository
-                .findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(recipient, PageRequest.of(0, 10));
-
-        assertTrue(result.isEmpty());
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getId()).isEqualTo(first.getId());
+        assertThat(result.get(1).getId()).isEqualTo(second.getId());
     }
 
     @Test
-    void findByRecipientAndDeletedByRecipientFalse_doesNotReturnOtherUsersMessages() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient1 = em.persistFlushFind(TestUtilities.validUser("2", "2"));
-        UserEntity recipient2 = em.persistFlushFind(TestUtilities.validUser("3", "3"));
+    void findByThreadIdOrderByCreatedAtAsc_returnsEmptyWhenNoMessages() {
+        List<MessageEntity> result = messageRepository.findByThreadIdOrderByCreatedAtAsc(thread.getId());
 
-        em.persistFlushFind(TestUtilities.validMessage(sender, recipient2, "Hey!"));
-
-        Page<MessageEntity> result = messageRepository
-                .findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(recipient1, PageRequest.of(0, 10));
-
-        assertTrue(result.isEmpty());
+        assertThat(result).isEmpty();
     }
 
     @Test
-    void findByRecipientAndDeletedByRecipientFalse_returnsInChronologicalOrder() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+    void findByThreadIdOrderByCreatedAtAsc_doesNotReturnMessagesFromOtherThreads() {
+        ThreadEntity otherThread = em.persistFlushFind(TestUtilities.validThread(sender));
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Other", otherThread));
+        MessageEntity mine = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Mine", thread));
 
-        MessageEntity first = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First"));
-        MessageEntity second = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second"));
+        List<MessageEntity> result = messageRepository.findByThreadIdOrderByCreatedAtAsc(thread.getId());
 
-        Page<MessageEntity> result = messageRepository
-                .findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(recipient, PageRequest.of(0, 10));
-
-        assertEquals(2, result.getTotalElements());
-        assertEquals(second, result.getContent().get(0));
-        assertEquals(first, result.getContent().get(1));
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getId()).isEqualTo(mine.getId());
     }
 
     @Test
-    void findBySenderAndDeletedBySenderFalse_returnsMessages() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+    void findThreadsByUserId_returnsThreadsForSender() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
 
-        MessageEntity message = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hey!"));
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(sender.getId(), PageRequest.of(0, 10));
 
-        Page<MessageEntity> result = messageRepository
-                .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(sender, PageRequest.of(0, 10));
-
-        assertEquals(1, result.getTotalElements());
-        assertEquals(message, result.getContent().getFirst());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getId()).isEqualTo(thread.getId());
     }
 
     @Test
-    void findBySenderAndDeletedBySenderFalse_doesNotReturnDeletedMessages() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+    void findThreadsByUserId_returnsThreadsForRecipient() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hey!");
-        message.setDeletedBySender(true);
-        em.persistFlushFind(message);
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(recipient.getId(), PageRequest.of(0, 10));
 
-        Page<MessageEntity> result = messageRepository
-                .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(sender, PageRequest.of(0, 10));
-
-        assertTrue(result.isEmpty());
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     @Test
-    void findBySenderAndDeletedBySenderFalse_doesNotReturnOtherUsersSentMessages() {
-        UserEntity sender1 = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity sender2 = em.persistFlushFind(TestUtilities.validUser("2", "2"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("3", "3"));
+    void findThreadsByUserId_doesNotReturnDuplicateThreads() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second", thread));
 
-        em.persistFlushFind(TestUtilities.validMessage(sender2, recipient, "Hey!"));
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(sender.getId(), PageRequest.of(0, 10));
 
-        Page<MessageEntity> result = messageRepository
-                .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(sender1, PageRequest.of(0, 10));
-
-        assertTrue(result.isEmpty());
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     @Test
-    void findBySenderAndDeletedBySenderFalse_returnsInChronologicalOrder() {
-        UserEntity sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        UserEntity recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+    void findThreadsByUserId_returnsEmptyWhenNoThreads() {
+        UserEntity noThreadUser = em.persistFlushFind(TestUtilities.validUser("3", "3"));
 
-        MessageEntity first = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First"));
-        MessageEntity second = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second"));
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(noThreadUser.getId(), PageRequest.of(0, 10));
 
-        Page<MessageEntity> result = messageRepository
-                .findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(sender, PageRequest.of(0, 10));
+        assertThat(result.isEmpty()).isTrue();
+    }
 
-        assertEquals(2, result.getTotalElements());
-        assertEquals(second.getId(), result.getContent().get(0).getId());
-        assertEquals(first.getId(), result.getContent().get(1).getId());
+    @Test
+    void existsByThreadIdAndUserId_returnsTrueForSender() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), sender.getId());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void existsByThreadIdAndUserId_returnsTrueForRecipient() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), recipient.getId());
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void existsByThreadIdAndUserId_returnsFalseForUnrelatedUser() {
+        UserEntity other = em.persistFlushFind(TestUtilities.validUser("3", "3"));
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), other.getId());
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void findLatestMessagePerThread_returnsLatestMessageForEachThread() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
+        MessageEntity latest = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Latest", thread));
+
+        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(List.of(thread.getId()));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getId()).isEqualTo(latest.getId());
+    }
+
+    @Test
+    void findLatestMessagePerThread_returnsOnePerThread() {
+        ThreadEntity thread2 = em.persistFlushFind(TestUtilities.validThread(sender));
+        MessageEntity latest1 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "T1 latest", thread));
+        MessageEntity latest2 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "T2 latest", thread2));
+
+        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(
+                List.of(thread.getId(), thread2.getId()));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.stream().map(MessageEntity::getId))
+                .containsExactlyInAnyOrder(latest1.getId(), latest2.getId());
+    }
+
+    @Test
+    void findLatestMessagePerThread_returnsEmptyWhenNoThreadIds() {
+        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(List.of());
+
+        assertThat(result).isEmpty();
     }
 }

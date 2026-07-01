@@ -69,6 +69,11 @@ public class GlobalExceptionHandler {
         }
     }
 
+    public static class ThreadNotFoundException extends RuntimeException {
+        public ThreadNotFoundException(Long id) {super("Thread not found: " + id);
+        }
+    }
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(AuthException.class)

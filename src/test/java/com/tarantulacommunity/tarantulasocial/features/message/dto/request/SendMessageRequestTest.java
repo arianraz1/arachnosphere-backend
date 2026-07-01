@@ -83,5 +83,38 @@ class SendMessageRequestTest {
         Set<ConstraintViolation<SendMessageRequest>> violations = validator.validate(request);
         assertEquals(2, violations.size());
     }
+
+    @Test
+    void subjectOver255CharsFailsValidation() {
+        SendMessageRequest request = new SendMessageRequest();
+        request.setRecipientId(1L);
+        request.setContent("Hello");
+        request.setSubject("a".repeat(256));
+
+        Set<ConstraintViolation<SendMessageRequest>> violations = validator.validate(request);
+        assertEquals(1, violations.size());
+    }
+
+    @Test
+    void nullSubjectPassesValidation() {
+        SendMessageRequest request = new SendMessageRequest();
+        request.setRecipientId(1L);
+        request.setContent("Hello");
+        request.setSubject(null);
+
+        Set<ConstraintViolation<SendMessageRequest>> violations = validator.validate(request);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void nullThreadIdPassesValidation() {
+        SendMessageRequest request = new SendMessageRequest();
+        request.setRecipientId(1L);
+        request.setContent("Hello");
+        request.setThreadId(null);
+
+        Set<ConstraintViolation<SendMessageRequest>> violations = validator.validate(request);
+        assertTrue(violations.isEmpty());
+    }
 }
 

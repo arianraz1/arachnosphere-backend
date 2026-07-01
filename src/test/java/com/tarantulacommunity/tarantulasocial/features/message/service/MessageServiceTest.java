@@ -3,42 +3,42 @@ package com.tarantulacommunity.tarantulasocial.features.message.service;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.mapper.MessageMapper;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.MessageRepository;
-import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MessageServiceTest {
 
-    @Mock
-    private MessageRepository messageRepository;
-
-    @Mock
-    private MessageMapper messageMapper;
-
-    @Mock
-    private UserRepository userRepository;
+    @Mock private MessageRepository messageRepository;
+    @Mock private MessageMapper messageMapper;
+    @Mock private UserRepository userRepository;
+    @Mock private ThreadRepository threadRepository;
 
     @InjectMocks
     private MessageService messageService;
@@ -46,8 +46,7 @@ public class MessageServiceTest {
     private UserEntity sender;
     private UserEntity recipient;
     private MessageEntity message;
-    private UserSummaryResponse senderSummary;
-    private UserSummaryResponse recipientSummary;
+    private ThreadEntity thread;
 
     @BeforeEach
     void setUp() {
@@ -57,171 +56,267 @@ public class MessageServiceTest {
         recipient = new UserEntity();
         recipient.setId(2L);
 
+        thread = new ThreadEntity();
+        thread.setId(1L);
+        thread.setCreatedBy(sender);
+        thread.setSubject("Test subject");
+        thread.setActive(true);
+
         message = new MessageEntity();
         message.setId(1L);
         message.setSender(sender);
         message.setRecipient(recipient);
         message.setContent("hello");
-
-        senderSummary = new UserSummaryResponse();
-        senderSummary.setId(1L);
-
-        recipientSummary = new UserSummaryResponse();
-        recipientSummary.setId(2L);
+        message.setThread(thread);
     }
 
-    @Test
-    void sendMessage_shouldReturnMessageResponse_whenValid() {
-        MessageResponse expectedResponse = new MessageResponse();
+    // --- sendMessage ---
 
-        expectedResponse.setId(1L);
-        expectedResponse.setSender(senderSummary);
-        expectedResponse.setRecipient(recipientSummary);
-        expectedResponse.setContent("hello");
+    @Test
+    void sendMessage_createsNewThread_whenNoThreadIdProvided() {
+        SendMessageRequest request = new SendMessageRequest(2L, "hello", "Subject", null);
+        MessageResponse expectedResponse = new MessageResponse();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
-
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(threadRepository.save(any())).thenReturn(thread);
         when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
-        when(messageRepository.save(any(MessageEntity.class))).thenReturn(message);
 
-        MessageResponse actualResponse = messageService.sendMessage(1L, new SendMessageRequest(2L, "hello"));
+        MessageResponse result = messageService.sendMessage(1L, request);
 
-        assertEquals(expectedResponse, actualResponse);
+        assertEquals(expectedResponse, result);
+        verify(threadRepository, atLeastOnce()).save(any(ThreadEntity.class));
     }
 
     @Test
-    void sendMessage_shouldThrowUserNotFoundException_whenSenderNotFound() {
+    void sendMessage_usesContentAsSubject_whenSubjectNotProvided() {
+        SendMessageRequest request = new SendMessageRequest(2L, "hello", null, null);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
+
+        messageService.sendMessage(1L, request);
+
+        ArgumentCaptor<ThreadEntity> captor = ArgumentCaptor.forClass(ThreadEntity.class);
+        verify(threadRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getAllValues().getFirst().getSubject()).isEqualTo("hello");
+    }
+
+    @Test
+    void sendMessage_truncatesSubjectFromContent_whenContentExceeds50Chars() {
+        String longContent = "a".repeat(60);
+        SendMessageRequest request = new SendMessageRequest(2L, longContent, null, null);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
+
+        messageService.sendMessage(1L, request);
+
+        ArgumentCaptor<ThreadEntity> captor = ArgumentCaptor.forClass(ThreadEntity.class);
+        verify(threadRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getAllValues().getFirst().getSubject()).endsWith("...");
+    }
+
+    @Test
+    void sendMessage_repliesOnExistingThread_whenThreadIdProvided() {
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 1L);
+        MessageResponse expectedResponse = new MessageResponse();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
+
+        MessageResponse result = messageService.sendMessage(1L, request);
+
+        assertEquals(expectedResponse, result);
+    }
+
+    @Test
+    void sendMessage_throwsWhenThreadNotFound() {
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 99L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
+                () -> messageService.sendMessage(1L, request));
+    }
+
+    @Test
+    void sendMessage_throwsWhenThreadIsInactive() {
+        thread.setActive(false);
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+
+        assertThrows(GlobalExceptionHandler.InvalidMessageException.class,
+                () -> messageService.sendMessage(1L, request));
+    }
+
+    @Test
+    void sendMessage_throwsWhenUserNotPartOfThread() {
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(false);
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageService.sendMessage(1L, request));
+    }
+
+    @Test
+    void sendMessage_throwsUserNotFoundException_whenSenderNotFound() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                messageService.sendMessage(1L, new SendMessageRequest(2L, "hello")));
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageService.sendMessage(1L, new SendMessageRequest(2L, "hello", null, null)));
     }
 
     @Test
-    void sendMessage_shouldThrowUserNotFoundException_whenRecipientNotFound() {
+    void sendMessage_throwsUserNotFoundException_whenRecipientNotFound() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                messageService.sendMessage(1L, new SendMessageRequest(2L, "hello")));
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> messageService.sendMessage(1L, new SendMessageRequest(2L, "hello", null, null)));
     }
 
     @Test
-    void sendMessage_shouldThrowInvalidMessageException_whenSenderAndRecipientAreSameUser() {
+    void sendMessage_throwsInvalidMessageException_whenSendingToSelf() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
 
-        assertThrows(GlobalExceptionHandler.InvalidMessageException.class, () ->
-                messageService.sendMessage(1L, new SendMessageRequest(1L, "hello")));
+        assertThrows(GlobalExceptionHandler.InvalidMessageException.class,
+                () -> messageService.sendMessage(1L, new SendMessageRequest(1L, "hello", null, null)));
+    }
+
+    // --- getThreadsForUser ---
+
+    @Test
+    void getThreadsForUser_returnsPageOfThreadSummaries() {
+        Page<ThreadEntity> threadPage = new PageImpl<>(List.of(thread));
+        when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(threadPage);
+        when(messageRepository.findLatestMessagePerThread(any())).thenReturn(List.of(message));
+
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setCreatedAt(LocalDateTime.now());
+        message.setThread(thread);
+
+        recipient.setUsername("user2");
+
+        Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getThreadId()).isEqualTo(1L);
+        assertThat(result.getContent().getFirst().getOtherParticipantUsername()).isEqualTo("user2");
     }
 
     @Test
-    void getInbox_shouldReturnPagedMessages_whenUserExists() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+    void getThreadsForUser_returnsEmptyPage_whenNoThreads() {
+        when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(Page.empty());
+        when(messageRepository.findLatestMessagePerThread(any())).thenReturn(List.of());
 
-        MessageResponse messageResponse = new MessageResponse();
-        messageResponse.setId(1L);
-        messageResponse.setSender(senderSummary);
-        messageResponse.setRecipient(recipientSummary);
-        messageResponse.setContent("hello");
+        Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
 
-        Page<MessageEntity> entityPage = new PageImpl<>(List.of(message), PageRequest.of(0, 10), 1);
+        assertThat(result.isEmpty()).isTrue();
+    }
 
-        when(messageRepository.findByRecipientAndDeletedByRecipientFalseOrderByCreatedAtDesc(
-                eq(sender), any(Pageable.class))).thenReturn(entityPage);
-        when(messageMapper.toResponse(message)).thenReturn(messageResponse);
+    // --- getThreadMessages ---
 
-        Page<MessageResponse> actualResponse = messageService.getInbox(1L, PageRequest.of(0, 10));
+    @Test
+    void getThreadMessages_returnsMessages_whenUserIsPartOfThread() {
+        MessageResponse expectedResponse = new MessageResponse();
+        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+        when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
 
-        assertEquals(1, actualResponse.getTotalElements());
-        assertEquals(messageResponse, actualResponse.getContent().getFirst());
+        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst()).isEqualTo(expectedResponse);
     }
 
     @Test
-    void getInbox_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+    void getThreadMessages_throwsWhenUserNotPartOfThread() {
+        when(messageRepository.existsByThreadIdAndUserId(1L, 99L)).thenReturn(false);
 
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                messageService.getInbox(1L, PageRequest.of(0, 10)));
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageService.getThreadMessages(1L, 99L));
     }
 
     @Test
-    void getSentMessages_shouldReturnPagedMessages_whenUserExists() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+    void getThreadMessages_returnsEmptyList_whenNoMessages() {
+        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
 
-        MessageResponse messageResponse = new MessageResponse();
-        messageResponse.setId(1L);
-        messageResponse.setSender(senderSummary);
-        messageResponse.setRecipient(recipientSummary);
-        messageResponse.setContent("hello");
+        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
 
-        Page<MessageEntity> entityPage = new PageImpl<>(List.of(message), PageRequest.of(0, 10), 1);
-
-        when(messageRepository.findBySenderAndDeletedBySenderFalseOrderByCreatedAtDesc(
-                eq(sender), any(Pageable.class))).thenReturn(entityPage);
-        when(messageMapper.toResponse(message)).thenReturn(messageResponse);
-
-        Page<MessageResponse> actualResponse = messageService.getSent(1L, PageRequest.of(0, 10));
-
-        assertEquals(1, actualResponse.getTotalElements());
-        assertEquals(messageResponse, actualResponse.getContent().getFirst());
+        assertThat(result).isEmpty();
     }
 
-    @Test
-    void getSent_shouldThrowUserNotFoundException_whenUserNotFound() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                messageService.getSent(1L, PageRequest.of(0, 10)));
-    }
+    // --- deleteMessage ---
 
     @Test
-    void deleteFromInbox_shouldSetDeletedByRecipientTrue_whenUserIsRecipient() {
+    void deleteMessage_setDeletedBySender_whenUserIsSender() {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
 
-        messageService.deleteFromInbox(1L, 2L);
-
-        assertTrue(message.isDeletedByRecipient());
-    }
-
-    @Test
-    void deleteFromInbox_shouldThrowMessageNotFoundException_whenMessageNotFound() {
-        when(messageRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class, () ->
-                messageService.deleteFromInbox(1L, 2L));
-    }
-
-    @Test
-    void deleteFromInbox_shouldThrowUnauthorizedException_whenUserIsNotRecipient() {
-        when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
-
-        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
-                messageService.deleteFromInbox(1L, 99L));
-    }
-
-    @Test
-    void deleteFromSent_shouldSetDeletedBySenderTrue_whenUserIsSender() {
-        when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
-
-        messageService.deleteFromSent(1L, 1L);
+        messageService.deleteMessage(1L, 1L);
 
         assertTrue(message.isDeletedBySender());
+        verify(messageRepository).save(message);
     }
 
     @Test
-    void deleteFromSent_shouldThrowMessageNotFoundException_whenMessageNotFound() {
-        when(messageRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class, () ->
-                messageService.deleteFromSent(1L, 1L));
-    }
-
-    @Test
-    void deleteFromSent_shouldThrowUnauthorizedException_whenUserIsNotSender() {
+    void deleteMessage_setDeletedByRecipient_whenUserIsRecipient() {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
 
-        assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
-                messageService.deleteFromSent(1L, 99L));
+        messageService.deleteMessage(1L, 2L);
+
+        assertTrue(message.isDeletedByRecipient());
+        verify(messageRepository).save(message);
+    }
+
+    @Test
+    void deleteMessage_hardDeletes_whenBothFlagsSet() {
+        message.setDeletedBySender(true);
+        when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
+
+        messageService.deleteMessage(1L, 2L);
+
+        verify(messageRepository).delete(message);
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteMessage_throwsMessageNotFoundException_whenNotFound() {
+        when(messageRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
+                () -> messageService.deleteMessage(99L, 1L));
+    }
+
+    @Test
+    void deleteMessage_throwsUnauthorizedException_whenUserNotInvolved() {
+        when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageService.deleteMessage(1L, 99L));
     }
 }

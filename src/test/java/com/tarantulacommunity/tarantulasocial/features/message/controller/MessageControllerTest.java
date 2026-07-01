@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
@@ -14,9 +15,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,7 +45,7 @@ class MessageControllerTest {
 
     @Test
     void send_shouldReturnCreatedMessageResponse() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello");
+        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
         MessageResponse expectedResponse = new MessageResponse();
         expectedResponse.setId(1L);
         expectedResponse.setContent("Hello");
@@ -58,7 +61,7 @@ class MessageControllerTest {
 
     @Test
     void send_shouldThrowWhenSenderNotFound() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello");
+        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
 
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(1L));
@@ -69,7 +72,7 @@ class MessageControllerTest {
 
     @Test
     void send_shouldThrowWhenRecipientNotFound() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello");
+        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
 
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(2L));
@@ -79,8 +82,8 @@ class MessageControllerTest {
     }
 
     @Test
-    void send_shouldThrowWhenMessageIsInvalid() {
-        SendMessageRequest request = new SendMessageRequest(1L, "Hello");
+    void send_shouldThrowWhenSendingToSelf() {
+        SendMessageRequest request = new SendMessageRequest(1L, "Hello", null, null);
 
         when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.InvalidMessageException("You cannot send a message to yourself"));
@@ -90,116 +93,47 @@ class MessageControllerTest {
     }
 
     @Test
-    void inbox_shouldReturnPageOfMessages() {
-        MessageResponse messageResponse = new MessageResponse();
-        messageResponse.setId(1L);
-        messageResponse.setContent("Hello");
-        Page<MessageResponse> page = new PageImpl<>(List.of(messageResponse), PageRequest.of(0, 20), 1);
+    void send_shouldThrowWhenThreadNotFound() {
+        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, 99L);
 
-        when(messageService.getInbox(eq(1L), any(PageRequest.class))).thenReturn(page);
+        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+                .thenThrow(new GlobalExceptionHandler.ThreadNotFoundException(99L));
 
-        ResponseEntity<Page<MessageResponse>> response =
+        assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
+                () -> messageController.send(userDetailsOf(1L), request));
+    }
+
+    @Test
+    void send_shouldThrowWhenNotPartOfThread() {
+        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, 1L);
+
+        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+                .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"));
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.send(userDetailsOf(1L), request));
+    }
+
+    @Test
+    void inbox_shouldReturnPageOfThreadSummaries() {
+        ThreadSummaryResponse summary = new ThreadSummaryResponse(1L, "Subject", "user2", 2L, "Hello...", LocalDateTime.now(), true);
+        Page<ThreadSummaryResponse> page = new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1);
+
+        when(messageService.getThreadsForUser(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        ResponseEntity<Page<ThreadSummaryResponse>> response =
                 messageController.inbox(userDetailsOf(1L), PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().getContent().getFirst()).isEqualTo(messageResponse);
+        assertThat(response.getBody().getContent().getFirst()).isEqualTo(summary);
     }
 
     @Test
-    void inbox_shouldThrowWhenUserNotFound() {
-        when(messageService.getInbox(eq(99L), any(PageRequest.class)))
-                .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
+    void inbox_shouldReturnEmptyPageWhenNoThreads() {
+        when(messageService.getThreadsForUser(eq(1L), any(Pageable.class))).thenReturn(Page.empty());
 
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.inbox(userDetailsOf(99L), PageRequest.of(0, 20)));
-    }
-
-    @Test
-    void sent_shouldReturnPageOfMessages() {
-        MessageResponse messageResponse = new MessageResponse();
-        messageResponse.setId(1L);
-        messageResponse.setContent("Hello");
-        Page<MessageResponse> page = new PageImpl<>(List.of(messageResponse), PageRequest.of(0, 20), 1);
-
-        when(messageService.getSent(eq(1L), any(PageRequest.class))).thenReturn(page);
-
-        ResponseEntity<Page<MessageResponse>> response =
-                messageController.sent(userDetailsOf(1L), PageRequest.of(0, 20));
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().getContent().getFirst()).isEqualTo(messageResponse);
-    }
-
-    @Test
-    void sent_shouldThrowWhenUserNotFound() {
-        when(messageService.getSent(eq(99L), any(PageRequest.class)))
-                .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
-
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.sent(userDetailsOf(99L), PageRequest.of(0, 20)));
-    }
-
-    @Test
-    void deleteFromInbox_shouldReturnNoContent() {
-        ResponseEntity<Void> response = messageController.deleteFromInbox(1L, userDetailsOf(1L));
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(messageService).deleteFromInbox(1L, 1L);
-    }
-
-    @Test
-    void deleteFromInbox_shouldThrowWhenMessageNotFound() {
-        doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
-                .when(messageService).deleteFromInbox(99L, 1L);
-
-        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
-                () -> messageController.deleteFromInbox(99L, userDetailsOf(1L)));
-    }
-
-    @Test
-    void deleteFromInbox_shouldThrowWhenUnauthorized() {
-        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
-                .when(messageService).deleteFromInbox(1L, 99L);
-
-        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.deleteFromInbox(1L, userDetailsOf(99L)));
-    }
-
-    @Test
-    void deleteFromSent_shouldReturnNoContent() {
-        ResponseEntity<Void> response = messageController.deleteFromSent(1L, userDetailsOf(1L));
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(messageService).deleteFromSent(1L, 1L);
-    }
-
-    @Test
-    void deleteFromSent_shouldThrowWhenMessageNotFound() {
-        doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
-                .when(messageService).deleteFromSent(99L, 1L);
-
-        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
-                () -> messageController.deleteFromSent(99L, userDetailsOf(1L)));
-    }
-
-    @Test
-    void deleteFromSent_shouldThrowWhenUnauthorized() {
-        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
-                .when(messageService).deleteFromSent(1L, 99L);
-
-        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.deleteFromSent(1L, userDetailsOf(99L)));
-    }
-
-    @Test
-    void inbox_shouldReturnEmptyPageWhenNoMessages() {
-        Page<MessageResponse> emptyPage = Page.empty();
-
-        when(messageService.getInbox(eq(1L), any(PageRequest.class))).thenReturn(emptyPage);
-
-        ResponseEntity<Page<MessageResponse>> response =
+        ResponseEntity<Page<ThreadSummaryResponse>> response =
                 messageController.inbox(userDetailsOf(1L), PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -207,15 +141,53 @@ class MessageControllerTest {
     }
 
     @Test
-    void sent_shouldReturnEmptyPageWhenNoMessages() {
-        Page<MessageResponse> emptyPage = Page.empty();
+    void getThread_shouldReturnMessagesInThread() {
+        MessageResponse msg = new MessageResponse();
+        msg.setId(1L);
+        msg.setContent("Hello");
 
-        when(messageService.getSent(eq(1L), any(PageRequest.class))).thenReturn(emptyPage);
+        when(messageService.getThreadMessages(eq(1L), eq(1L))).thenReturn(List.of(msg));
 
-        ResponseEntity<Page<MessageResponse>> response =
-                messageController.sent(userDetailsOf(1L), PageRequest.of(0, 20));
+        ResponseEntity<List<MessageResponse>> response =
+                messageController.getThread(1L, userDetailsOf(1L));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEmpty();
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().getFirst()).isEqualTo(msg);
+    }
+
+    @Test
+    void getThread_shouldThrowWhenNotPartOfThread() {
+        when(messageService.getThreadMessages(eq(1L), eq(99L)))
+                .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"));
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.getThread(1L, userDetailsOf(99L)));
+    }
+
+    @Test
+    void deleteMessage_shouldReturnNoContent() {
+        ResponseEntity<Void> response = messageController.deleteMessage(1L, userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).deleteMessage(1L, 1L);
+    }
+
+    @Test
+    void deleteMessage_shouldThrowWhenMessageNotFound() {
+        doThrow(new GlobalExceptionHandler.MessageNotFoundException(99L))
+                .when(messageService).deleteMessage(99L, 1L);
+
+        assertThrows(GlobalExceptionHandler.MessageNotFoundException.class,
+                () -> messageController.deleteMessage(99L, userDetailsOf(1L)));
+    }
+
+    @Test
+    void deleteMessage_shouldThrowWhenUnauthorized() {
+        doThrow(new GlobalExceptionHandler.UnauthorizedException("You do not own this message"))
+                .when(messageService).deleteMessage(1L, 99L);
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.deleteMessage(1L, userDetailsOf(99L)));
     }
 }

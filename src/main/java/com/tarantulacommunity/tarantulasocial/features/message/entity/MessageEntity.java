@@ -46,4 +46,8 @@ public class MessageEntity {
 
     @Column(nullable = false)
     private boolean deletedByRecipient = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "thread_id", nullable = false)
+    private ThreadEntity thread;
 }

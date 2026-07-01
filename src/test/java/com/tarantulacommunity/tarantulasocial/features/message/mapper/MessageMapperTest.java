@@ -3,7 +3,9 @@ package com.tarantulacommunity.tarantulasocial.features.message.mapper;
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +20,18 @@ class MessageMapperTest {
     @Autowired
     private MessageMapper messageMapper;
 
+    private ThreadEntity thread;
+
+    @BeforeEach
+    void setUp() {
+        UserEntity creator = TestUtilities.validUser("0", "0");
+        creator.setId(0L);
+        thread = new ThreadEntity();
+        thread.setId(1L);
+        thread.setCreatedBy(creator);
+        thread.setSubject("Test thread");
+    }
+
     @Test
     void testToResponse() {
         UserEntity sender = TestUtilities.validUser("1", "1");
@@ -28,7 +42,7 @@ class MessageMapperTest {
         recipient.setId(2L);
         recipient.setProfilePicUrl("https://example.com/recipient.jpg");
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hello!");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hello!", thread);
         message.setId(1L);
         message.setCreatedAt(LocalDateTime.now());
 
@@ -38,12 +52,11 @@ class MessageMapperTest {
         assertEquals(message.getId(), response.getId());
         assertEquals(message.getContent(), response.getContent());
         assertEquals(message.getCreatedAt(), response.getCreatedAt());
-
+        assertEquals(thread.getId(), response.getThreadId());
         assertNotNull(response.getSender());
         assertEquals(sender.getId(), response.getSender().getId());
         assertEquals(sender.getUsername(), response.getSender().getUsername());
         assertEquals(sender.getProfilePicUrl(), response.getSender().getProfilePicUrl());
-
         assertNotNull(response.getRecipient());
         assertEquals(recipient.getId(), response.getRecipient().getId());
         assertEquals(recipient.getUsername(), response.getRecipient().getUsername());
@@ -62,7 +75,7 @@ class MessageMapperTest {
                 "I have many species in my collection including the Brazilian Black, " +
                 "Singapore Blue, and Chilean Rose Hair. They are amazing!";
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, longContent);
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, longContent, thread);
         message.setId(2L);
         message.setCreatedAt(LocalDateTime.now());
 
@@ -81,7 +94,7 @@ class MessageMapperTest {
         UserEntity recipient = TestUtilities.validUser("6", "6");
         recipient.setId(6L);
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test", thread);
         message.setId(3L);
         LocalDateTime timestamp = LocalDateTime.of(2025, 6, 15, 14, 30, 0);
         message.setCreatedAt(timestamp);
@@ -101,7 +114,7 @@ class MessageMapperTest {
         recipient.setId(8L);
         recipient.setProfilePicUrl("https://example.com/recipient8.jpg");
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Another message");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Another message", thread);
         message.setId(4L);
         message.setCreatedAt(LocalDateTime.now());
 
@@ -122,7 +135,7 @@ class MessageMapperTest {
         UserEntity recipient = TestUtilities.validUser("10", "10");
         recipient.setId(10L);
 
-        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Message without pics");
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Message without pics", thread);
         message.setId(5L);
         message.setCreatedAt(LocalDateTime.now());
 
@@ -143,11 +156,8 @@ class MessageMapperTest {
         recipient.setId(12L);
         recipient.setProfilePicUrl("https://example.com/recipient12.jpg");
 
-        MessageEntity message = new MessageEntity();
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Complete message test", thread);
         message.setId(6L);
-        message.setSender(sender);
-        message.setRecipient(recipient);
-        message.setContent("Complete message test");
         LocalDateTime createdAt = LocalDateTime.of(2025, 12, 25, 12, 0, 0);
         message.setCreatedAt(createdAt);
 
@@ -156,10 +166,31 @@ class MessageMapperTest {
         assertEquals(6L, response.getId());
         assertEquals("Complete message test", response.getContent());
         assertEquals(createdAt, response.getCreatedAt());
+        assertEquals(thread.getId(), response.getThreadId());
         assertEquals(11L, response.getSender().getId());
         assertEquals("test11", response.getSender().getUsername());
         assertEquals(12L, response.getRecipient().getId());
         assertEquals("test12", response.getRecipient().getUsername());
     }
-}
 
+    @Test
+    void testToResponseMapsThreadId() {
+        UserEntity sender = TestUtilities.validUser("13", "13");
+        sender.setId(13L);
+
+        UserEntity recipient = TestUtilities.validUser("14", "14");
+        recipient.setId(14L);
+
+        ThreadEntity specificThread = new ThreadEntity();
+        specificThread.setId(5L);
+        specificThread.setCreatedBy(sender);
+
+        MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hello", specificThread);
+        message.setId(7L);
+        message.setCreatedAt(LocalDateTime.now());
+
+        MessageResponse response = messageMapper.toResponse(message);
+
+        assertEquals(5L, response.getThreadId());
+    }
+}
