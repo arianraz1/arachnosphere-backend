@@ -17,18 +17,25 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
     List<MessageEntity> findByThreadIdOrderByCreatedAtAsc(Long threadId);
 
     @Query(value = "SELECT DISTINCT m.thread FROM MessageEntity m " +
-            "WHERE m.sender.id = :userId OR m.recipient.id = :userId " +
+            "WHERE (m.sender.id = :userId AND m.deletedBySender = false) " +
+            "OR (m.recipient.id = :userId AND m.deletedByRecipient = false) " +
             "ORDER BY m.thread.updatedAt DESC",
             countQuery = "SELECT COUNT(DISTINCT m.thread) FROM MessageEntity m " +
-                    "WHERE m.sender.id = :userId OR m.recipient.id = :userId")
+                    "WHERE (m.sender.id = :userId AND m.deletedBySender = false) " +
+                    "OR (m.recipient.id = :userId AND m.deletedByRecipient = false)")
     Page<ThreadEntity> findThreadsByUserId(@Param("userId") Long userId, Pageable pageable);
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     @Query("SELECT CASE WHEN COUNT(m) > 0 THEN TRUE ELSE FALSE END FROM MessageEntity m " +
-            "WHERE m.thread.id = :threadId AND (m.sender.id = :userId OR m.recipient.id = :userId)")
-    boolean existsByThreadIdAndUserId(@Param("threadId") Long threadId, @Param("userId") Long userId);
+            "WHERE m.thread.id = :threadId " +
+            "AND ((m.sender.id = :userId AND m.deletedBySender = false) " +
+            "OR (m.recipient.id = :userId AND m.deletedByRecipient = false))")
+    boolean hasVisibleMessageInThread(@Param("threadId") Long threadId, @Param("userId") Long userId);
 
     @Query("SELECT m FROM MessageEntity m WHERE m.id IN (" +
-            "SELECT MAX(m2.id) FROM MessageEntity m2 WHERE m2.thread.id IN :threadIds GROUP BY m2.thread.id)")
-    List<MessageEntity> findLatestMessagePerThread(@Param("threadIds") List<Long> threadIds);
+            "SELECT MAX(m2.id) FROM MessageEntity m2 " +
+            "WHERE m2.thread.id IN :threadIds " +
+            "AND ((m2.sender.id = :userId AND m2.deletedBySender = false) " +
+            "OR (m2.recipient.id = :userId AND m2.deletedByRecipient = false)) " +
+            "GROUP BY m2.thread.id)")
+    List<MessageEntity> findLatestVisibleMessagePerThread(@Param("threadIds") List<Long> threadIds, @Param("userId") Long userId);
 }

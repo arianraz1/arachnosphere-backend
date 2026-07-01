@@ -81,7 +81,6 @@ public class MessageServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
         when(threadRepository.save(any())).thenReturn(thread);
         when(messageRepository.save(any())).thenReturn(message);
-        when(threadRepository.save(any())).thenReturn(thread);
         when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
 
         MessageResponse result = messageService.sendMessage(1L, request);
@@ -133,7 +132,7 @@ public class MessageServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
         when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
-        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
         when(messageRepository.save(any())).thenReturn(message);
         when(threadRepository.save(any())).thenReturn(thread);
         when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
@@ -175,7 +174,7 @@ public class MessageServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
         when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
-        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(false);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(false);
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageService.sendMessage(1L, request));
@@ -212,13 +211,12 @@ public class MessageServiceTest {
     void getThreadsForUser_returnsPageOfThreadSummaries() {
         Page<ThreadEntity> threadPage = new PageImpl<>(List.of(thread));
         when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(threadPage);
-        when(messageRepository.findLatestMessagePerThread(any())).thenReturn(List.of(message));
+        when(messageRepository.findLatestVisibleMessagePerThread(any(), eq(1L))).thenReturn(List.of(message));
 
         message.setSender(sender);
         message.setRecipient(recipient);
         message.setCreatedAt(LocalDateTime.now());
         message.setThread(thread);
-
         recipient.setUsername("user2");
 
         Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
@@ -231,7 +229,7 @@ public class MessageServiceTest {
     @Test
     void getThreadsForUser_returnsEmptyPage_whenNoThreads() {
         when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(Page.empty());
-        when(messageRepository.findLatestMessagePerThread(any())).thenReturn(List.of());
+        when(messageRepository.findLatestVisibleMessagePerThread(any(), eq(1L))).thenReturn(List.of());
 
         Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
 
@@ -243,7 +241,7 @@ public class MessageServiceTest {
     @Test
     void getThreadMessages_returnsMessages_whenUserIsPartOfThread() {
         MessageResponse expectedResponse = new MessageResponse();
-        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
         when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
         when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
 
@@ -255,7 +253,7 @@ public class MessageServiceTest {
 
     @Test
     void getThreadMessages_throwsWhenUserNotPartOfThread() {
-        when(messageRepository.existsByThreadIdAndUserId(1L, 99L)).thenReturn(false);
+        when(messageRepository.hasVisibleMessageInThread(1L, 99L)).thenReturn(false);
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageService.getThreadMessages(1L, 99L));
@@ -263,12 +261,47 @@ public class MessageServiceTest {
 
     @Test
     void getThreadMessages_returnsEmptyList_whenNoMessages() {
-        when(messageRepository.existsByThreadIdAndUserId(1L, 1L)).thenReturn(true);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
         when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
 
         List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getThreadMessages_filtersSenderDeletedMessages() {
+        message.setDeletedBySender(true);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+
+        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getThreadMessages_filtersRecipientDeletedMessages() {
+        message.setDeletedByRecipient(true);
+        when(messageRepository.hasVisibleMessageInThread(1L, 2L)).thenReturn(true);
+        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+
+        List<MessageResponse> result = messageService.getThreadMessages(1L, 2L);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getThreadMessages_doesNotFilterMessageDeletedByOtherSide() {
+        message.setDeletedBySender(true);
+        MessageResponse expectedResponse = new MessageResponse();
+        when(messageRepository.hasVisibleMessageInThread(1L, 2L)).thenReturn(true);
+        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+        when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
+
+        List<MessageResponse> result = messageService.getThreadMessages(1L, 2L);
+
+        assertThat(result).hasSize(1);
     }
 
     // --- deleteMessage ---

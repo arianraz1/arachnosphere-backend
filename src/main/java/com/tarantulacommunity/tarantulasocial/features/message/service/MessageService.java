@@ -53,7 +53,7 @@ public class MessageService {
                 throw new GlobalExceptionHandler.InvalidMessageException("This thread is no longer active");
             }
 
-            if (!messageRepository.existsByThreadIdAndUserId(thread.getId(), senderId)) {
+            if (!messageRepository.hasVisibleMessageInThread(thread.getId(), senderId)) {
                 throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
             }
         } else {
@@ -90,7 +90,7 @@ public class MessageService {
         List<Long> threadIds = threads.map(ThreadEntity::getId).toList();
 
         Map<Long, MessageEntity> latestByThread = messageRepository
-                .findLatestMessagePerThread(threadIds)
+                .findLatestVisibleMessagePerThread(threadIds, userId)
                 .stream()
                 .collect(Collectors.toMap(m -> m.getThread().getId(), m -> m));
 
@@ -123,12 +123,17 @@ public class MessageService {
     }
 
     public List<MessageResponse> getThreadMessages(Long threadId, Long userId) {
-        if (!messageRepository.existsByThreadIdAndUserId(threadId, userId)) {
+        if (!messageRepository.hasVisibleMessageInThread(threadId, userId)) {
             throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
         }
 
         return messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId)
                 .stream()
+                .filter(m -> {
+                    if (m.getSender().getId().equals(userId)) return !m.isDeletedBySender();
+                    if (m.getRecipient().getId().equals(userId)) return !m.isDeletedByRecipient();
+                    return true;
+                })
                 .map(messageMapper::toResponse)
                 .collect(Collectors.toList());
     }

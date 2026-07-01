@@ -19,8 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 public class MessageRepositoryTest {
 
-    @Autowired private TestEntityManager em;
-    @Autowired private MessageRepository messageRepository;
+    @Autowired
+    private TestEntityManager em;
+    @Autowired
+    private MessageRepository messageRepository;
 
     private ThreadEntity thread;
     private UserEntity sender;
@@ -32,6 +34,8 @@ public class MessageRepositoryTest {
         recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
         thread = em.persistFlushFind(TestUtilities.validThread(sender));
     }
+
+    // --- findByThreadIdOrderByCreatedAtAsc ---
 
     @Test
     void findByThreadIdOrderByCreatedAtAsc_returnsMessagesInOrder() {
@@ -63,6 +67,8 @@ public class MessageRepositoryTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getId()).isEqualTo(mine.getId());
     }
+
+    // --- findThreadsByUserId ---
 
     @Test
     void findThreadsByUserId_returnsThreadsForSender() {
@@ -103,62 +109,77 @@ public class MessageRepositoryTest {
     }
 
     @Test
-    void existsByThreadIdAndUserId_returnsTrueForSender() {
+    void findThreadsByUserId_doesNotReturnThreadWhenSenderDeletedAllMessages() {
+        MessageEntity msg = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        msg.setDeletedBySender(true);
+        em.persistFlushFind(msg);
+
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(sender.getId(), PageRequest.of(0, 10));
+
+        assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void findThreadsByUserId_doesNotReturnThreadWhenRecipientDeletedAllMessages() {
+        MessageEntity msg = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        msg.setDeletedByRecipient(true);
+        em.persistFlushFind(msg);
+
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(recipient.getId(), PageRequest.of(0, 10));
+
+        assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void findThreadsByUserId_stillReturnsThreadForOtherSideWhenOneSideDeletes() {
+        MessageEntity msg = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        msg.setDeletedBySender(true);
+        em.persistFlushFind(msg);
+
+        Page<ThreadEntity> result = messageRepository.findThreadsByUserId(recipient.getId(), PageRequest.of(0, 10));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    // --- hasVisibleMessageInThread ---
+
+    @Test
+    void hasVisibleMessageInThread_returnsTrueForSenderWithVisibleMessage() {
         em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
 
-        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), sender.getId());
+        boolean result = messageRepository.hasVisibleMessageInThread(thread.getId(), sender.getId());
 
         assertThat(result).isTrue();
     }
 
     @Test
-    void existsByThreadIdAndUserId_returnsTrueForRecipient() {
+    void hasVisibleMessageInThread_returnsTrueForRecipientWithVisibleMessage() {
         em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
 
-        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), recipient.getId());
+        boolean result = messageRepository.hasVisibleMessageInThread(thread.getId(), recipient.getId());
 
         assertThat(result).isTrue();
     }
 
     @Test
-    void existsByThreadIdAndUserId_returnsFalseForUnrelatedUser() {
-        UserEntity other = em.persistFlushFind(TestUtilities.validUser("3", "3"));
-        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+    void hasVisibleMessageInThread_returnsFalseWhenSenderDeletedAllMessages() {
+        MessageEntity msg = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        msg.setDeletedBySender(true);
+        em.persistFlushFind(msg);
 
-        boolean result = messageRepository.existsByThreadIdAndUserId(thread.getId(), other.getId());
+        boolean result = messageRepository.hasVisibleMessageInThread(thread.getId(), sender.getId());
 
         assertThat(result).isFalse();
     }
 
     @Test
-    void findLatestMessagePerThread_returnsLatestMessageForEachThread() {
-        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
-        MessageEntity latest = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Latest", thread));
+    void hasVisibleMessageInThread_returnsFalseWhenRecipientDeletedAllMessages() {
+        MessageEntity msg = TestUtilities.validMessage(sender, recipient, "Hello", thread);
+        msg.setDeletedByRecipient(true);
+        em.persistFlushFind(msg);
 
-        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(List.of(thread.getId()));
+        boolean result = messageRepository.hasVisibleMessageInThread(thread.getId(), recipient.getId());
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getId()).isEqualTo(latest.getId());
-    }
-
-    @Test
-    void findLatestMessagePerThread_returnsOnePerThread() {
-        ThreadEntity thread2 = em.persistFlushFind(TestUtilities.validThread(sender));
-        MessageEntity latest1 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "T1 latest", thread));
-        MessageEntity latest2 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "T2 latest", thread2));
-
-        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(
-                List.of(thread.getId(), thread2.getId()));
-
-        assertThat(result).hasSize(2);
-        assertThat(result.stream().map(MessageEntity::getId))
-                .containsExactlyInAnyOrder(latest1.getId(), latest2.getId());
-    }
-
-    @Test
-    void findLatestMessagePerThread_returnsEmptyWhenNoThreadIds() {
-        List<MessageEntity> result = messageRepository.findLatestMessagePerThread(List.of());
-
-        assertThat(result).isEmpty();
+        assertThat(result).isFalse();
     }
 }
