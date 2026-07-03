@@ -176,5 +176,13 @@ class UserEntityTest {
         assertEquals(user.getFavoriteCaption(), savedUser.getFavoriteCaption());
         assertEquals(0L, savedUser.getVersion());
     }
+
+    @Test
+    void emailVerifiedDefaultsToFalse() {
+        UserEntity user = TestUtilities.validUser("19", "19");
+        UserEntity savedUser = em.persistFlushFind(user);
+
+        assertFalse(savedUser.isEmailVerified());
+    }
 }
 

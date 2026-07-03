@@ -1,9 +1,11 @@
 package com.tarantulacommunity.tarantulasocial.security.service;
 
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
@@ -30,6 +32,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
     private final AuthMapper authMapper;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public AuthResult register(UserRegisterRequest request) {
@@ -37,6 +40,8 @@ public class AuthService {
 
         UserEntity user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalStateException("User not found after registration"));
+
+        emailVerificationService.sendVerificationEmail(user);
 
         TokenPair tokens = issueTokens(user);
         return new AuthResult(signupResponse, tokens);
@@ -53,6 +58,11 @@ public class AuthService {
         }
 
         UserEntity user = userDetails.getUser();
+
+        if (!user.isEmailVerified()) {
+            throw new GlobalExceptionHandler.EmailNotVerifiedException("Please verify your email before logging in");
+        }
+
         TokenPair tokens = issueTokens(user);
         var loginResponse = authMapper.toLoginResponse(user);
 

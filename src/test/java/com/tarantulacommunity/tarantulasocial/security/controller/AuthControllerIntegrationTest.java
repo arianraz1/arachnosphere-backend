@@ -2,7 +2,9 @@ package com.tarantulacommunity.tarantulasocial.security.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tarantulacommunity.tarantulasocial.TarantulaProjectApplication;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.EmailVerificationTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.features.user.repository.EmailVerificationTokenRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.service.RefreshTokenService;
@@ -21,6 +23,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,6 +49,9 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private RefreshTokenService refreshTokenService;
+
+    @Autowired
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -112,13 +120,80 @@ class AuthControllerIntegrationTest {
                 .andExpect(cookie().value("refresh_token", ""));
     }
 
+    // ---------- LOGIN — UNVERIFIED EMAIL ----------
+    @Test
+    void shouldRejectLoginWhenEmailNotVerified() throws Exception {
+        createUser("unverified@test.com", "unverified", "pass123", false);
+
+        LoginRequest request = new LoginRequest("unverified@test.com", "pass123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------- VERIFY EMAIL ----------
+    @Test
+    void shouldVerifyEmailWithValidToken() throws Exception {
+        UserEntity user = createUser("verify@test.com", "verifyuser", "pass123", false);
+
+        EmailVerificationTokenEntity token = new EmailVerificationTokenEntity();
+        token.setUser(user);
+        token.setToken("valid-test-token");
+        token.setExpiresAt(LocalDateTime.now().plusHours(24));
+        emailVerificationTokenRepository.save(token);
+
+        mockMvc.perform(get("/api/auth/verify-email").param("token", "valid-test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+
+        UserEntity refreshed = userRepository.findById(user.getId()).orElseThrow();
+        assertTrue(refreshed.isEmailVerified());
+    }
+
+    @Test
+    void shouldRejectVerifyEmailWithInvalidToken() throws Exception {
+        mockMvc.perform(get("/api/auth/verify-email").param("token", "nonexistent-token"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectVerifyEmailWithExpiredToken() throws Exception {
+        UserEntity user = createUser("expired@test.com", "expireduser", "pass123", false);
+
+        EmailVerificationTokenEntity token = new EmailVerificationTokenEntity();
+        token.setUser(user);
+        token.setToken("expired-test-token");
+        token.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        emailVerificationTokenRepository.save(token);
+
+        mockMvc.perform(get("/api/auth/verify-email").param("token", "expired-test-token"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------- RESEND VERIFICATION ----------
+    @Test
+    void shouldReturnGenericMessageForResendRegardlessOfEmailExistence() throws Exception {
+        String expectedMessage = "If that email is registered and not yet verified, a verification link has been sent.";
+
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .param("email", "doesnotexist@test.com")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(expectedMessage));
+
+        createUser("realbutunverified@test.com", "realuser", "pass123", false);
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .param("email", "realbutunverified@test.com")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(expectedMessage));
+    }
+
     // ---------- HELPERS ----------
     private UserEntity createUser(String email, String username, String rawPassword) {
-        UserEntity user = new UserEntity();
-        user.setEmail(email);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(rawPassword));
-        return userRepository.save(user);
+        return createUser(email, username, rawPassword, true);
     }
 
     private Cookie buildRefreshCookie(String value) {
@@ -137,5 +212,14 @@ class AuthControllerIntegrationTest {
         c.setHttpOnly(true);
         c.setSecure(false);
         return c;
+    }
+
+    private UserEntity createUser(String email, String username, String rawPassword, boolean emailVerified) {
+        UserEntity user = new UserEntity();
+        user.setEmail(email);
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setEmailVerified(emailVerified);
+        return userRepository.save(user);
     }
 }

@@ -70,7 +70,26 @@ public class GlobalExceptionHandler {
     }
 
     public static class ThreadNotFoundException extends RuntimeException {
-        public ThreadNotFoundException(Long id) {super("Thread not found: " + id);
+        public ThreadNotFoundException(Long id) {
+            super("Thread not found: " + id);
+        }
+    }
+
+    public static class InvalidTokenException extends RuntimeException {
+        public InvalidTokenException(String message) {
+            super(message);
+        }
+    }
+
+    public static class EmailNotVerifiedException extends RuntimeException {
+        public EmailNotVerifiedException(String message) {
+            super(message);
+        }
+    }
+
+    public static class TooManyRequestsException extends RuntimeException {
+        public TooManyRequestsException(String message) {
+            super(message);
         }
     }
 
@@ -118,35 +137,52 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(e.getMessage()));
     }
 
+    @ExceptionHandler(ThreadNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleThreadNotFound(ThreadNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
     @ExceptionHandler(EmailAlreadyTakenException.class)
     public ResponseEntity<ErrorResponse> handleEmailTaken(EmailAlreadyTakenException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT) // 409 Conflict
+        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(e.getMessage()));
     }
 
     @ExceptionHandler(UsernameAlreadyTakenException.class)
     public ResponseEntity<ErrorResponse> handleUsernameTaken(UsernameAlreadyTakenException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT) // 409 Conflict
+        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(e.getMessage()));
     }
 
     @ExceptionHandler(InvalidMessageException.class)
     public ResponseEntity<ErrorResponse> handleInvalidMessage(InvalidMessageException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST) // 400 Bad Request
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotVerified(EmailNotVerifiedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(new ErrorResponse(e.getMessage()));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED) // 401 Unauthorized
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(e.getMessage()));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception e) {
-        log.error("Unhandled exception", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("An unexpected error occurred"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -181,5 +217,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("Malformed or missing request body"));
     }
 
-    public record ErrorResponse(String message) {}
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception e) {
+        log.error("Unhandled exception", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("An unexpected error occurred"));
+    }
+
+    public record ErrorResponse(String message) {
+    }
 }

@@ -1,9 +1,11 @@
 package com.tarantulacommunity.tarantulasocial.security.service;
 
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
@@ -19,14 +21,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -39,6 +45,7 @@ class AuthServiceTest {
     @Mock private CookieUtil cookieUtil;
     @Mock private AuthMapper authMapper;
     @Mock private Authentication authentication;
+    @Mock private EmailVerificationService emailVerificationService;
 
     @InjectMocks
     private AuthService authService;
@@ -52,12 +59,12 @@ class AuthServiceTest {
         user.setId(1L);
         user.setEmail("user@example.com");
         user.setUsername("user");
+        user.setEmailVerified(true); // login() requires this now — see loginShouldThrowWhenEmailNotVerified for the false case
         loginRequest = new LoginRequest("user@example.com", "password");
     }
 
     @Test
     void loginShouldReturnTokensAndLoginResponse() {
-        // given
         given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .willReturn(authentication);
         given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user, 1L));
@@ -67,13 +74,35 @@ class AuthServiceTest {
         given(cookieUtil.refreshTokenCookie("refresh-raw")).willReturn(ResponseCookie.from("refresh", "val").build());
         given(authMapper.toLoginResponse(user)).willReturn(new LoginResponse(1L, "user@example.com", "user"));
 
-        // when
         AuthService.AuthResult result = authService.login(loginRequest);
 
-        // then
         assertThat(result.responseBody()).isInstanceOf(LoginResponse.class);
         assertThat(result.tokens().accessTokenCookie()).isNotNull();
         assertThat(result.tokens().refreshTokenCookie()).isNotNull();
+    }
+
+    @Test
+    void loginShouldThrowWhenEmailNotVerified() {
+        user.setEmailVerified(false);
+        given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .willReturn(authentication);
+        given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user, 1L));
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(GlobalExceptionHandler.EmailNotVerifiedException.class);
+
+        // Nothing downstream should run once the verification gate fails
+        verifyNoInteractions(jwtUtil, refreshTokenService, cookieUtil);
+    }
+
+    @Test
+    void loginShouldThrowWhenPrincipalIsWrongType() {
+        given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .willReturn(authentication);
+        given(authentication.getPrincipal()).willReturn("not-a-custom-user-details");
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
@@ -91,7 +120,24 @@ class AuthServiceTest {
         given(cookieUtil.refreshTokenCookie("ref")).willReturn(ResponseCookie.from("r", "r").build());
 
         AuthService.AuthResult result = authService.register(regReq);
+
         assertThat(result.responseBody()).isEqualTo(signupResponse);
+        verify(emailVerificationService).sendVerificationEmail(user);
+    }
+
+    @Test
+    void registerShouldThrowWhenUserNotFoundAfterRegistration() {
+        UserRegisterRequest regReq = new UserRegisterRequest();
+        regReq.setEmail("ghost@example.com");
+        regReq.setUsername("ghost");
+        regReq.setPassword("pass");
+        given(userService.registerUser(regReq)).willReturn(new UserSignupResponse());
+        given(userRepository.findByEmail("ghost@example.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.register(regReq))
+                .isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(emailVerificationService);
     }
 
     @Test
@@ -104,6 +150,7 @@ class AuthServiceTest {
         given(cookieUtil.refreshTokenCookie("new-raw")).willReturn(ResponseCookie.from("refresh", "new-ref").build());
 
         AuthService.TokenPair pair = authService.refresh("old-raw");
+
         assertThat(pair.accessTokenCookie()).isNotNull();
         assertThat(pair.refreshTokenCookie()).isNotNull();
     }
@@ -112,6 +159,6 @@ class AuthServiceTest {
     void logoutShouldRevokeAllIfUserExists() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         authService.logout(1L);
-        // verify
+        // consider: verify(refreshTokenService).revokeAll(user) once that dependency is visible here
     }
 }

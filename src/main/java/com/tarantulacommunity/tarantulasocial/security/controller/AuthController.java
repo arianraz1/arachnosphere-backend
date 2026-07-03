@@ -1,6 +1,9 @@
 package com.tarantulacommunity.tarantulasocial.security.controller;
 
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
 import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
@@ -24,6 +27,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -31,6 +37,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final CookieProperties cookieProps;
+    private final EmailVerificationService emailVerificationService;
+    private final UserRepository userRepository;
 
     @Value("${app.cookie.refresh-token-name}")
     private String refreshTokenName;
@@ -66,6 +74,29 @@ public class AuthController {
         responseBody.put("csrfToken", newCsrf);
 
         return ResponseEntity.ok(responseBody);
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        emailVerificationService.verifyToken(token);
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully. You can now log in."));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestParam String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (!user.isEmailVerified()) {
+                try {
+                    emailVerificationService.sendVerificationEmail(user);
+                } catch (GlobalExceptionHandler.TooManyRequestsException ex) {
+                    log.debug("Resend verification rate-limited for user id {}", user.getId());
+                }
+            }
+        });
+
+        return ResponseEntity.ok(Map.of(
+                "message", "If that email is registered and not yet verified, a verification link has been sent."
+        ));
     }
 
     @PostMapping("/refresh")

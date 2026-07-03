@@ -59,6 +59,9 @@ public class UserEntity {
     @Column(length = 255)
     private String favoriteCaption;
 
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
