@@ -31,6 +31,7 @@ services:
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
       CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:3000}
       ADMIN_USER_ID: ${ADMIN_USER_ID:-1}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     depends_on:
       db:
         condition: service_healthy
