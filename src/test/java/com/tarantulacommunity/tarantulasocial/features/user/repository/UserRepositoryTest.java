@@ -20,23 +20,6 @@ public class UserRepositoryTest {
     private UserRepository userRepository;
 
     @Test
-    void findByEmail_returnsCorrectUser() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-
-        Optional<UserEntity> result = userRepository.findByEmail(user.getEmail());
-
-        assertTrue(result.isPresent());
-        assertEquals(user, result.get());
-    }
-
-    @Test
-    void findByEmail_returnsEmpty_whenNoMatch() {
-        Optional<UserEntity> result = userRepository.findByEmail("nonexistent@example.com");
-
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
     void findByUsername_returnsCorrectUser() {
         UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
 

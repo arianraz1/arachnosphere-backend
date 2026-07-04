@@ -4,7 +4,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUs
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -5,7 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegi
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.service.AuthService;
 import jakarta.servlet.http.Cookie;
@@ -22,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,6 +40,9 @@ public class AuthController {
     private final CookieProperties cookieProps;
     private final EmailVerificationService emailVerificationService;
     private final UserRepository userRepository;
+
+    @Value("${app.cors.allowed-origin}")
+    private String frontendUrl;
 
     @Value("${app.cookie.refresh-token-name}")
     private String refreshTokenName;
@@ -77,8 +81,16 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+    public ResponseEntity<?> verifyEmail(@RequestParam String token, HttpServletRequest request) {
         emailVerificationService.verifyToken(token);
+
+        String acceptHeader = request.getHeader(HttpHeaders.ACCEPT);
+        if (acceptHeader != null && acceptHeader.contains("text/html")) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/verified"))
+                    .build();
+        }
+
         return ResponseEntity.ok(Map.of("message", "Email verified successfully. You can now log in."));
     }
 

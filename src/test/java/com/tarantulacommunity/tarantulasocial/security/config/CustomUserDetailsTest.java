@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.dto;
+package com.tarantulacommunity.tarantulasocial.security.config;
 
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +16,7 @@ class CustomUserDetailsTest {
         user.setId(1L);
         user.setEmail("test@example.com");
         user.setPassword("encoded");
+        user.setEmailVerified(true);
     }
 
     // -------------------------------------------------------------------------
@@ -51,7 +52,15 @@ class CustomUserDetailsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void shouldBeEnabled() {
+    void shouldAlwaysBeEnabled() {
+        user.setEmailVerified(true);
+        CustomUserDetails details = new CustomUserDetails(user, 99L);
+        assertThat(details.isEnabled()).isTrue();
+    }
+
+    @Test
+    void shouldBeEnabledEvenWhenEmailNotVerified() {
+        user.setEmailVerified(false);
         CustomUserDetails details = new CustomUserDetails(user, 99L);
         assertThat(details.isEnabled()).isTrue();
     }

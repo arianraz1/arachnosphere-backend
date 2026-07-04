@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.service;
 
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;

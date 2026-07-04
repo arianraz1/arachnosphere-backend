@@ -1,13 +1,12 @@
 package com.tarantulacommunity.tarantulasocial.security.service;
 
-import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
-import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSignupResponse;
+import com.tarantulacommunity.tarantulasocial.security.dto.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginResponse;
 import com.tarantulacommunity.tarantulasocial.security.mapper.AuthMapper;
@@ -59,7 +58,7 @@ class AuthServiceTest {
         user.setId(1L);
         user.setEmail("user@example.com");
         user.setUsername("user");
-        user.setEmailVerified(true); // login() requires this now — see loginShouldThrowWhenEmailNotVerified for the false case
+        user.setEmailVerified(true);
         loginRequest = new LoginRequest("user@example.com", "password");
     }
 
@@ -72,7 +71,7 @@ class AuthServiceTest {
         given(refreshTokenService.issue(user)).willReturn("refresh-raw");
         given(cookieUtil.accessTokenCookie("access-token")).willReturn(ResponseCookie.from("access", "val").build());
         given(cookieUtil.refreshTokenCookie("refresh-raw")).willReturn(ResponseCookie.from("refresh", "val").build());
-        given(authMapper.toLoginResponse(user)).willReturn(new LoginResponse(1L, "user@example.com", "user"));
+        given(authMapper.toLoginResponse(user)).willReturn(new LoginResponse(1L, "user@example.com", "user", true));
 
         AuthService.AuthResult result = authService.login(loginRequest);
 
@@ -82,17 +81,21 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginShouldThrowWhenEmailNotVerified() {
+    void loginShouldSucceedWhenEmailNotVerified() {
         user.setEmailVerified(false);
         given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .willReturn(authentication);
         given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user, 1L));
+        given(jwtUtil.generateAccessToken(1L, "user@example.com")).willReturn("access-token");
+        given(refreshTokenService.issue(user)).willReturn("refresh-raw");
+        given(cookieUtil.accessTokenCookie("access-token")).willReturn(ResponseCookie.from("access", "val").build());
+        given(cookieUtil.refreshTokenCookie("refresh-raw")).willReturn(ResponseCookie.from("refresh", "val").build());
+        given(authMapper.toLoginResponse(user)).willReturn(new LoginResponse(1L, "user@example.com", "user", false));
 
-        assertThatThrownBy(() -> authService.login(loginRequest))
-                .isInstanceOf(GlobalExceptionHandler.EmailNotVerifiedException.class);
+        AuthService.AuthResult result = authService.login(loginRequest);
 
-        // Nothing downstream should run once the verification gate fails
-        verifyNoInteractions(jwtUtil, refreshTokenService, cookieUtil);
+        assertThat(result.responseBody()).isInstanceOf(LoginResponse.class);
+        assertThat(result.tokens()).isNotNull();
     }
 
     @Test

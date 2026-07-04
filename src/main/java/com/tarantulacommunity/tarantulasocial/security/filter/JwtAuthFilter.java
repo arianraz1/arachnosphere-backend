@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.filter;
 
-import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,27 +10,32 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
     private final String accessTokenCookieName;
     private final Long adminUserId;
 
-    // Use clean constructor injection to map configuration properties
     public JwtAuthFilter(JwtUtil jwtUtil,
+                         UserRepository userRepository,
                          @Value("${app.cookie.access-token-name}") String accessTokenCookieName,
-                         @Value("${app.admin.user-id:1}") Long adminUserId) { // Defaults to 1 if missing
+                         @Value("${app.admin.user-id:1}") Long adminUserId) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
         this.accessTokenCookieName = accessTokenCookieName;
         this.adminUserId = adminUserId;
     }
@@ -46,24 +51,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     .filter(jwtUtil::isValid)
                     .ifPresent(token -> {
                         Long userId = jwtUtil.extractUserId(token);
-                        String email = jwtUtil.extractEmail(token);
 
-                        UserEntity userEntity = new UserEntity();
-                        userEntity.setId(userId);
-                        userEntity.setEmail(email);
-                        userEntity.setPassword("[STATELESS]"); // Stubbed since JWT handles authentication
+                        userRepository.findById(userId).ifPresent(user -> {
+                            CustomUserDetails userDetails = new CustomUserDetails(user, adminUserId);
 
-                        CustomUserDetails userDetails = new CustomUserDetails(userEntity, adminUserId);
+                            List<GrantedAuthority> authorities = user.isEmailVerified()
+                                    ? new ArrayList<>(userDetails.getAuthorities())
+                                    : List.of();
 
-                        UsernamePasswordAuthenticationToken auth =
-                                UsernamePasswordAuthenticationToken.authenticated(
-                                        userDetails,
-                                        null,
-                                        userDetails.getAuthorities()
-                                );
+                            UsernamePasswordAuthenticationToken auth =
+                                    UsernamePasswordAuthenticationToken.authenticated(
+                                            userDetails,
+                                            null,
+                                            authorities
+                                    );
 
-                        auth.setDetails(new WebAuthenticationDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(auth);
+                            auth.setDetails(new WebAuthenticationDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        });
                     });
         }
 

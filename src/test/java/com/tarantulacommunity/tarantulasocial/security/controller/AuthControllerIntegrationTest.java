@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -122,13 +123,33 @@ class AuthControllerIntegrationTest {
 
     // ---------- LOGIN — UNVERIFIED EMAIL ----------
     @Test
-    void shouldRejectLoginWhenEmailNotVerified() throws Exception {
+    void shouldAllowLoginWhenEmailNotVerified() throws Exception {
         createUser("unverified@test.com", "unverified", "pass123", false);
 
         LoginRequest request = new LoginRequest("unverified@test.com", "pass123");
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn403WhenUnverifiedUserAccessesProtectedEndpoint() throws Exception {
+        createUser("unverified@test.com", "unverified", "pass123", false);
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new LoginRequest("unverified@test.com", "pass123")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String accessToken = loginResult.getResponse().getCookie("access_token").getValue();
+
+        mockMvc.perform(get("/api/messages/inbox")
+                        .cookie(new Cookie("access_token", accessToken))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
     }

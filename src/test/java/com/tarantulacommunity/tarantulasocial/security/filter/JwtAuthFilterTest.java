@@ -1,6 +1,8 @@
 package com.tarantulacommunity.tarantulasocial.security.filter;
 
-import com.tarantulacommunity.tarantulasocial.security.dto.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -11,7 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Collections;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -23,21 +29,32 @@ class JwtAuthFilterTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private UserRepository userRepository;
+
     private JwtAuthFilter filter;
 
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
+
     @Mock
     private FilterChain chain;
 
+    private UserEntity validUser;
+
     @BeforeEach
     void setUp() {
-        // Manually create the filter with the mock and a known cookie name
-        filter = new JwtAuthFilter(jwtUtil, "access_token", 1L);
+        filter = new JwtAuthFilter(jwtUtil, userRepository, "access_token", 1L);
 
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
         SecurityContextHolder.clearContext();
+
+        validUser = new UserEntity();
+        validUser.setId(5L);
+        validUser.setEmail("user@example.com");
+        validUser.setPassword("hashed");
+        validUser.setEmailVerified(true);
     }
 
     @Test
@@ -47,19 +64,33 @@ class JwtAuthFilterTest {
 
         given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
         given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
-        given(jwtUtil.extractEmail("valid.jwt.token")).willReturn("user@example.com");
+        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
 
         filter.doFilterInternal(request, response, chain);
 
         var auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
-
         assertThat(auth.getPrincipal()).isInstanceOf(CustomUserDetails.class);
 
         CustomUserDetails principal = (CustomUserDetails) auth.getPrincipal();
         assertThat(principal.getId()).isEqualTo(5L);
         assertThat(principal.getUsername()).isEqualTo("user@example.com");
 
+        verify(chain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldNotAuthenticateWhenUserNotFoundInDatabase() throws Exception {
+        Cookie cookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(cookie);
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(99L);
+        given(userRepository.findById(99L)).willReturn(Optional.empty());
+
+        filter.doFilterInternal(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(chain).doFilter(request, response);
     }
 
@@ -80,19 +111,17 @@ class JwtAuthFilterTest {
 
     @Test
     void shouldNotAuthenticateWhenAuthenticationAlreadyExists() throws Exception {
-        // Pre-set authentication
         SecurityContextHolder.getContext().setAuthentication(
-            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                "existing", null, java.util.Collections.emptyList()
-            )
+                new UsernamePasswordAuthenticationToken(
+                        "existing", null, Collections.emptyList()
+                )
         );
 
         filter.doFilterInternal(request, response, chain);
 
-        // Should not overwrite existing authentication
         var auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
-        assertThat(auth.getPrincipal()).isInstanceOf(String.class); // Still the existing one
+        assertThat(auth.getPrincipal()).isInstanceOf(String.class);
     }
 
     @Test
@@ -104,14 +133,14 @@ class JwtAuthFilterTest {
     }
 
     @Test
-    void shouldNotAuthenticateWithMultipleCookies() throws Exception {
+    void shouldAuthenticateWithMultipleCookiesWhenCorrectOnePresent() throws Exception {
         Cookie wrongCookie = new Cookie("wrong_cookie", "token");
         Cookie rightCookie = new Cookie("access_token", "valid.jwt.token");
         request.setCookies(wrongCookie, rightCookie);
 
         given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
         given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
-        given(jwtUtil.extractEmail("valid.jwt.token")).willReturn("user@example.com");
+        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
 
         filter.doFilterInternal(request, response, chain);
 
@@ -122,9 +151,62 @@ class JwtAuthFilterTest {
 
     @Test
     void shouldNotAuthenticateWithNullCookies() throws Exception {
-        request.setCookies((jakarta.servlet.http.Cookie[]) null);
+        request.setCookies((Cookie[]) null);
 
         filter.doFilterInternal(request, response, chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void shouldSetEmptyAuthoritiesWhenEmailNotVerified() throws Exception {
+        Cookie cookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(cookie);
+
+        validUser.setEmailVerified(false);
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
+        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
+
+        filter.doFilterInternal(request, response, chain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getAuthorities()).isEmpty();
+    }
+
+    @Test
+    void shouldSetFullAuthoritiesWhenEmailVerified() throws Exception {
+        Cookie cookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(cookie);
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
+        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
+
+        filter.doFilterInternal(request, response, chain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getAuthorities()).isNotEmpty();
+    }
+
+    @Test
+    void shouldGrantAdminRoleToAdminUser() throws Exception {
+        Cookie cookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(cookie);
+
+        validUser.setId(1L); // admin user id
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(validUser));
+
+        filter.doFilterInternal(request, response, chain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth.getAuthorities())
+                .extracting("authority")
+                .containsExactly("ROLE_ADMIN");
     }
 }

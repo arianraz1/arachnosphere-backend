@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.features.user.dto.response;
+package com.tarantulacommunity.tarantulasocial.security.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,4 +17,5 @@ public class UserSignupResponse {
     private String email;
     private String username;
     private LocalDateTime createdAt;
+    private boolean emailVerified;
 }

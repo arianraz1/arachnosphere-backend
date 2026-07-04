@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.dto;
+package com.tarantulacommunity.tarantulasocial.security.config;
 
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
