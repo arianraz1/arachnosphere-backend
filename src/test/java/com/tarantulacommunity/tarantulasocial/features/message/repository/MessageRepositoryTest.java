@@ -30,8 +30,8 @@ public class MessageRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        sender = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        recipient = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
         thread = em.persistFlushFind(TestUtilities.validThread(sender));
     }
 
@@ -101,7 +101,7 @@ public class MessageRepositoryTest {
 
     @Test
     void findThreadsByUserId_returnsEmptyWhenNoThreads() {
-        UserEntity noThreadUser = em.persistFlushFind(TestUtilities.validUser("3", "3"));
+        UserEntity noThreadUser = em.persistFlushFind(TestUtilities.verifiedUser("3", "3"));
 
         Page<ThreadEntity> result = messageRepository.findThreadsByUserId(noThreadUser.getId(), PageRequest.of(0, 10));
 

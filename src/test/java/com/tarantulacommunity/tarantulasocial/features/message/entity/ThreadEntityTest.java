@@ -25,7 +25,7 @@ class ThreadEntityTest {
 
     @Test
     void validThreadPersistsWithDefaults() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         assertNotNull(thread.getId());
@@ -46,7 +46,7 @@ class ThreadEntityTest {
 
     @Test
     void subjectOver255CharsFailsBeanValidation() {
-        UserEntity user = TestUtilities.validUser("2", "2");
+        UserEntity user = TestUtilities.verifiedUser("2", "2");
         ThreadEntity thread = new ThreadEntity();
         thread.setCreatedBy(user);
         thread.setSubject("a".repeat(256));
@@ -57,7 +57,7 @@ class ThreadEntityTest {
 
     @Test
     void nullSubjectIsAllowed() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("3", "3"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("3", "3"));
         ThreadEntity thread = new ThreadEntity();
         thread.setCreatedBy(user);
         thread.setSubject(null);
@@ -68,7 +68,7 @@ class ThreadEntityTest {
 
     @Test
     void activeDefaultsToTrue() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("4", "4"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("4", "4"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         assertTrue(thread.isActive());
@@ -76,7 +76,7 @@ class ThreadEntityTest {
 
     @Test
     void activeCanBeSetToFalse() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("5", "5"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("5", "5"));
         ThreadEntity thread = TestUtilities.validThread(user);
         thread.setActive(false);
         ThreadEntity saved = em.persistFlushFind(thread);
@@ -86,7 +86,7 @@ class ThreadEntityTest {
 
     @Test
     void createdAtIsNotUpdatable() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("6", "6"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("6", "6"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         LocalDateTime originalCreatedAt = thread.getCreatedAt();
@@ -98,7 +98,7 @@ class ThreadEntityTest {
 
     @Test
     void updatedAtChangesOnUpdate() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("7", "7"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("7", "7"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         LocalDateTime originalUpdatedAt = thread.getUpdatedAt();
@@ -110,7 +110,7 @@ class ThreadEntityTest {
 
     @Test
     void messagesListIsEmptyByDefault() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("8", "8"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("8", "8"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         assertNotNull(thread.getMessages());

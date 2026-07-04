@@ -62,7 +62,7 @@ public class SpeciesRepositoryTest {
 
     @Test
     void findOwnedSpeciesByQuery_returnsOnlyOwnedSpecies() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
         SpeciesEntity owned = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity unowned = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
@@ -80,7 +80,7 @@ public class SpeciesRepositoryTest {
         SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
 
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
@@ -101,7 +101,7 @@ public class SpeciesRepositoryTest {
         bh.setCommonName("Mexican Red Knee");
         em.persistFlushFind(bh);
 
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
 
@@ -114,7 +114,7 @@ public class SpeciesRepositoryTest {
     @Test
     void findOwnedSpeciesByQuery_isCaseInsensitive() {
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 
         Page<SpeciesEntity> result = speciesRepository.findOwnedSpeciesByQuery("chromatopelma", PageRequest.of(0, 10));
@@ -145,7 +145,7 @@ public class SpeciesRepositoryTest {
         SpeciesEntity owned = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity unowned = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
 
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, owned));
 
         Page<SpeciesEntity> result = speciesRepository.findUnownedSpeciesByQuery("", PageRequest.of(0, 10));
@@ -182,7 +182,7 @@ public class SpeciesRepositoryTest {
     @Test
     void findUnownedSpeciesByQuery_returnsEmpty_whenAllSpeciesAreOwned() {
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 
         Page<SpeciesEntity> result = speciesRepository.findUnownedSpeciesByQuery("", PageRequest.of(0, 10));
@@ -192,7 +192,7 @@ public class SpeciesRepositoryTest {
 
     @Test
     void findOwnedSpeciesByQueryOrderByOwnerCount_returnsOnlyOwnedSpecies() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
         SpeciesEntity owned = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
@@ -209,9 +209,9 @@ public class SpeciesRepositoryTest {
         SpeciesEntity popular = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity lessPopular = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
 
-        UserEntity user1 = em.persistFlushFind(TestUtilities.validUser("1", "user1"));
-        UserEntity user2 = em.persistFlushFind(TestUtilities.validUser("2", "user2"));
-        UserEntity user3 = em.persistFlushFind(TestUtilities.validUser("3", "user3"));
+        UserEntity user1 = em.persistFlushFind(TestUtilities.verifiedUser("1", "user1"));
+        UserEntity user2 = em.persistFlushFind(TestUtilities.verifiedUser("2", "user2"));
+        UserEntity user3 = em.persistFlushFind(TestUtilities.verifiedUser("3", "user3"));
 
         em.persistFlushFind(TestUtilities.validCollectionEntry(user1, popular));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user2, popular));
@@ -227,7 +227,7 @@ public class SpeciesRepositoryTest {
 
     @Test
     void findOwnedSpeciesByQueryOrderByOwnerCount_filtersbyScientificName() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
         SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
@@ -243,7 +243,7 @@ public class SpeciesRepositoryTest {
 
     @Test
     void findOwnedSpeciesByQueryOrderByOwnerCount_isCaseInsensitive() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 

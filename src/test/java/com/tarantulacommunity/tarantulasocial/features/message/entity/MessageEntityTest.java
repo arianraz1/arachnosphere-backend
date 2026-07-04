@@ -29,8 +29,8 @@ class MessageEntityTest {
 
     @BeforeEach
     void setUp() {
-        sender = em.persistFlushFind(TestUtilities.validUser("1", "1"));
-        recipient = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        sender = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        recipient = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
         thread = em.persistFlushFind(TestUtilities.validThread(sender));
     }
 

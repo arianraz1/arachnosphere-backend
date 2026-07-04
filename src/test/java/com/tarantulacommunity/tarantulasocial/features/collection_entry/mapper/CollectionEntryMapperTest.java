@@ -22,7 +22,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToResponse() {
-        UserEntity user = TestUtilities.validUser("1", "1");
+        UserEntity user = TestUtilities.verifiedUser("1", "1");
         user.setId(1L);
         user.setProfilePicUrl("https://example.com/user.jpg");
 
@@ -82,7 +82,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToResponseWithAllZeroCounts() {
-        UserEntity user = TestUtilities.validUser("2", "2");
+        UserEntity user = TestUtilities.verifiedUser("2", "2");
         user.setId(2L);
 
         SpeciesEntity species = TestUtilities.validSpecies(234567L, "Lampropelma violaceopes");
@@ -109,7 +109,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToResponseWithoutOptionalFields() {
-        UserEntity user = TestUtilities.validUser("3", "3");
+        UserEntity user = TestUtilities.verifiedUser("3", "3");
         user.setId(3L);
 
         SpeciesEntity species = TestUtilities.validSpecies(345678L, "Avicularia avicularia");
@@ -186,7 +186,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testUpdateEntityFromRequest() {
-        UserEntity user = TestUtilities.validUser("4", "4");
+        UserEntity user = TestUtilities.verifiedUser("4", "4");
         user.setId(4L);
 
         SpeciesEntity species = TestUtilities.validSpecies(456789L, "Brachypelma smithi");
@@ -231,7 +231,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testUpdateEntityFromRequestIgnoresImmutableFields() {
-        UserEntity user = TestUtilities.validUser("5", "5");
+        UserEntity user = TestUtilities.verifiedUser("5", "5");
         user.setId(5L);
 
         SpeciesEntity species = TestUtilities.validSpecies(567890L, "Poecilotheria striata");
@@ -257,7 +257,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToUpdateRequest() {
-        UserEntity user = TestUtilities.validUser("6", "6");
+        UserEntity user = TestUtilities.verifiedUser("6", "6");
         user.setId(6L);
 
         SpeciesEntity species = TestUtilities.validSpecies(678901L, "Teraphosa blondi");
@@ -288,7 +288,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToUpdateRequestWithNullOptionalFields() {
-        UserEntity user = TestUtilities.validUser("7", "7");
+        UserEntity user = TestUtilities.verifiedUser("7", "7");
         user.setId(7L);
 
         SpeciesEntity species = TestUtilities.validSpecies(789012L, "Ceratogyrus darlingi");
@@ -308,7 +308,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testComplexMappingWithHighQuantities() {
-        UserEntity user = TestUtilities.validUser("8", "8");
+        UserEntity user = TestUtilities.verifiedUser("8", "8");
         user.setId(8L);
 
         SpeciesEntity species = TestUtilities.validSpecies(890123L, "Species with many individuals");
@@ -347,7 +347,7 @@ class CollectionEntryMapperTest {
 
     @Test
     void testToOwnerResponse_shouldMapEntityToOwnerDto() {
-        UserEntity user = TestUtilities.validUser("9", "9");
+        UserEntity user = TestUtilities.verifiedUser("9", "9");
         user.setId(9L);
         user.setProfilePicUrl("https://example.com/owner-avatar.jpg");
 

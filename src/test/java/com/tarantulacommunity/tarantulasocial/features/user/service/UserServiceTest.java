@@ -11,6 +11,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,16 +42,16 @@ public class UserServiceTest {
 
     @Test
     void register_savesUserAndReturnsSignupResponse() {
-        UserRegisterRequest request = new UserRegisterRequest("test@example.com", "testuser", "password123");
+        UserRegisterRequest request = new UserRegisterRequest("TEST@Example.COM", "TestUser", "password123");
 
-        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
-        when(userRepository.existsByUsername(request.getUsername())).thenReturn(false);
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("$2a$10$hashedpassword");
 
         UserEntity savedUser = new UserEntity();
         savedUser.setId(1L);
-        savedUser.setEmail(request.getEmail());
-        savedUser.setUsername(request.getUsername());
+        savedUser.setEmail("test@example.com");
+        savedUser.setUsername("testuser");
         savedUser.setPassword("$2a$10$hashedpassword");
 
         when(userRepository.save(any(UserEntity.class))).thenReturn(savedUser);
@@ -65,10 +67,44 @@ public class UserServiceTest {
     }
 
     @Test
-    void register_throwsEmailAlreadyTakenException_whenEmailExists() {
-        UserRegisterRequest request = new UserRegisterRequest("test@example.com", "testuser", "password123");
+    void register_normalizesEmailToLowercase() {
+        UserRegisterRequest request = new UserRegisterRequest("TEST@EXAMPLE.COM", "testuser", "password123");
 
-        when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userMapper.toSignupResponse(any())).thenReturn(new UserSignupResponse());
+
+        userService.registerUser(request);
+
+        ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    void register_normalizesUsernameToLowercase() {
+        UserRegisterRequest request = new UserRegisterRequest("test@example.com", "TestUser", "password123");
+
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(userRepository.existsByUsername("testuser")).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(userMapper.toSignupResponse(any())).thenReturn(new UserSignupResponse());
+
+        userService.registerUser(request);
+
+        ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getUsername()).isEqualTo("testuser");
+    }
+
+    @Test
+    void register_throwsEmailAlreadyTakenException_whenEmailExists() {
+        UserRegisterRequest request = new UserRegisterRequest("TEST@Example.COM", "testuser", "password123");
+
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
 
         assertThrows(GlobalExceptionHandler.EmailAlreadyTakenException.class, () -> userService.registerUser(request));
         verify(userRepository, never()).save(any(UserEntity.class));
@@ -77,9 +113,9 @@ public class UserServiceTest {
 
     @Test
     void register_throwsUsernameAlreadyTakenException_whenUsernameExists() {
-        UserRegisterRequest request = new UserRegisterRequest("test@example.com", "testuser", "password123");
+        UserRegisterRequest request = new UserRegisterRequest("test@example.com", "TestUser", "password123");
 
-        when(userRepository.existsByUsername(request.getUsername())).thenReturn(true);
+        when(userRepository.existsByUsername("testuser")).thenReturn(true);
 
         assertThrows(GlobalExceptionHandler.UsernameAlreadyTakenException.class, () -> userService.registerUser(request));
         verify(userRepository, never()).save(any(UserEntity.class));

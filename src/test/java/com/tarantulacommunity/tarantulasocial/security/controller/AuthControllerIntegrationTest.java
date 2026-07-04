@@ -2,6 +2,8 @@ package com.tarantulacommunity.tarantulasocial.security.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tarantulacommunity.tarantulasocial.TarantulaProjectApplication;
+import com.tarantulacommunity.tarantulasocial.TestUtilities;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.EmailVerificationTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.EmailVerificationTokenRepository;
@@ -195,28 +197,79 @@ class AuthControllerIntegrationTest {
 
     // ---------- RESEND VERIFICATION ----------
     @Test
-    void shouldReturnGenericMessageForResendRegardlessOfEmailExistence() throws Exception {
-        String expectedMessage = "If that email is registered and not yet verified, a verification link has been sent.";
+    void shouldReturnEmailVerifiedFalseInLoginResponseWhenUnverified() throws Exception {
+        createUser("unverified2@test.com", "unverified2", "pass123", false);
 
-        mockMvc.perform(post("/api/auth/resend-verification")
-                        .param("email", "doesnotexist@test.com")
+        LoginRequest request = new LoginRequest("unverified2@test.com", "pass123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value(expectedMessage));
+                .andExpect(jsonPath("$.user.emailVerified").value(false));
+    }
 
-        createUser("realbutunverified@test.com", "realuser", "pass123", false);
-        mockMvc.perform(post("/api/auth/resend-verification")
-                        .param("email", "realbutunverified@test.com")
+    @Test
+    void shouldReturnEmailVerifiedTrueInLoginResponseWhenVerified() throws Exception {
+        createUser("verified@test.com", "verified", "pass123", true);
+
+        LoginRequest request = new LoginRequest("verified@test.com", "pass123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value(expectedMessage));
+                .andExpect(jsonPath("$.user.emailVerified").value(true));
+    }
+
+    // ---------- CASE INSENSITIVE LOGIN ----------
+    @Test
+    void shouldLoginWithMixedCaseEmail() throws Exception {
+        createUser("login2@test.com", "loginuser2", "pass123");
+
+        LoginRequest request = new LoginRequest("LOGIN2@TEST.COM", "pass123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value("login2@test.com"));
+    }
+
+    // ---------- DUPLICATE EMAIL CASE INSENSITIVE ----------
+    @Test
+    void shouldNotRegisterDuplicateEmailWithDifferentCase() throws Exception {
+        createUser("duplicate@test.com", "user1", "pass1234");
+
+        UserRegisterRequest request = new UserRegisterRequest("DUPLICATE@TEST.COM", "user2", "pass1234");
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isConflict());
+    }
+
+    // ---------- RESEND VERIFICATION ----------
+    @Test
+    void shouldResendVerificationEmailWhenAuthenticated() throws Exception {
+        UserEntity user = createUser("resend@test.com", "resenduser", "pass123", false);
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
+
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .cookie(buildAccessCookie(accessToken))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void shouldReturn401ForResendVerificationWhenNotAuthenticated() throws Exception {
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
     }
 
     // ---------- HELPERS ----------
-    private UserEntity createUser(String email, String username, String rawPassword) {
-        return createUser(email, username, rawPassword, true);
-    }
-
     private Cookie buildRefreshCookie(String value) {
         Cookie c = new Cookie("refresh_token", value);
         c.setPath("/api/auth/refresh");
@@ -235,12 +288,17 @@ class AuthControllerIntegrationTest {
         return c;
     }
 
+    private UserEntity createUser(String email, String username, String rawPassword) {
+        return createUser(email, username, rawPassword, true);
+    }
+
     private UserEntity createUser(String email, String username, String rawPassword, boolean emailVerified) {
-        UserEntity user = new UserEntity();
-        user.setEmail(email);
-        user.setUsername(username);
+        UserEntity user = emailVerified
+                ? TestUtilities.verifiedUser(email, username)
+                : TestUtilities.unverifiedUser(email, username);
+        user.setEmail(email.toLowerCase().trim());
+        user.setUsername(username.toLowerCase().trim());
         user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setEmailVerified(emailVerified);
         return userRepository.save(user);
     }
 }

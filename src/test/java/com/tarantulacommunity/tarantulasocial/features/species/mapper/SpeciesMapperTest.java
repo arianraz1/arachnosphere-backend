@@ -188,7 +188,7 @@ class SpeciesMapperTest {
 
         SpeciesResponse species = speciesMapper.toResponse(speciesEntity);
 
-        UserEntity user = TestUtilities.validUser("1", "dockeruser");
+        UserEntity user = TestUtilities.verifiedUser("1", "dockeruser");
         user.setId(1L);
         user.setProfilePicUrl("https://example.com/avatar.jpg");
 

@@ -22,7 +22,7 @@ class EmailVerificationTokenRepositoryTest {
     @Autowired private EmailVerificationTokenRepository tokenRepository;
 
     private UserEntity persistUser(String suffix) {
-        UserEntity user = TestUtilities.validUser(suffix, suffix);
+        UserEntity user = TestUtilities.verifiedUser(suffix, suffix);
         return em.persistFlushFind(user);
     }
 

@@ -25,16 +25,19 @@ public class UserService {
 
     @Transactional
     public UserSignupResponse registerUser(UserRegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new GlobalExceptionHandler.EmailAlreadyTakenException(request.getEmail());
+        String normalizedEmail = request.getEmail().toLowerCase().trim();
+        String normalizedUsername = request.getUsername().toLowerCase().trim();
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new GlobalExceptionHandler.EmailAlreadyTakenException(normalizedEmail);
         }
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new GlobalExceptionHandler.UsernameAlreadyTakenException(request.getUsername());
+        if (userRepository.existsByUsername(normalizedUsername)) {
+            throw new GlobalExceptionHandler.UsernameAlreadyTakenException(normalizedUsername);
         }
 
         UserEntity user = new UserEntity();
-        user.setEmail(request.getEmail());
-        user.setUsername(request.getUsername());
+        user.setEmail(normalizedEmail);
+        user.setUsername(normalizedUsername);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         return userMapper.toSignupResponse(userRepository.save(user));

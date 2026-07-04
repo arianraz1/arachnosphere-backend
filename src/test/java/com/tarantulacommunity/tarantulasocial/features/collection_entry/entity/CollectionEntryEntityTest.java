@@ -25,7 +25,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void validEntryPersistsWithDefaults() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2001L, "Grammostola pulchripes"));
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -48,7 +48,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void duplicateUserSpeciesViolatesUniqueConstraint() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2002L, "Brachypelma hamorii"));
 
         em.persist(TestUtilities.validCollectionEntry(user, species));
@@ -59,8 +59,8 @@ class CollectionEntryEntityTest {
 
     @Test
     void sameSpeciesDifferentUsersPersistsSuccessfully() {
-        UserEntity user1 = em.persistFlushFind(TestUtilities.validUser("3", "3"));
-        UserEntity user2 = em.persistFlushFind(TestUtilities.validUser("4", "4"));
+        UserEntity user1 = em.persistFlushFind(TestUtilities.verifiedUser("3", "3"));
+        UserEntity user2 = em.persistFlushFind(TestUtilities.verifiedUser("4", "4"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2003L, "Aphonopelma chalcodes"));
 
         CollectionEntryEntity entry1 = TestUtilities.validCollectionEntry(user1, species);
@@ -72,7 +72,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void sameUserDifferentSpeciesPersistsSuccessfully() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("5", "5"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("5", "5"));
         SpeciesEntity species1 = em.persistFlushFind(TestUtilities.validSpecies(2004L, "Caribena versicolor"));
         SpeciesEntity species2 = em.persistFlushFind(TestUtilities.validSpecies(2005L, "Poecilotheria metallica"));
 
@@ -85,7 +85,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void negativeCountViolatesCheckConstraint() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("6", "6"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("6", "6"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2006L, "Tliltocatl albopilosus"));
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -96,7 +96,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void negativeCountFailsBeanValidation() {
-        UserEntity user = TestUtilities.validUser("7", "7");
+        UserEntity user = TestUtilities.verifiedUser("7", "7");
         SpeciesEntity species = TestUtilities.validSpecies(2007L, "Xenesthis immanis");
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -108,7 +108,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void customInfoTooLongFailsBeanValidation() {
-        UserEntity user = TestUtilities.validUser("8", "8");
+        UserEntity user = TestUtilities.verifiedUser("8", "8");
         SpeciesEntity species = TestUtilities.validSpecies(2008L, "Pamphobeteus antinous");
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -120,7 +120,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void featuredImageUrlTooLongFailsBeanValidation() {
-        UserEntity user = TestUtilities.validUser("9", "9");
+        UserEntity user = TestUtilities.verifiedUser("9", "9");
         SpeciesEntity species = TestUtilities.validSpecies(2009L, "Lampropelma violaceopes");
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -132,7 +132,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void validEntryWithCountsAndOptionalFieldsPersistsSuccessfully() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("10", "10"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("10", "10"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2010L, "Theraphosa blondi"));
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
@@ -162,7 +162,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void nullSpeciesViolatesNotNullConstraint() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("11", "11"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("11", "11"));
 
         CollectionEntryEntity entry = new CollectionEntryEntity();
         entry.setUser(user);
@@ -173,7 +173,7 @@ class CollectionEntryEntityTest {
 
     @Test
     void version_incrementsOnUpdate() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 

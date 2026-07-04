@@ -8,12 +8,21 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 
 public class TestUtilities {
 
-    public static UserEntity validUser(String emailSuffix, String usernameSuffix) {
+    public static UserEntity validUser(String emailSuffix, String usernameSuffix, boolean emailVerified) {
         UserEntity user = new UserEntity();
         user.setEmail("test" + emailSuffix + "@example.com");
         user.setUsername("test" + usernameSuffix);
         user.setPassword("$2a$10$abcdefghijklmnopqrstuv");
+        user.setEmailVerified(emailVerified);
         return user;
+    }
+
+    public static UserEntity verifiedUser(String emailSuffix, String usernameSuffix) {
+        return validUser(emailSuffix, usernameSuffix, true);
+    }
+
+    public static UserEntity unverifiedUser(String emailSuffix, String usernameSuffix) {
+        return validUser(emailSuffix, usernameSuffix, false);
     }
 
     public static SpeciesEntity validSpecies(long gbifKey, String scientificName) {

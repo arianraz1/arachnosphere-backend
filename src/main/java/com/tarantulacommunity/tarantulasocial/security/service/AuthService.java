@@ -49,7 +49,10 @@ public class AuthService {
     @Transactional
     public AuthResult login(LoginRequest request) {
         Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail().toLowerCase().trim(),
+                        request.getPassword()
+                )
         );
 
         if (!(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {

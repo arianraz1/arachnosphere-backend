@@ -37,4 +37,24 @@ class CustomUserDetailsServiceTest {
         assertThatThrownBy(() -> service.loadUserByUsername("missing"))
                 .isInstanceOf(UsernameNotFoundException.class);
     }
+
+    @Test
+    void shouldNormalizeEmailToLowercaseBeforeLookup() {
+        UserEntity user = new UserEntity();
+        user.setEmail("u@example.com");
+        given(userRepository.findByEmail("u@example.com")).willReturn(Optional.of(user));
+
+        var details = service.loadUserByUsername("U@EXAMPLE.COM");
+        assertThat(details.getUsername()).isEqualTo("u@example.com");
+    }
+
+    @Test
+    void shouldTrimWhitespaceFromEmail() {
+        UserEntity user = new UserEntity();
+        user.setEmail("u@example.com");
+        given(userRepository.findByEmail("u@example.com")).willReturn(Optional.of(user));
+
+        var details = service.loadUserByUsername("  u@example.com  ");
+        assertThat(details.getUsername()).isEqualTo("u@example.com");
+    }
 }

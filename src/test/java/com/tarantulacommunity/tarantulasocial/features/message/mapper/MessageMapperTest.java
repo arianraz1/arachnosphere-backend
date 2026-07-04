@@ -24,7 +24,7 @@ class MessageMapperTest {
 
     @BeforeEach
     void setUp() {
-        UserEntity creator = TestUtilities.validUser("0", "0");
+        UserEntity creator = TestUtilities.verifiedUser("0", "0");
         creator.setId(0L);
         thread = new ThreadEntity();
         thread.setId(1L);
@@ -34,11 +34,11 @@ class MessageMapperTest {
 
     @Test
     void testToResponse() {
-        UserEntity sender = TestUtilities.validUser("1", "1");
+        UserEntity sender = TestUtilities.verifiedUser("1", "1");
         sender.setId(1L);
         sender.setProfilePicUrl("https://example.com/sender.jpg");
 
-        UserEntity recipient = TestUtilities.validUser("2", "2");
+        UserEntity recipient = TestUtilities.verifiedUser("2", "2");
         recipient.setId(2L);
         recipient.setProfilePicUrl("https://example.com/recipient.jpg");
 
@@ -65,10 +65,10 @@ class MessageMapperTest {
 
     @Test
     void testToResponseWithLongMessage() {
-        UserEntity sender = TestUtilities.validUser("3", "3");
+        UserEntity sender = TestUtilities.verifiedUser("3", "3");
         sender.setId(3L);
 
-        UserEntity recipient = TestUtilities.validUser("4", "4");
+        UserEntity recipient = TestUtilities.verifiedUser("4", "4");
         recipient.setId(4L);
 
         String longContent = "This is a very long message about tarantulas. " +
@@ -88,10 +88,10 @@ class MessageMapperTest {
 
     @Test
     void testToResponsePreservesTimestamp() {
-        UserEntity sender = TestUtilities.validUser("5", "5");
+        UserEntity sender = TestUtilities.verifiedUser("5", "5");
         sender.setId(5L);
 
-        UserEntity recipient = TestUtilities.validUser("6", "6");
+        UserEntity recipient = TestUtilities.verifiedUser("6", "6");
         recipient.setId(6L);
 
         MessageEntity message = TestUtilities.validMessage(sender, recipient, "Test", thread);
@@ -106,11 +106,11 @@ class MessageMapperTest {
 
     @Test
     void testToResponseWithDifferentUsers() {
-        UserEntity sender = TestUtilities.validUser("7", "7");
+        UserEntity sender = TestUtilities.verifiedUser("7", "7");
         sender.setId(7L);
         sender.setProfilePicUrl("https://example.com/sender7.jpg");
 
-        UserEntity recipient = TestUtilities.validUser("8", "8");
+        UserEntity recipient = TestUtilities.verifiedUser("8", "8");
         recipient.setId(8L);
         recipient.setProfilePicUrl("https://example.com/recipient8.jpg");
 
@@ -129,10 +129,10 @@ class MessageMapperTest {
 
     @Test
     void testToResponseWithoutProfilePictures() {
-        UserEntity sender = TestUtilities.validUser("9", "9");
+        UserEntity sender = TestUtilities.verifiedUser("9", "9");
         sender.setId(9L);
 
-        UserEntity recipient = TestUtilities.validUser("10", "10");
+        UserEntity recipient = TestUtilities.verifiedUser("10", "10");
         recipient.setId(10L);
 
         MessageEntity message = TestUtilities.validMessage(sender, recipient, "Message without pics", thread);
@@ -148,11 +148,11 @@ class MessageMapperTest {
 
     @Test
     void testToResponseMapsAllFields() {
-        UserEntity sender = TestUtilities.validUser("11", "11");
+        UserEntity sender = TestUtilities.verifiedUser("11", "11");
         sender.setId(11L);
         sender.setProfilePicUrl("https://example.com/sender11.jpg");
 
-        UserEntity recipient = TestUtilities.validUser("12", "12");
+        UserEntity recipient = TestUtilities.verifiedUser("12", "12");
         recipient.setId(12L);
         recipient.setProfilePicUrl("https://example.com/recipient12.jpg");
 
@@ -175,10 +175,10 @@ class MessageMapperTest {
 
     @Test
     void testToResponseMapsThreadId() {
-        UserEntity sender = TestUtilities.validUser("13", "13");
+        UserEntity sender = TestUtilities.verifiedUser("13", "13");
         sender.setId(13L);
 
-        UserEntity recipient = TestUtilities.validUser("14", "14");
+        UserEntity recipient = TestUtilities.verifiedUser("14", "14");
         recipient.setId(14L);
 
         ThreadEntity specificThread = new ThreadEntity();

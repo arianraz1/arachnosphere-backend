@@ -25,7 +25,7 @@ class ThreadRepositoryTest {
 
     @Test
     void save_persistsThread() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         Optional<ThreadEntity> result = threadRepository.findById(thread.getId());
@@ -43,7 +43,7 @@ class ThreadRepositoryTest {
 
     @Test
     void delete_removesThread() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("2", "2"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         threadRepository.delete(thread);

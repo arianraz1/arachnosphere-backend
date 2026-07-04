@@ -95,8 +95,8 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestParam String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
+    public ResponseEntity<?> resendVerification(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        userRepository.findById(userDetails.getId()).ifPresent(user -> {
             if (!user.isEmailVerified()) {
                 try {
                     emailVerificationService.sendVerificationEmail(user);
@@ -107,7 +107,7 @@ public class AuthController {
         });
 
         return ResponseEntity.ok(Map.of(
-                "message", "If that email is registered and not yet verified, a verification link has been sent."
+                "message", "If your email is not yet verified, a verification link has been sent."
         ));
     }
 

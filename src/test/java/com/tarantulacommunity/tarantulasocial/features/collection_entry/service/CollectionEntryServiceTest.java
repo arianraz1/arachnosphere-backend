@@ -55,7 +55,7 @@ class CollectionEntryServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = TestUtilities.validUser("1", "1");
+        user = TestUtilities.verifiedUser("1", "1");
         user.setId(1L);
 
         species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");

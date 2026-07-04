@@ -23,7 +23,7 @@ class UserMapperTest {
 
     @Test
     void testToProfileResponse() {
-        UserEntity user = TestUtilities.validUser("1", "1");
+        UserEntity user = TestUtilities.verifiedUser("1", "1");
         user.setId(1L);
         user.setProfilePicUrl("https://example.com/pic.jpg");
         user.setBio("I love tarantulas!");
@@ -45,7 +45,7 @@ class UserMapperTest {
 
     @Test
     void testToProfileResponseWithNullOptionalFields() {
-        UserEntity user = TestUtilities.validUser("2", "2");
+        UserEntity user = TestUtilities.verifiedUser("2", "2");
         user.setId(2L);
         user.setCreatedAt(LocalDateTime.now());
 
@@ -63,7 +63,7 @@ class UserMapperTest {
     @Test
     void testToSummaryResponse() {
         // Arrange
-        UserEntity user = TestUtilities.validUser("3", "3");
+        UserEntity user = TestUtilities.verifiedUser("3", "3");
         user.setId(3L);
         user.setProfilePicUrl("https://example.com/pic.jpg");
 
@@ -80,7 +80,7 @@ class UserMapperTest {
     @Test
     void testToSummaryResponseWithNullProfilePic() {
         // Arrange
-        UserEntity user = TestUtilities.validUser("4", "4");
+        UserEntity user = TestUtilities.verifiedUser("4", "4");
         user.setId(4L);
         // profilePicUrl is null
 
@@ -97,7 +97,7 @@ class UserMapperTest {
     @Test
     void testToSignupResponse() {
         // Arrange
-        UserEntity user = TestUtilities.validUser("5", "5");
+        UserEntity user = TestUtilities.verifiedUser("5", "5");
         user.setId(5L);
         user.setCreatedAt(LocalDateTime.now());
 
@@ -113,7 +113,7 @@ class UserMapperTest {
 
     @Test
     void testUpdateProfileFromRequest() {
-        UserEntity user = TestUtilities.validUser("6", "6");
+        UserEntity user = TestUtilities.verifiedUser("6", "6");
         user.setId(6L);
         user.setVersion(0L);
 
@@ -126,12 +126,12 @@ class UserMapperTest {
         assertEquals("https://example.com/new-pic.jpg", user.getProfilePicUrl());
         assertEquals("Updated bio!", user.getBio());
         assertEquals(6L, user.getId());
-        assertEquals(TestUtilities.validUser("6", "6").getEmail(), user.getEmail());
+        assertEquals(TestUtilities.verifiedUser("6", "6").getEmail(), user.getEmail());
     }
 
     @Test
     void testUpdateProfileFromRequestIgnoresImmutableFields() {
-        UserEntity user = TestUtilities.validUser("7", "7");
+        UserEntity user = TestUtilities.verifiedUser("7", "7");
         user.setId(7L);
         Long originalId = user.getId();
         String originalEmail = user.getEmail();
@@ -152,7 +152,7 @@ class UserMapperTest {
 
     @Test
     void testUpdateProfileFromRequestWithNullValues() {
-        UserEntity user = TestUtilities.validUser("8", "8");
+        UserEntity user = TestUtilities.verifiedUser("8", "8");
         user.setId(8L);
         user.setProfilePicUrl("https://example.com/pic.jpg");
         user.setBio("Old bio");
@@ -169,7 +169,7 @@ class UserMapperTest {
 
     @Test
     void testUpdateFavoriteFromRequest() {
-        UserEntity user = TestUtilities.validUser("9", "9");
+        UserEntity user = TestUtilities.verifiedUser("9", "9");
         user.setId(9L);
         user.setVersion(0L);
 
@@ -185,7 +185,7 @@ class UserMapperTest {
 
     @Test
     void testUpdateFavoriteFromRequestIgnoresImmutableFields() {
-        UserEntity user = TestUtilities.validUser("10", "10");
+        UserEntity user = TestUtilities.verifiedUser("10", "10");
         user.setId(10L);
         String originalProfilePicUrl = "https://example.com/pic.jpg";
         String originalBio = "My bio";
@@ -204,7 +204,7 @@ class UserMapperTest {
 
     @Test
     void testUpdateFavoriteFromRequestWithNullValues() {
-        UserEntity user = TestUtilities.validUser("11", "11");
+        UserEntity user = TestUtilities.verifiedUser("11", "11");
         user.setId(11L);
         user.setFavoriteImageUrl("https://example.com/favorite.jpg");
         user.setFavoriteCaption("Old caption");

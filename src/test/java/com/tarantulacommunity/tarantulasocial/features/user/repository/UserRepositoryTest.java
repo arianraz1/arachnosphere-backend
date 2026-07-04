@@ -21,7 +21,7 @@ public class UserRepositoryTest {
 
     @Test
     void findByUsername_returnsCorrectUser() {
-        UserEntity user = em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
         Optional<UserEntity> result = userRepository.findByUsername("test1");
 
@@ -38,7 +38,7 @@ public class UserRepositoryTest {
 
     @Test
     void existsByEmail_returnsTrue_whenExists() {
-        em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         assertTrue(userRepository.existsByEmail("test1@example.com"));
     }
 
@@ -49,7 +49,7 @@ public class UserRepositoryTest {
 
     @Test
     void existsByUsername_returnsTrue_whenExists() {
-        em.persistFlushFind(TestUtilities.validUser("1", "1"));
+        em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         assertTrue(userRepository.existsByUsername("test1"));
     }
 

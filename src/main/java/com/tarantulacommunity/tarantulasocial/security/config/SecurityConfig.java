@@ -133,6 +133,7 @@ public class SecurityConfig {
                         .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/resend-verification").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/species/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()

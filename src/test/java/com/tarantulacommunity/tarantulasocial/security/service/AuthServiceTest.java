@@ -15,6 +15,7 @@ import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -60,6 +61,27 @@ class AuthServiceTest {
         user.setUsername("user");
         user.setEmailVerified(true);
         loginRequest = new LoginRequest("user@example.com", "password");
+    }
+
+    @Test
+    void loginShouldNormalizeEmailToLowercase() {
+        LoginRequest mixedCaseRequest = new LoginRequest("USER@EXAMPLE.COM", "password");
+
+        given(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .willReturn(authentication);
+        given(authentication.getPrincipal()).willReturn(new CustomUserDetails(user, 1L));
+        given(jwtUtil.generateAccessToken(1L, "user@example.com")).willReturn("access-token");
+        given(refreshTokenService.issue(user)).willReturn("refresh-raw");
+        given(cookieUtil.accessTokenCookie("access-token")).willReturn(ResponseCookie.from("access", "val").build());
+        given(cookieUtil.refreshTokenCookie("refresh-raw")).willReturn(ResponseCookie.from("refresh", "val").build());
+        given(authMapper.toLoginResponse(user)).willReturn(new LoginResponse(1L, "user@example.com", "user", true));
+
+        authService.login(mixedCaseRequest);
+
+        ArgumentCaptor<UsernamePasswordAuthenticationToken> captor =
+                ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+        verify(authManager).authenticate(captor.capture());
+        assertThat(captor.getValue().getName()).isEqualTo("user@example.com");
     }
 
     @Test
