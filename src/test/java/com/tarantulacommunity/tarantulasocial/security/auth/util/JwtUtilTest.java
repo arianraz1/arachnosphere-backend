@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.util;
+package com.tarantulacommunity.tarantulasocial.security.auth.util;
 
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,13 +12,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtUtilTest {
 
-    private com.tarantulacommunity.tarantulasocial.security.util.JwtUtil jwtUtil;
+    private JwtUtil jwtUtil;
 
     @BeforeEach
     void setUp() {
         String secret = Base64.getEncoder().encodeToString("mysecretmysecretmysecretmysecret".getBytes()); // 32 bytes
         JwtProperties props = new JwtProperties(secret, Duration.ofMinutes(5), Duration.ofDays(7));
-        jwtUtil = new com.tarantulacommunity.tarantulasocial.security.util.JwtUtil(props);
+        jwtUtil = new JwtUtil(props);
     }
 
     @Test
@@ -33,7 +33,7 @@ class JwtUtilTest {
         JwtProperties shortExp = new JwtProperties(
                 Base64.getEncoder().encodeToString("12345678901234567890123456789012".getBytes()),
                 Duration.ofMillis(10), Duration.ofDays(7));
-        com.tarantulacommunity.tarantulasocial.security.util.JwtUtil shortJwt = new com.tarantulacommunity.tarantulasocial.security.util.JwtUtil(shortExp);
+        JwtUtil shortJwt = new JwtUtil(shortExp);
         String token = shortJwt.generateAccessToken(1L, "x");
         Thread.sleep(20);
         assertThat(shortJwt.isValid(token)).isFalse();

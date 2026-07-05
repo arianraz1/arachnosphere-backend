@@ -14,7 +14,7 @@ import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationT
 import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
 import com.tarantulacommunity.tarantulasocial.security.password.repository.PasswordResetTokenRepository;
 import com.tarantulacommunity.tarantulasocial.security.refresh_token.service.RefreshTokenService;
-import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
+import com.tarantulacommunity.tarantulasocial.security.auth.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

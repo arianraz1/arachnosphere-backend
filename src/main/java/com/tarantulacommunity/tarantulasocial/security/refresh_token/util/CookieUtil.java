@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.util;
+package com.tarantulacommunity.tarantulasocial.security.refresh_token.util;
 
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;

@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.util;
+package com.tarantulacommunity.tarantulasocial.security.auth.util;
 
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import io.jsonwebtoken.Claims;

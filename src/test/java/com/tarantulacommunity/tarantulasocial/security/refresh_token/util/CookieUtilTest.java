@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.util;
+package com.tarantulacommunity.tarantulasocial.security.refresh_token.util;
 
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CookieUtilTest {
 
-    private com.tarantulacommunity.tarantulasocial.security.util.CookieUtil cookieUtil;
+    private CookieUtil cookieUtil;
     private CookieProperties cookieProps;
 
     @BeforeEach

@@ -2,7 +2,7 @@ package com.tarantulacommunity.tarantulasocial.security.auth.filter;
 
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
-import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
+import com.tarantulacommunity.tarantulasocial.security.auth.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
