@@ -4,12 +4,12 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegi
 import com.tarantulacommunity.tarantulasocial.security.dto.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginResponse;
 import com.tarantulacommunity.tarantulasocial.security.mapper.AuthMapper;
+import com.tarantulacommunity.tarantulasocial.security.service.email.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.util.CookieUtil;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;

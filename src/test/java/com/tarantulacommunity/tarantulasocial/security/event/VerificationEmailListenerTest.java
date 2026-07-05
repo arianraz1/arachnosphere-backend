@@ -1,6 +1,6 @@
-package com.tarantulacommunity.tarantulasocial.features.user.event;
+package com.tarantulacommunity.tarantulasocial.security.event;
 
-import com.tarantulacommunity.tarantulasocial.features.user.service.EmailService;
+import com.tarantulacommunity.tarantulasocial.security.service.email.EmailService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

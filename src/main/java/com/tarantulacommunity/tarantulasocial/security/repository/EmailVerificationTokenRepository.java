@@ -1,6 +1,6 @@
-package com.tarantulacommunity.tarantulasocial.features.user.repository;
+package com.tarantulacommunity.tarantulasocial.security.repository;
 
-import com.tarantulacommunity.tarantulasocial.features.user.entity.EmailVerificationTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

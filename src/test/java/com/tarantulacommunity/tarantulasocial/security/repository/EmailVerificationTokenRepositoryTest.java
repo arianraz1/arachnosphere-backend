@@ -1,7 +1,7 @@
-package com.tarantulacommunity.tarantulasocial.features.user.repository;
+package com.tarantulacommunity.tarantulasocial.security.repository;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
-import com.tarantulacommunity.tarantulasocial.features.user.entity.EmailVerificationTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

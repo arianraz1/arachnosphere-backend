@@ -1,5 +1,6 @@
-package com.tarantulacommunity.tarantulasocial.features.user.entity;
+package com.tarantulacommunity.tarantulasocial.security.entity;
 
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -3,7 +3,7 @@ package com.tarantulacommunity.tarantulasocial.security.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.features.user.service.EmailVerificationService;
+import com.tarantulacommunity.tarantulasocial.security.service.email.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
 import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;

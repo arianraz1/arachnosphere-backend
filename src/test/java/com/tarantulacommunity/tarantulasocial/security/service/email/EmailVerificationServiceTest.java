@@ -1,10 +1,10 @@
-package com.tarantulacommunity.tarantulasocial.features.user.service;
+package com.tarantulacommunity.tarantulasocial.security.service.email;
 
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
-import com.tarantulacommunity.tarantulasocial.features.user.entity.EmailVerificationTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.features.user.event.VerificationEmailRequestedEvent;
-import com.tarantulacommunity.tarantulasocial.features.user.repository.EmailVerificationTokenRepository;
+import com.tarantulacommunity.tarantulasocial.security.event.VerificationEmailRequestedEvent;
+import com.tarantulacommunity.tarantulasocial.security.repository.EmailVerificationTokenRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

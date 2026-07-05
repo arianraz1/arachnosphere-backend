@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.features.user.service;
+package com.tarantulacommunity.tarantulasocial.security.service.email;
 
 import com.sendgrid.Request;
 import com.sendgrid.Response;
