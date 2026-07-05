@@ -203,7 +203,7 @@ class PasswordResetServiceTest {
         existingToken.setUser(user);
         existingToken.setToken("existing-token");
         existingToken.setExpiresAt(LocalDateTime.now().plusHours(1));
-        existingToken.setCreatedAt(LocalDateTime.now().minusSeconds(61)); // 61s ago, cooldown expired
+        existingToken.setCreatedAt(LocalDateTime.now().minusSeconds(301)); // 61s ago, cooldown expired
 
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(tokenRepository.findByUserId(1L)).thenReturn(Optional.of(existingToken));
