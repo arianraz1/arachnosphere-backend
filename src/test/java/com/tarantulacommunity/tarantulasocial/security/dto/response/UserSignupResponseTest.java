@@ -10,7 +10,7 @@ class UserSignupResponseTest {
 
     @Test
     void testNoArgsConstructor() {
-        UserSignupResponse response = new UserSignupResponse();
+        com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse response = new com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse();
         assertNotNull(response);
         assertNull(response.getId());
         assertNull(response.getEmail());
@@ -22,7 +22,7 @@ class UserSignupResponseTest {
     @Test
     void testAllArgsConstructor() {
         LocalDateTime createdAt = LocalDateTime.now();
-        UserSignupResponse response = new UserSignupResponse(1L, "user@example.com", "tarantula_fan", createdAt, true);
+        com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse response = new com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse(1L, "user@example.com", "tarantula_fan", createdAt, true);
 
         assertEquals(1L, response.getId());
         assertEquals("user@example.com", response.getEmail());
@@ -34,7 +34,7 @@ class UserSignupResponseTest {
     @Test
     void testSettersAndGetters() {
         LocalDateTime createdAt = LocalDateTime.now();
-        UserSignupResponse response = new UserSignupResponse();
+        com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse response = new com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse();
 
         response.setId(1L);
         response.setEmail("user@example.com");
@@ -51,13 +51,13 @@ class UserSignupResponseTest {
 
     @Test
     void testEmailVerifiedDefaultsFalse() {
-        UserSignupResponse response = new UserSignupResponse();
+        com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse response = new com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse();
         assertFalse(response.isEmailVerified());
     }
 
     @Test
     void testCanSetNullValues() {
-        UserSignupResponse response = new UserSignupResponse();
+        com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse response = new UserSignupResponse();
 
         response.setId(null);
         response.setEmail(null);

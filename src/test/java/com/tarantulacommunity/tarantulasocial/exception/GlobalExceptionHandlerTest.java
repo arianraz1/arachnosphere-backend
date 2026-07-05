@@ -16,177 +16,210 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
+    void testTokenReusedExceptionConstructor() {
+        GlobalExceptionHandler.TokenReusedException exception =
+                new GlobalExceptionHandler.TokenReusedException();
+
+        assertEquals("Refresh token reuse detected — all sessions invalidated", exception.getMessage());
+        assertTrue(exception instanceof GlobalExceptionHandler.AuthException);
+    }
+
+    @Test
+    void testHandleAuthWithInvalidRefreshTokenException() {
+        GlobalExceptionHandler.InvalidRefreshTokenException exception =
+                new GlobalExceptionHandler.InvalidRefreshTokenException("Token is malformed");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleAuth(exception);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Token is malformed", response.getBody().message());
+    }
+
+    @Test
+    void testHandleAuthWithTokenReusedException() {
+        GlobalExceptionHandler.TokenReusedException exception =
+                new GlobalExceptionHandler.TokenReusedException();
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleAuth(exception);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Refresh token reuse detected — all sessions invalidated", response.getBody().message());
+    }
+
+    @Test
     void testCollectionEntryNotFoundException() {
-        GlobalExceptionHandler.CollectionEntryNotFoundException exception = 
+        GlobalExceptionHandler.CollectionEntryNotFoundException exception =
             new GlobalExceptionHandler.CollectionEntryNotFoundException(1L);
-        
+
         assertEquals("Collection entry not found with id: 1", exception.getMessage());
     }
 
     @Test
     void testEmailAlreadyTakenException() {
-        GlobalExceptionHandler.EmailAlreadyTakenException exception = 
+        GlobalExceptionHandler.EmailAlreadyTakenException exception =
             new GlobalExceptionHandler.EmailAlreadyTakenException("test@example.com");
-        
+
         assertEquals("Email already taken: test@example.com", exception.getMessage());
     }
 
     @Test
     void testInvalidMessageException() {
-        GlobalExceptionHandler.InvalidMessageException exception = 
+        GlobalExceptionHandler.InvalidMessageException exception =
             new GlobalExceptionHandler.InvalidMessageException("Invalid message content");
-        
+
         assertEquals("Invalid message content", exception.getMessage());
     }
 
     @Test
     void testMessageNotFoundException() {
-        GlobalExceptionHandler.MessageNotFoundException exception = 
+        GlobalExceptionHandler.MessageNotFoundException exception =
             new GlobalExceptionHandler.MessageNotFoundException(1L);
-        
+
         assertEquals("Message not found with id: 1", exception.getMessage());
     }
 
     @Test
     void testSpeciesNotFoundException() {
-        GlobalExceptionHandler.SpeciesNotFoundException exception = 
+        GlobalExceptionHandler.SpeciesNotFoundException exception =
             new GlobalExceptionHandler.SpeciesNotFoundException(1L);
-        
+
         assertEquals("Species not found with id: 1", exception.getMessage());
     }
 
     @Test
     void testUnauthorizedException() {
-        GlobalExceptionHandler.UnauthorizedException exception = 
+        GlobalExceptionHandler.UnauthorizedException exception =
             new GlobalExceptionHandler.UnauthorizedException("Not authorized");
-        
+
         assertEquals("Not authorized", exception.getMessage());
     }
 
     @Test
     void testUsernameAlreadyTakenException() {
-        GlobalExceptionHandler.UsernameAlreadyTakenException exception = 
+        GlobalExceptionHandler.UsernameAlreadyTakenException exception =
             new GlobalExceptionHandler.UsernameAlreadyTakenException("testuser");
-        
+
         assertEquals("Username already taken: testuser", exception.getMessage());
     }
 
     @Test
     void testUserNotFoundException() {
-        GlobalExceptionHandler.UserNotFoundException exception = 
+        GlobalExceptionHandler.UserNotFoundException exception =
             new GlobalExceptionHandler.UserNotFoundException(1L);
-        
+
         assertEquals("User not found with id: 1", exception.getMessage());
     }
 
     @Test
     void testErrorResponseRecord() {
         GlobalExceptionHandler.ErrorResponse response = new GlobalExceptionHandler.ErrorResponse("Test error");
-        
+
         assertEquals("Test error", response.message());
     }
 
     @Test
     void testHandleUserNotFound() {
-        GlobalExceptionHandler.UserNotFoundException exception = 
+        GlobalExceptionHandler.UserNotFoundException exception =
             new GlobalExceptionHandler.UserNotFoundException(1L);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleUserNotFound(exception);
-        
+
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals("User not found with id: 1", response.getBody().message());
     }
 
     @Test
     void testHandleSpeciesNotFound() {
-        GlobalExceptionHandler.SpeciesNotFoundException exception = 
+        GlobalExceptionHandler.SpeciesNotFoundException exception =
             new GlobalExceptionHandler.SpeciesNotFoundException(1L);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleSpeciesNotFound(exception);
-        
+
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals("Species not found with id: 1", response.getBody().message());
     }
 
     @Test
     void testHandleMessageNotFound() {
-        GlobalExceptionHandler.MessageNotFoundException exception = 
+        GlobalExceptionHandler.MessageNotFoundException exception =
             new GlobalExceptionHandler.MessageNotFoundException(1L);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleMessageNotFound(exception);
-        
+
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals("Message not found with id: 1", response.getBody().message());
     }
 
     @Test
     void testHandleCollectionEntryNotFound() {
-        GlobalExceptionHandler.CollectionEntryNotFoundException exception = 
+        GlobalExceptionHandler.CollectionEntryNotFoundException exception =
             new GlobalExceptionHandler.CollectionEntryNotFoundException(1L);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleCollectionEntryNotFound(exception);
-        
+
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals("Collection entry not found with id: 1", response.getBody().message());
     }
 
     @Test
     void testHandleEmailTaken() {
-        GlobalExceptionHandler.EmailAlreadyTakenException exception = 
+        GlobalExceptionHandler.EmailAlreadyTakenException exception =
             new GlobalExceptionHandler.EmailAlreadyTakenException("test@example.com");
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleEmailTaken(exception);
-        
+
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("Email already taken: test@example.com", response.getBody().message());
     }
 
     @Test
     void testHandleUsernameTaken() {
-        GlobalExceptionHandler.UsernameAlreadyTakenException exception = 
+        GlobalExceptionHandler.UsernameAlreadyTakenException exception =
             new GlobalExceptionHandler.UsernameAlreadyTakenException("testuser");
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleUsernameTaken(exception);
-        
+
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("Username already taken: testuser", response.getBody().message());
     }
 
     @Test
     void testHandleInvalidMessage() {
-        GlobalExceptionHandler.InvalidMessageException exception = 
+        GlobalExceptionHandler.InvalidMessageException exception =
             new GlobalExceptionHandler.InvalidMessageException("Invalid message");
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleInvalidMessage(exception);
-        
+
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Invalid message", response.getBody().message());
     }
 
     @Test
     void testHandleUnauthorized() {
-        GlobalExceptionHandler.UnauthorizedException exception = 
+        GlobalExceptionHandler.UnauthorizedException exception =
             new GlobalExceptionHandler.UnauthorizedException("Not authorized");
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleUnauthorized(exception);
-        
+
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals("Not authorized", response.getBody().message());
     }
 
     @Test
     void testHandleBadCredentials() {
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleBadCredentials();
-        
+
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals("Invalid credentials", response.getBody().message());
     }
@@ -203,22 +236,22 @@ class GlobalExceptionHandlerTest {
     @Test
     void testHandleNotFound() {
         NoHandlerFoundException exception = new NoHandlerFoundException("GET", "/api/test", null);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleNotFound(exception);
-        
+
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertEquals("The requested endpoint was not found", response.getBody().message());
     }
 
     @Test
     void testHandleMethodNotAllowed() {
-        HttpRequestMethodNotSupportedException exception = 
+        HttpRequestMethodNotSupportedException exception =
             new HttpRequestMethodNotSupportedException("POST");
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleMethodNotAllowed(exception);
-        
+
         assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
         assertEquals("HTTP method not supported for this endpoint", response.getBody().message());
     }
@@ -228,10 +261,10 @@ class GlobalExceptionHandlerTest {
         MethodArgumentTypeMismatchException exception = new MethodArgumentTypeMismatchException(
             null, null, "testParam", null, null
         );
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleTypeMismatch(exception);
-        
+
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertTrue(response.getBody().message().contains("Invalid parameter format"));
     }
@@ -239,10 +272,10 @@ class GlobalExceptionHandlerTest {
     @Test
     void testHandleMessageNotReadable() {
         HttpMessageNotReadableException exception = new HttpMessageNotReadableException("Bad JSON", null);
-        
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = 
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
             handler.handleMessageNotReadable(exception);
-        
+
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Malformed or missing request body", response.getBody().message());
     }

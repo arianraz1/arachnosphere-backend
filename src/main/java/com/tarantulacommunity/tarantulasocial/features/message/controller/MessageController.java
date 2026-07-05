@@ -4,7 +4,7 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendM
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
-import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

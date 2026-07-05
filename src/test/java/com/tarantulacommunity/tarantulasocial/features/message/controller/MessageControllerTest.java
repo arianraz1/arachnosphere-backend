@@ -6,7 +6,7 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.response.Mess
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

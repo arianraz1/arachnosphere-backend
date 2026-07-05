@@ -18,19 +18,19 @@ class LoginRequestTest {
 
     @Test
     void shouldPassValidRequest() {
-        LoginRequest req = new LoginRequest("user@example.com", "pass123");
+        com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest req = new com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest("user@example.com", "pass123");
         assertThat(validator.validate(req)).isEmpty();
     }
 
     @Test
     void shouldFailInvalidEmail() {
-        LoginRequest req = new LoginRequest("not-an-email", "pass");
+        com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest req = new com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest("not-an-email", "pass");
         assertThat(validator.validate(req)).isNotEmpty();
     }
 
     @Test
     void shouldFailBlankPassword() {
-        LoginRequest req = new LoginRequest("user@example.com", "");
+        com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest req = new LoginRequest("user@example.com", "");
         assertThat(validator.validate(req)).isNotEmpty();
     }
 }

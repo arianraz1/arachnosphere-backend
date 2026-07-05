@@ -1,6 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.exception;
 
-import org.hibernate.exception.AuthException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,6 +19,24 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    public static abstract class AuthException extends RuntimeException {
+        protected AuthException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidRefreshTokenException extends AuthException {
+        public InvalidRefreshTokenException(String message) {
+            super(message);
+        }
+    }
+
+    public static class TokenReusedException extends AuthException {
+        public TokenReusedException() {
+            super("Refresh token reuse detected — all sessions invalidated");
+        }
+    }
 
     public static class CollectionEntryNotFoundException extends RuntimeException {
         public CollectionEntryNotFoundException(Long id) {
@@ -92,6 +109,20 @@ public class GlobalExceptionHandler {
             super(message);
         }
     }
+
+    public static class RateLimitExceededException extends RuntimeException {
+        private final long retryAfterSeconds;
+
+        public RateLimitExceededException(String message, long retryAfterSeconds) {
+            super(message);
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+
+        public long getRetryAfterSeconds() {
+            return retryAfterSeconds;
+        }
+    }
+
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -222,6 +253,14 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse("An unexpected error occurred"));
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(RateLimitExceededException e) {
+        log.warn("Rate limit exceeded: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(e.getRetryAfterSeconds()))
+                .body(new ErrorResponse(e.getMessage()));
     }
 
     public record ErrorResponse(String message) {

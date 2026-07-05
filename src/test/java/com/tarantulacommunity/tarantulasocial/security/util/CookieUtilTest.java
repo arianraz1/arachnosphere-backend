@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.util;
 
-import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
-import com.tarantulacommunity.tarantulasocial.security.config.JwtProperties;
+import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
+import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseCookie;
@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CookieUtilTest {
 
-    private CookieUtil cookieUtil;
+    private com.tarantulacommunity.tarantulasocial.security.util.CookieUtil cookieUtil;
     private CookieProperties cookieProps;
 
     @BeforeEach

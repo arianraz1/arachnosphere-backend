@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.security.util;
 
-import com.tarantulacommunity.tarantulasocial.security.config.JwtProperties;
+import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

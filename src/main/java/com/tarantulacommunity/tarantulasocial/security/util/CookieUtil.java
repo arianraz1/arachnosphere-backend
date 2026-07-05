@@ -1,7 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.security.util;
 
-import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
-import com.tarantulacommunity.tarantulasocial.security.config.JwtProperties;
+import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
+import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 

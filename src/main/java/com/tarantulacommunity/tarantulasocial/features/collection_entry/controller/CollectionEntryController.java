@@ -4,7 +4,7 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
-import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
