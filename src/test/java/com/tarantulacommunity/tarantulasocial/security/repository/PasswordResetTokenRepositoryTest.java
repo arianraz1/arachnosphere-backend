@@ -83,4 +83,32 @@ class PasswordResetTokenRepositoryTest {
 
         assertTrue(tokenRepository.findByToken("other-token").isPresent());
     }
+
+    @Test
+    void findByUserId_returnsToken_whenExists() {
+        persistToken("user-token", LocalDateTime.now().plusHours(1));
+
+        Optional<PasswordResetTokenEntity> result = tokenRepository.findByUserId(user.getId());
+
+        assertTrue(result.isPresent());
+        assertEquals("user-token", result.get().getToken());
+    }
+
+    @Test
+    void findByUserId_returnsEmpty_whenNoToken() {
+        Optional<PasswordResetTokenEntity> result = tokenRepository.findByUserId(user.getId());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findByUserId_returnsEmpty_whenUserHasNoToken() {
+        UserEntity otherUser = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
+
+        persistToken("my-token", LocalDateTime.now().plusHours(1));
+
+        Optional<PasswordResetTokenEntity> result = tokenRepository.findByUserId(otherUser.getId());
+
+        assertTrue(result.isEmpty());
+    }
 }

@@ -1,7 +1,9 @@
 package com.tarantulacommunity.tarantulasocial.security.repository;
 
+import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
 import com.tarantulacommunity.tarantulasocial.security.entity.RefreshTokenEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,12 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 @ActiveProfiles("test")

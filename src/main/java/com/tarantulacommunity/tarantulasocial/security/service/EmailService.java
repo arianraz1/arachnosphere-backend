@@ -33,15 +33,15 @@ public class EmailService {
     public void sendVerificationEmail(String toEmail, String username, String verificationLink) {
         Email from = new Email(fromEmail, fromName);
         Email to = new Email(toEmail);
-        String subject = "Verify your Arachnosphere account \uD83D\uDD78\uFE0F";
+        String subject = "Verify your Arachnosphere account 🕸️";
 
         String htmlContent = """
         <!DOCTYPE html>
                <html lang="en">
-               <head>
+               <head>.
                    <meta charset="UTF-8" />
                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                   <title>Verify your Arachnosphere account</title>
+                   <title>Verify your Arachnosphere account 🕸️</title>
                </head>
                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
                    <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
@@ -53,7 +53,7 @@ public class EmailService {
                                    <tr>
                                        <td style="background-color: #1b1918; padding: 40px 40px 24px 40px; text-align: center;">
                                            <h1 style="margin: 0; color: #4A90E2; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
-                                               🕷 Arachnosphere
+                                               🕷️ Arachnosphere
                                            </h1>
                                        </td>
                                    </tr>
@@ -149,7 +149,7 @@ public class EmailService {
     public void sendPasswordResetEmail(String toEmail, String username, String resetLink) {
         Email from = new Email(fromEmail, fromName);
         Email to = new Email(toEmail);
-        String subject = "Reset your Arachnosphere password 🕷️";
+        String subject = "Reset your Arachnosphere password 🕸️️";
 
         String htmlContent = """
     <!DOCTYPE html>
@@ -157,7 +157,7 @@ public class EmailService {
            <head>
                <meta charset="UTF-8" />
                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-               <title>Reset your Arachnosphere password</title>
+               <title>Reset your Arachnosphere password 🕸️</title>
            </head>
            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
                <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
@@ -169,7 +169,7 @@ public class EmailService {
                                <tr>
                                    <td style="background-color: #1b1918; padding: 40px 40px 24px 40px; text-align: center;">
                                        <h1 style="margin: 0; color: #4A90E2; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
-                                           🕷 Arachnosphere
+                                           🕷️ Arachnosphere
                                        </h1>
                                    </td>
                                </tr>

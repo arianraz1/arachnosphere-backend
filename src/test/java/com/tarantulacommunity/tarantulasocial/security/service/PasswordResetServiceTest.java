@@ -176,4 +176,55 @@ class PasswordResetServiceTest {
 
         verify(tokenRepository).delete(token);
     }
+
+    @Test
+    void sendResetEmail_throwsTooManyRequestsWhenCooldownNotExpired() {
+        UserEntity user = verifiedUser();
+        PasswordResetTokenEntity existingToken = new PasswordResetTokenEntity();
+        existingToken.setUser(user);
+        existingToken.setToken("existing-token");
+        existingToken.setExpiresAt(LocalDateTime.now().plusHours(1));
+        existingToken.setCreatedAt(LocalDateTime.now().minusSeconds(30)); // 30s ago, cooldown is 60s
+
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(tokenRepository.findByUserId(1L)).thenReturn(Optional.of(existingToken));
+
+        assertThrows(GlobalExceptionHandler.TooManyRequestsException.class,
+                () -> passwordResetService.sendResetEmail("user@example.com"));
+
+        verifyNoInteractions(emailService);
+        verify(tokenRepository, never()).deleteByUserId(any());
+    }
+
+    @Test
+    void sendResetEmail_allowsResendWhenCooldownExpired() {
+        UserEntity user = verifiedUser();
+        PasswordResetTokenEntity existingToken = new PasswordResetTokenEntity();
+        existingToken.setUser(user);
+        existingToken.setToken("existing-token");
+        existingToken.setExpiresAt(LocalDateTime.now().plusHours(1));
+        existingToken.setCreatedAt(LocalDateTime.now().minusSeconds(61)); // 61s ago, cooldown expired
+
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(tokenRepository.findByUserId(1L)).thenReturn(Optional.of(existingToken));
+        when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        passwordResetService.sendResetEmail("user@example.com");
+
+        verify(emailService).sendPasswordResetEmail(any(), any(), any());
+        verify(tokenRepository).deleteByUserId(1L);
+    }
+
+    @Test
+    void sendResetEmail_allowsResendWhenNoPreviousToken() {
+        UserEntity user = verifiedUser();
+
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(tokenRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(tokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        passwordResetService.sendResetEmail("user@example.com");
+
+        verify(emailService).sendPasswordResetEmail(any(), any(), any());
+    }
 }

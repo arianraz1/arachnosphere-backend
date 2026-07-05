@@ -33,10 +33,19 @@ public class PasswordResetService {
     private String frontendUrl;
 
     private static final int TOKEN_EXPIRY_HOURS = 1;
+    private static final long RESEND_COOLDOWN_SECONDS = 300;
 
     @Transactional
     public void sendResetEmail(String email) {
         userRepository.findByEmail(email.toLowerCase().trim()).ifPresent(user -> {
+            tokenRepository.findByUserId(user.getId()).ifPresent(existing -> {
+                LocalDateTime cooldownExpiresAt = existing.getCreatedAt().plusSeconds(RESEND_COOLDOWN_SECONDS);
+                if (cooldownExpiresAt.isAfter(LocalDateTime.now())) {
+                    throw new GlobalExceptionHandler.TooManyRequestsException(
+                            "Please wait before requesting another password reset email");
+                }
+            });
+
             tokenRepository.deleteByUserId(user.getId());
 
             String token = generateToken();
