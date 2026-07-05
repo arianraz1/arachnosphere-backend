@@ -1,8 +1,8 @@
 package com.tarantulacommunity.tarantulasocial.security.mapper;
 
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginResponse;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
+import com.tarantulacommunity.tarantulasocial.security.dto.response.LoginResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

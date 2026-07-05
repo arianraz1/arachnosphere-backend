@@ -4,11 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tarantulacommunity.tarantulasocial.TarantulaProjectApplication;
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.ResetPasswordRequest;
 import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
 import com.tarantulacommunity.tarantulasocial.security.repository.EmailVerificationTokenRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
+import com.tarantulacommunity.tarantulasocial.security.repository.PasswordResetTokenRepository;
+import com.tarantulacommunity.tarantulasocial.security.service.EmailService;
 import com.tarantulacommunity.tarantulasocial.security.service.RefreshTokenService;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
@@ -20,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -56,7 +61,13 @@ class AuthControllerIntegrationTest {
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -299,5 +310,95 @@ class AuthControllerIntegrationTest {
         user.setUsername(username.toLowerCase().trim());
         user.setPassword(passwordEncoder.encode(rawPassword));
         return userRepository.save(user);
+    }
+
+    // ---------- FORGOT PASSWORD ----------
+    @Test
+    void shouldReturnGenericMessageForForgotPasswordRegardlessOfEmailExistence() throws Exception {
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .param("email", "doesnotexist@test.com")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+
+        createUser("real@test.com", "realuser", "password123");
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .param("email", "real@test.com")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    // ---------- RESET PASSWORD ----------
+    @Test
+    void shouldResetPasswordWithValidToken() throws Exception {
+        UserEntity user = createUser("reset@test.com", "resetuser", "password123");
+
+        PasswordResetTokenEntity token = new PasswordResetTokenEntity();
+        token.setUser(user);
+        token.setToken("valid-reset-token");
+        token.setExpiresAt(LocalDateTime.now().plusHours(1));
+        passwordResetTokenRepository.save(token);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("valid-reset-token", "newpassword123");
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void shouldRejectResetPasswordWithInvalidToken() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest("invalid-token", "newpassword123");
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectResetPasswordWithExpiredToken() throws Exception {
+        UserEntity user = createUser("expired2@test.com", "expireduser2", "password123");
+
+        PasswordResetTokenEntity token = new PasswordResetTokenEntity();
+        token.setUser(user);
+        token.setToken("expired-reset-token");
+        token.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        passwordResetTokenRepository.save(token);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("expired-reset-token", "newpassword123");
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldBeAbleToLoginWithNewPasswordAfterReset() throws Exception {
+        UserEntity user = createUser("newpass@test.com", "newpassuser", "password123");
+
+        PasswordResetTokenEntity token = new PasswordResetTokenEntity();
+        token.setUser(user);
+        token.setToken("reset-token-login");
+        token.setExpiresAt(LocalDateTime.now().plusHours(1));
+        passwordResetTokenRepository.save(token);
+
+        ResetPasswordRequest resetRequest = new ResetPasswordRequest("reset-token-login", "newpassword123");
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(resetRequest))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        LoginRequest loginRequest = new LoginRequest("newpass@test.com", "newpassword123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest))
+                        .with(csrf()))
+                .andExpect(status().isOk());
     }
 }

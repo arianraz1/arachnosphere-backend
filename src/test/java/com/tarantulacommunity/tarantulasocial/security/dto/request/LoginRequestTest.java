@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.dto;
+package com.tarantulacommunity.tarantulasocial.security.dto.request;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

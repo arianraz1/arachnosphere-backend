@@ -3,11 +3,13 @@ package com.tarantulacommunity.tarantulasocial.security.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.service.email.EmailVerificationService;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.ResetPasswordRequest;
+import com.tarantulacommunity.tarantulasocial.security.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.config.CookieProperties;
 import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.service.AuthService;
+import com.tarantulacommunity.tarantulasocial.security.service.PasswordResetService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,6 +42,7 @@ public class AuthController {
     private final CookieProperties cookieProps;
     private final EmailVerificationService emailVerificationService;
     private final UserRepository userRepository;
+    private final PasswordResetService passwordResetService;
 
     @Value("${app.cors.allowed-origin}")
     private String frontendUrl;
@@ -162,6 +165,20 @@ public class AuthController {
 
         response.addHeader(HttpHeaders.SET_COOKIE, clearCsrf.toString());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        passwordResetService.sendResetEmail(email);
+        return ResponseEntity.ok(Map.of(
+                "message", "If that email is registered, a password reset link has been sent."
+        ));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully. You can now log in."));
     }
 
     private void setCookies(HttpServletResponse response, AuthService.TokenPair tokens) {

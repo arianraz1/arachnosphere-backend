@@ -1,14 +1,13 @@
 package com.tarantulacommunity.tarantulasocial.security.service;
 
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
-import com.tarantulacommunity.tarantulasocial.security.dto.UserSignupResponse;
+import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.config.CustomUserDetails;
-import com.tarantulacommunity.tarantulasocial.security.dto.LoginRequest;
+import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.mapper.AuthMapper;
-import com.tarantulacommunity.tarantulasocial.security.service.email.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.util.CookieUtil;
 import com.tarantulacommunity.tarantulasocial.security.util.JwtUtil;
 import lombok.RequiredArgsConstructor;

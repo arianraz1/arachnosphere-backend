@@ -1,4 +1,4 @@
-package com.tarantulacommunity.tarantulasocial.security.service.email;
+package com.tarantulacommunity.tarantulasocial.security.service;
 
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;

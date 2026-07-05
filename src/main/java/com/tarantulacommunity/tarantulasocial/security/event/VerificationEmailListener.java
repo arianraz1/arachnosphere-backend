@@ -1,6 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.security.event;
 
-import com.tarantulacommunity.tarantulasocial.security.service.email.EmailService;
+import com.tarantulacommunity.tarantulasocial.security.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.event.TransactionPhase;

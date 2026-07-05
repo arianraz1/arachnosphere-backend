@@ -5,7 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUs
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
-import com.tarantulacommunity.tarantulasocial.security.dto.UserSignupResponse;
+import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
