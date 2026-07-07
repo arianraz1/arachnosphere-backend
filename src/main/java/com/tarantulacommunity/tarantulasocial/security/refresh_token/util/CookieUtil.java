@@ -10,7 +10,7 @@ import java.time.Duration;
 @Component
 public class CookieUtil {
 
-    private static final String REFRESH_TOKEN_PATH = "/api/auth/refresh";
+    private static final String REFRESH_TOKEN_PATH = "/api/v1/auth/refresh";
     private final CookieProperties cookieProps;
     private final JwtProperties jwtProps;
 

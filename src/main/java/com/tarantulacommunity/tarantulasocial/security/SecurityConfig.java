@@ -1,13 +1,18 @@
 package com.tarantulacommunity.tarantulasocial.security;
 
+import com.tarantulacommunity.tarantulasocial.security.headers.SecurityHeadersFilter;
+import com.tarantulacommunity.tarantulasocial.security.logging.RequestLoggingFilter;
 import com.tarantulacommunity.tarantulasocial.security.auth.filter.JwtAuthFilter;
 import com.tarantulacommunity.tarantulasocial.security.auth.service.CustomUserDetailsService;
+import com.tarantulacommunity.tarantulasocial.security.rate_limit.filter.IpRateLimitFilter;
+import com.tarantulacommunity.tarantulasocial.security.rate_limit.filter.UserRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -43,6 +48,10 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
     private final CookieProperties cookieProps;
+    private final IpRateLimitFilter ipRateLimitFilter;
+    private final UserRateLimitFilter userRateLimitFilter;
+    private final RequestLoggingFilter requestLoggingFilter;
+    private final SecurityHeadersFilter securityHeadersFilter;
 
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
@@ -70,8 +79,16 @@ public class SecurityConfig {
     }
 
     @Bean
+    public FilterRegistrationBean<RequestLoggingFilter> registration(RequestLoggingFilter filter) {
+        FilterRegistrationBean<RequestLoggingFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        // Truly Stateless CSRF Repository that locks the cookie jar
         CsrfTokenRepository statelessCsrfRepository = new CsrfTokenRepository() {
 
             @Override
@@ -82,7 +99,7 @@ public class SecurityConfig {
 
             @Override
             public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
-                // CRITICAL: Check if the browser already sent an XSRF-TOKEN cookie.
+                // Check if the browser already sent an XSRF-TOKEN cookie.
                 // If the cookie is already there, RETURN IMMEDIATELY. This breaks the endless refresh loop!
                 if (request.getCookies() != null) {
                     boolean hasCookie = Arrays.stream(request.getCookies())
@@ -118,7 +135,7 @@ public class SecurityConfig {
             }
         };
 
-        // 2. Disable BREACH protection (XOR scrambling) so React reads the raw string cleanly
+        // Disable BREACH protection (XOR scrambling) so React reads the raw string cleanly
         CsrfTokenRequestAttributeHandler stableHandler = new CsrfTokenRequestAttributeHandler();
         stableHandler.setCsrfRequestAttributeName(null);
 
@@ -133,16 +150,39 @@ public class SecurityConfig {
                         .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/resend-verification").authenticated()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/species/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/collection/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/auth/resend-verification").authenticated()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/species/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/collection/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Actuator endpoints - health and info public, metrics restricted to admins
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        // Swagger/OpenAPI documentation - admin only but permitAll() for production
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/webjars/**"
+                        ).permitAll()
+
                         .anyRequest().hasAnyRole("USER", "ADMIN")
                 )
                 .authenticationProvider(authenticationProvider())
+                // Security headers filter runs first (highest precedence via @Order)
+                .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class)
+                // Request logging filter runs second to capture all requests
+                .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
+                // IP-based limiter runs third — before authentication even
+                // resolves — so it's cheap to hit and caps abuse regardless of
+                // whether the request carries a valid token.
+                .addFilterBefore(ipRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // User-based limiter runs right after JwtAuthFilter, so
+                // SecurityContextHolder already has the resolved principal
+                // (or doesn't, for anonymous requests, which it skips).
+                .addFilterAfter(userRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
                         .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
@@ -156,15 +196,37 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
         config.setAllowedHeaders(List.of(
-                "Content-Type", "Authorization", "X-XSRF-TOKEN", "Accept", "Origin"
+                "Content-Type",
+                "Authorization",
+                "X-XSRF-TOKEN",
+                "X-CSRF-TOKEN",
+                "Accept",
+                "Origin"
         ));
-        config.setExposedHeaders(List.of("X-CSRF-TOKEN"));
+
+        config.setExposedHeaders(List.of(
+                "X-CSRF-TOKEN",
+                "X-XSRF-TOKEN",
+                "X-RateLimit-Limit",
+                "X-RateLimit-Remaining",
+                "X-RateLimit-Reset",
+                "Retry-After"
+        ));
+
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/swagger-ui/**", config);
+        source.registerCorsConfiguration("/v3/api-docs/**", config);
+        source.registerCorsConfiguration("/webjars/**", config);
+
+        source.registerCorsConfiguration("/actuator/**", config);
+
         return source;
     }
 }

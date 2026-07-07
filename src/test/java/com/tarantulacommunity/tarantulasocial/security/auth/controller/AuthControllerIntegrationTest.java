@@ -69,12 +69,15 @@ class AuthControllerIntegrationTest {
     @MockitoBean
     private EmailService emailService;
 
+    private final String uriPath = "/api/v1/auth";
+    private final String messageUriPath = "/api/v1/messages";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ---------- NEW CSRF ENDPOINT TEST ----------
     @Test
     void shouldGetCsrfTokenAndSetCookie() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/auth/csrf"))
+        MvcResult result = mockMvc.perform(get(uriPath + "/csrf"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").exists())
                 .andReturn();
@@ -89,7 +92,7 @@ class AuthControllerIntegrationTest {
         createUser("login@test.com", "loginuser", "pass123");
 
         LoginRequest request = new LoginRequest("login@test.com", "pass123");
-        ResultActions result = mockMvc.perform(post("/api/auth/login")
+        ResultActions result = mockMvc.perform(post(uriPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request))
                 .with(csrf()));
@@ -108,7 +111,7 @@ class AuthControllerIntegrationTest {
         UserEntity user = createUser("refresh@test.com", "refresh", "pass");
         String rawRefresh = refreshTokenService.issue(user);
 
-        ResultActions result = mockMvc.perform(post("/api/auth/refresh")
+        ResultActions result = mockMvc.perform(post(uriPath + "/refresh")
                 .cookie(buildRefreshCookie(rawRefresh))
                 .with(csrf()));
 
@@ -124,7 +127,7 @@ class AuthControllerIntegrationTest {
         UserEntity user = createUser("logout@test.com", "logout", "pass");
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
 
-        ResultActions result = mockMvc.perform(post("/api/auth/logout")
+        ResultActions result = mockMvc.perform(post(uriPath + "/logout")
                 .cookie(buildAccessCookie(accessToken))
                 .with(csrf()));
 
@@ -139,7 +142,7 @@ class AuthControllerIntegrationTest {
         createUser("unverified@test.com", "unverified", "pass123", false);
 
         LoginRequest request = new LoginRequest("unverified@test.com", "pass123");
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -150,7 +153,7 @@ class AuthControllerIntegrationTest {
     void shouldReturn403WhenUnverifiedUserAccessesProtectedEndpoint() throws Exception {
         createUser("unverified@test.com", "unverified", "pass123", false);
 
-        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+        MvcResult loginResult = mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new LoginRequest("unverified@test.com", "pass123")))
@@ -160,7 +163,7 @@ class AuthControllerIntegrationTest {
 
         String accessToken = loginResult.getResponse().getCookie("access_token").getValue();
 
-        mockMvc.perform(get("/api/messages/inbox")
+        mockMvc.perform(get(messageUriPath + "/inbox")
                         .cookie(new Cookie("access_token", accessToken))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
@@ -177,7 +180,7 @@ class AuthControllerIntegrationTest {
         token.setExpiresAt(LocalDateTime.now().plusHours(24));
         emailVerificationTokenRepository.save(token);
 
-        mockMvc.perform(get("/api/auth/verify-email").param("token", "valid-test-token"))
+        mockMvc.perform(get(uriPath + "/verify-email").param("token", "valid-test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").exists());
 
@@ -187,7 +190,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectVerifyEmailWithInvalidToken() throws Exception {
-        mockMvc.perform(get("/api/auth/verify-email").param("token", "nonexistent-token"))
+        mockMvc.perform(get(uriPath + "/verify-email").param("token", "nonexistent-token"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -201,7 +204,7 @@ class AuthControllerIntegrationTest {
         token.setExpiresAt(LocalDateTime.now().minusMinutes(1));
         emailVerificationTokenRepository.save(token);
 
-        mockMvc.perform(get("/api/auth/verify-email").param("token", "expired-test-token"))
+        mockMvc.perform(get(uriPath + "/verify-email").param("token", "expired-test-token"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -211,7 +214,7 @@ class AuthControllerIntegrationTest {
         createUser("unverified2@test.com", "unverified2", "pass123", false);
 
         LoginRequest request = new LoginRequest("unverified2@test.com", "pass123");
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -224,7 +227,7 @@ class AuthControllerIntegrationTest {
         createUser("verified@test.com", "verified", "pass123", true);
 
         LoginRequest request = new LoginRequest("verified@test.com", "pass123");
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -238,7 +241,7 @@ class AuthControllerIntegrationTest {
         createUser("login2@test.com", "loginuser2", "pass123");
 
         LoginRequest request = new LoginRequest("LOGIN2@TEST.COM", "pass123");
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -252,7 +255,7 @@ class AuthControllerIntegrationTest {
         createUser("duplicate@test.com", "user1", "pass1234");
 
         UserRegisterRequest request = new UserRegisterRequest("DUPLICATE@TEST.COM", "user2", "pass1234");
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post(uriPath + "/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -265,7 +268,7 @@ class AuthControllerIntegrationTest {
         UserEntity user = createUser("resend@test.com", "resenduser", "pass123", false);
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
 
-        mockMvc.perform(post("/api/auth/resend-verification")
+        mockMvc.perform(post(uriPath + "/resend-verification")
                         .cookie(buildAccessCookie(accessToken))
                         .with(csrf()))
                 .andExpect(status().isOk())
@@ -274,7 +277,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturn401ForResendVerificationWhenNotAuthenticated() throws Exception {
-        mockMvc.perform(post("/api/auth/resend-verification")
+        mockMvc.perform(post(uriPath + "/resend-verification")
                         .with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
@@ -315,14 +318,14 @@ class AuthControllerIntegrationTest {
     // ---------- FORGOT PASSWORD ----------
     @Test
     void shouldReturnGenericMessageForForgotPasswordRegardlessOfEmailExistence() throws Exception {
-        mockMvc.perform(post("/api/auth/forgot-password")
+        mockMvc.perform(post(uriPath + "/forgot-password")
                         .param("email", "doesnotexist@test.com")
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").exists());
 
         createUser("real@test.com", "realuser", "password123");
-        mockMvc.perform(post("/api/auth/forgot-password")
+        mockMvc.perform(post(uriPath + "/forgot-password")
                         .param("email", "real@test.com")
                         .with(csrf()))
                 .andExpect(status().isOk())
@@ -341,7 +344,7 @@ class AuthControllerIntegrationTest {
         passwordResetTokenRepository.save(token);
 
         ResetPasswordRequest request = new ResetPasswordRequest("valid-reset-token", "newpassword123");
-        mockMvc.perform(post("/api/auth/reset-password")
+        mockMvc.perform(post(uriPath + "/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -352,7 +355,7 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldRejectResetPasswordWithInvalidToken() throws Exception {
         ResetPasswordRequest request = new ResetPasswordRequest("invalid-token", "newpassword123");
-        mockMvc.perform(post("/api/auth/reset-password")
+        mockMvc.perform(post(uriPath + "/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -370,7 +373,7 @@ class AuthControllerIntegrationTest {
         passwordResetTokenRepository.save(token);
 
         ResetPasswordRequest request = new ResetPasswordRequest("expired-reset-token", "newpassword123");
-        mockMvc.perform(post("/api/auth/reset-password")
+        mockMvc.perform(post(uriPath + "/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
@@ -388,14 +391,14 @@ class AuthControllerIntegrationTest {
         passwordResetTokenRepository.save(token);
 
         ResetPasswordRequest resetRequest = new ResetPasswordRequest("reset-token-login", "newpassword123");
-        mockMvc.perform(post("/api/auth/reset-password")
+        mockMvc.perform(post(uriPath + "/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(resetRequest))
                         .with(csrf()))
                 .andExpect(status().isOk());
 
         LoginRequest loginRequest = new LoginRequest("newpass@test.com", "newpassword123");
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(uriPath + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest))
                         .with(csrf()))

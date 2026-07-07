@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- ==============================================================
+         Console Appender - Development
+         ============================================================== -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <logger name="com.tarantulacommunity.tarantulasocial" level="DEBUG"/>
+    </springProfile>
+
+    <!-- ==============================================================
+         Console Appender - Production (JSON format for Render/cloud logging)
+         ============================================================== -->
+    <springProfile name="prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- Include MDC fields in JSON output -->
+                <includeMdc>true</includeMdc>
+                <!-- Include context information -->
+                <includeContext>true</includeContext>
+                <!-- Include stack trace for exceptions -->
+                <includeStackTrace>true</includeStackTrace>
+                <!-- Use ISO8601 timestamps for Render compatibility -->
+                <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampPattern>
+                <!-- Pretty print disabled for production (single-line JSON) -->
+                <prettyPrint>false</prettyPrint>
+                <!-- Custom field for Render log parsing -->
+                <customFields>{"service":"tarantula-social","environment":"production"}</customFields>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Application-specific logging levels -->
+        <logger name="com.tarantulacommunity.tarantulasocial" level="INFO"/>
+
+        <!-- Third-party library logging levels -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="com.zaxxer.hikari" level="WARN"/>
+        <logger name="org.flywaydb" level="INFO"/>
+
+        <!-- Silence the intentional Spring Security warning -->
+        <logger name="org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer" level="ERROR"/>
+    </springProfile>
+</configuration>

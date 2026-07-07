@@ -234,17 +234,6 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void testHandleNotFound() {
-        NoHandlerFoundException exception = new NoHandlerFoundException("GET", "/api/test", null);
-
-        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
-            handler.handleNotFound(exception);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertEquals("The requested endpoint was not found", response.getBody().message());
-    }
-
-    @Test
     void testHandleMethodNotAllowed() {
         HttpRequestMethodNotSupportedException exception =
             new HttpRequestMethodNotSupportedException("POST");
@@ -278,5 +267,160 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Malformed or missing request body", response.getBody().message());
+    }
+
+    @Test
+    void testThreadNotFoundException() {
+        GlobalExceptionHandler.ThreadNotFoundException exception =
+            new GlobalExceptionHandler.ThreadNotFoundException(1L);
+
+        assertEquals("Thread not found: 1", exception.getMessage());
+    }
+
+    @Test
+    void testInvalidTokenException() {
+        GlobalExceptionHandler.InvalidTokenException exception =
+            new GlobalExceptionHandler.InvalidTokenException("Invalid token");
+
+        assertEquals("Invalid token", exception.getMessage());
+    }
+
+    @Test
+    void testEmailNotVerifiedException() {
+        GlobalExceptionHandler.EmailNotVerifiedException exception =
+            new GlobalExceptionHandler.EmailNotVerifiedException("Email not verified");
+
+        assertEquals("Email not verified", exception.getMessage());
+    }
+
+    @Test
+    void testTooManyRequestsException() {
+        GlobalExceptionHandler.TooManyRequestsException exception =
+            new GlobalExceptionHandler.TooManyRequestsException("Too many requests");
+
+        assertEquals("Too many requests", exception.getMessage());
+    }
+
+    @Test
+    void testRateLimitExceededException() {
+        GlobalExceptionHandler.RateLimitExceededException exception =
+            new GlobalExceptionHandler.RateLimitExceededException("Rate limit exceeded", 60);
+
+        assertEquals("Rate limit exceeded", exception.getMessage());
+        assertEquals(60, exception.getRetryAfterSeconds());
+    }
+
+    @Test
+    void testHandleThreadNotFound() {
+        GlobalExceptionHandler.ThreadNotFoundException exception =
+            new GlobalExceptionHandler.ThreadNotFoundException(1L);
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleThreadNotFound(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("Thread not found: 1", response.getBody().message());
+    }
+
+    @Test
+    void testHandleInvalidToken() {
+        GlobalExceptionHandler.InvalidTokenException exception =
+            new GlobalExceptionHandler.InvalidTokenException("Invalid token");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleInvalidToken(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Invalid token", response.getBody().message());
+    }
+
+    @Test
+    void testHandleEmailNotVerified() {
+        GlobalExceptionHandler.EmailNotVerifiedException exception =
+            new GlobalExceptionHandler.EmailNotVerifiedException("Email not verified");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleEmailNotVerified(exception);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("Email not verified", response.getBody().message());
+    }
+
+    @Test
+    void testHandleTooManyRequests() {
+        GlobalExceptionHandler.TooManyRequestsException exception =
+            new GlobalExceptionHandler.TooManyRequestsException("Too many requests");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleTooManyRequests(exception);
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
+        assertEquals("Too many requests", response.getBody().message());
+    }
+
+    @Test
+    void testHandleRateLimit() {
+        GlobalExceptionHandler.RateLimitExceededException exception =
+            new GlobalExceptionHandler.RateLimitExceededException("Rate limit exceeded", 60);
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleRateLimit(exception);
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
+        assertEquals("Rate limit exceeded", response.getBody().message());
+        assertEquals("60", response.getHeaders().getFirst("Retry-After"));
+    }
+
+    @Test
+    void testHandleNoResourceFound() {
+        // Correctly passes the HttpMethod enum, the request URI, and the failed resource path
+        org.springframework.web.servlet.resource.NoResourceFoundException exception =
+                new org.springframework.web.servlet.resource.NoResourceFoundException(
+                        org.springframework.http.HttpMethod.GET,
+                        "/invalid",
+                        "static/invalid"
+                );
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleNoResourceFound(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("The requested resource was not found", response.getBody().message());
+    }
+
+
+    @Test
+    void testHandleMissingParam() {
+        org.springframework.web.bind.MissingServletRequestParameterException exception =
+            new org.springframework.web.bind.MissingServletRequestParameterException("param", "String");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleMissingParam(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Missing required parameter: param", response.getBody().message());
+    }
+
+    @Test
+    void testHandleConstraintViolation() {
+        jakarta.validation.ConstraintViolationException exception =
+            new jakarta.validation.ConstraintViolationException("Validation failed", java.util.Set.of());
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleConstraintViolation(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Validation failed", response.getBody().message());
+    }
+
+    @Test
+    void testHandleMissingHeader() {
+        org.springframework.web.bind.MissingRequestHeaderException exception =
+            new org.springframework.web.bind.MissingRequestHeaderException("Authorization", null);
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleMissingHeader(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Missing required header: Authorization", response.getBody().message());
     }
 }

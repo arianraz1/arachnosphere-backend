@@ -13,12 +13,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - tarantula-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     container_name: tarantula-db
 
   app:
     build: .
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -41,7 +51,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - tarantula-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     container_name: tarantula-backend
+
+networks:
+  tarantula-network:
+    driver: bridge
 
 volumes:
   pgdata:
