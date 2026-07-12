@@ -134,18 +134,18 @@ class UserEntityTest {
     }
 
     @Test
-    void profilePicUrlTooLongFailsBeanValidation() {
+    void profilePicKeyTooLongFailsBeanValidation() {
         UserEntity user = TestUtilities.verifiedUser("15", "15");
-        user.setProfilePicUrl("a".repeat(2049)); // exceeds max length of 2048
+        user.setProfilePicKey("a".repeat(513)); // exceeds max length of 512
 
         Set<ConstraintViolation<UserEntity>> violations = validator.validate(user);
         assertEquals(1, violations.size());
     }
 
     @Test
-    void favoriteImageUrlTooLongFailsBeanValidation() {
+    void favoriteImageKeyTooLongFailsBeanValidation() {
         UserEntity user = TestUtilities.verifiedUser("16", "16");
-        user.setFavoriteImageUrl("a".repeat(2049)); // exceeds max length of 2048
+        user.setFavoriteImageKey("a".repeat(513)); // exceeds max length of 512
 
         Set<ConstraintViolation<UserEntity>> violations = validator.validate(user);
         assertEquals(1, violations.size());
@@ -164,15 +164,15 @@ class UserEntityTest {
     void verifiedUserWithOptionalFieldsPersistsSuccessfully() {
         UserEntity user = TestUtilities.verifiedUser("18", "18");
         user.setBio("I love my Brazilian Black T!");
-        user.setProfilePicUrl("https://example.com/pic.jpg");
-        user.setFavoriteImageUrl("https://example.com/favorite.jpg");
+        user.setProfilePicKey("profile-pictures/juniper.jpg");
+        user.setFavoriteImageKey("favorite-images/juniper.jpg");
         user.setFavoriteCaption("My GBB, Juniper");
 
         UserEntity savedUser = em.persistFlushFind(user);
 
         assertEquals(user.getBio(), savedUser.getBio());
-        assertEquals(user.getProfilePicUrl(), savedUser.getProfilePicUrl());
-        assertEquals(user.getFavoriteImageUrl(), savedUser.getFavoriteImageUrl());
+        assertEquals(user.getProfilePicKey(), savedUser.getProfilePicKey());
+        assertEquals(user.getFavoriteImageKey(), savedUser.getFavoriteImageKey());
         assertEquals(user.getFavoriteCaption(), savedUser.getFavoriteCaption());
         assertEquals(0L, savedUser.getVersion());
     }
@@ -185,4 +185,3 @@ class UserEntityTest {
         assertFalse(savedUser.isEmailVerified());
     }
 }
-

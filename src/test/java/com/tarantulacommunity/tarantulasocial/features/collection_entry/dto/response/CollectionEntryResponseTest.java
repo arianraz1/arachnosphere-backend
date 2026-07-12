@@ -4,6 +4,8 @@ import com.tarantulacommunity.tarantulasocial.features.species.dto.response.Spec
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionEntryResponseTest {
@@ -27,25 +29,27 @@ class CollectionEntryResponseTest {
         assertEquals(0, response.getAdultMale());
         assertEquals(0, response.getAdultFemale());
         assertEquals(0, response.getAdultUnsexed());
-        assertNull(response.getFeaturedImageUrl());
         assertNull(response.getCustomInfo());
+        assertNull(response.getImages());
     }
 
     @Test
     void testAllArgsConstructor() {
         UserSummaryResponse user = new UserSummaryResponse();
         SpeciesSummaryResponse species = new SpeciesSummaryResponse();
-        
+        List<CollectionImageResponse> images = List.of(
+                new CollectionImageResponse(1L, "http://example.com/image.jpg", "caption", true, 0));
+
         CollectionEntryResponse response = new CollectionEntryResponse(
-            1L, user, species,
-            1, 2, 3,
-            4, 5, 6,
-            7, 8, 9,
-            10, 11, 12,
-            "http://example.com/image.jpg",
-            "Custom info"
+                1L, user, species,
+                1, 2, 3,
+                4, 5, 6,
+                7, 8, 9,
+                10, 11, 12,
+                "Custom info",
+                images
         );
-        
+
         assertEquals(1L, response.getId());
         assertEquals(user, response.getUser());
         assertEquals(species, response.getSpecies());
@@ -61,8 +65,8 @@ class CollectionEntryResponseTest {
         assertEquals(10, response.getAdultMale());
         assertEquals(11, response.getAdultFemale());
         assertEquals(12, response.getAdultUnsexed());
-        assertEquals("http://example.com/image.jpg", response.getFeaturedImageUrl());
         assertEquals("Custom info", response.getCustomInfo());
+        assertEquals(images, response.getImages());
     }
 
     @Test
@@ -70,7 +74,9 @@ class CollectionEntryResponseTest {
         CollectionEntryResponse response = new CollectionEntryResponse();
         UserSummaryResponse user = new UserSummaryResponse();
         SpeciesSummaryResponse species = new SpeciesSummaryResponse();
-        
+        List<CollectionImageResponse> images = List.of(
+                new CollectionImageResponse(2L, "http://example.com/image2.jpg", null, false, 1));
+
         response.setId(1L);
         response.setUser(user);
         response.setSpecies(species);
@@ -86,9 +92,9 @@ class CollectionEntryResponseTest {
         response.setAdultMale(10);
         response.setAdultFemale(11);
         response.setAdultUnsexed(12);
-        response.setFeaturedImageUrl("http://example.com/image.jpg");
         response.setCustomInfo("Custom info");
-        
+        response.setImages(images);
+
         assertEquals(1L, response.getId());
         assertEquals(user, response.getUser());
         assertEquals(species, response.getSpecies());
@@ -104,7 +110,16 @@ class CollectionEntryResponseTest {
         assertEquals(10, response.getAdultMale());
         assertEquals(11, response.getAdultFemale());
         assertEquals(12, response.getAdultUnsexed());
-        assertEquals("http://example.com/image.jpg", response.getFeaturedImageUrl());
         assertEquals("Custom info", response.getCustomInfo());
+        assertEquals(images, response.getImages());
+    }
+
+    @Test
+    void testEmptyImagesList() {
+        CollectionEntryResponse response = new CollectionEntryResponse();
+        response.setImages(List.of());
+
+        assertNotNull(response.getImages());
+        assertTrue(response.getImages().isEmpty());
     }
 }

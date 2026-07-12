@@ -38,7 +38,7 @@ class CookieUtilTest {
     void shouldBuildRefreshTokenCookieWithCorrectPath() {
         ResponseCookie cookie = cookieUtil.refreshTokenCookie("def");
         assertThat(cookie.getName()).isEqualTo("refresh");
-        assertThat(cookie.getPath()).isEqualTo("/api/auth/refresh");
+        assertThat(cookie.getPath()).isEqualTo("/api/v1/auth/refresh");
         assertThat(cookie.getMaxAge()).isPositive();
     }
 

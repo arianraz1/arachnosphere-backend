@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +28,6 @@ public class CollectionEntryOwnerResponse {
     private int adultMale;
     private int adultFemale;
     private int adultUnsexed;
-    private String featuredImageUrl;
     private String customInfo;
+    private List<CollectionImageResponse> images;
 }

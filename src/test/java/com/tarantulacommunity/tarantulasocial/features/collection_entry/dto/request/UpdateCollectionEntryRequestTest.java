@@ -18,7 +18,6 @@ class UpdateCollectionEntryRequestTest {
     void validUpdateCollectionEntryRequestPasses() {
         UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
         request.setAdultFemale(2);
-        request.setFeaturedImageUrl("https://example.com/spider.jpg");
         request.setCustomInfo("Updated info");
 
         Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
@@ -103,21 +102,21 @@ class UpdateCollectionEntryRequestTest {
     }
 
     @Test
-    void featuredImageUrlTooLongFailsValidation() {
-        UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
-        request.setFeaturedImageUrl("a".repeat(2049)); // exceeds 2048
-
-        Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
-        assertEquals(1, violations.size());
-    }
-
-    @Test
     void customInfoTooLongFailsValidation() {
         UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
         request.setCustomInfo("a".repeat(1001)); // exceeds 1000
 
         Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
         assertEquals(1, violations.size());
+    }
+
+    @Test
+    void customInfoAtMaxLengthPassesValidation() {
+        UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
+        request.setCustomInfo("a".repeat(1000)); // exactly at max
+
+        Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
+        assertTrue(violations.isEmpty());
     }
 
     @Test
@@ -135,7 +134,6 @@ class UpdateCollectionEntryRequestTest {
         request.setAdultMale(1);
         request.setAdultFemale(1);
         request.setAdultUnsexed(0);
-        request.setFeaturedImageUrl("https://example.com/update.jpg");
         request.setCustomInfo("Updated collection info");
 
         Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
@@ -143,14 +141,13 @@ class UpdateCollectionEntryRequestTest {
     }
 
     @Test
-    void negativeCoutsAndLongUrlsFailValidation() {
+    void negativeCountsAndLongCustomInfoFailValidation() {
         UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
         request.setSlingMale(-1);
-        request.setFeaturedImageUrl("a".repeat(2049));
         request.setCustomInfo("b".repeat(1001));
 
         Set<ConstraintViolation<UpdateCollectionEntryRequest>> violations = validator.validate(request);
-        assertEquals(3, violations.size());
+        assertEquals(2, violations.size());
     }
 }
 

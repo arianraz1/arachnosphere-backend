@@ -14,8 +14,10 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring", uses = {SpeciesMapper.class, UserMapper.class})
 public interface CollectionEntryMapper {
 
+    @Mapping(target = "images", ignore = true)
     CollectionEntryResponse toResponse(CollectionEntryEntity entry);
 
+    @Mapping(target = "images", ignore = true)
     CollectionEntryOwnerResponse toOwnerResponse(CollectionEntryEntity entity);
 
     @Mapping(target = "id", ignore = true)
@@ -30,7 +32,6 @@ public interface CollectionEntryMapper {
     @Mapping(target = "version", ignore = true)
     void updateEntityFromRequest(UpdateCollectionEntryRequest request, @MappingTarget CollectionEntryEntity entry);
 
-
     @Mapping(target = "slingMale", source = "request.slingMale")
     @Mapping(target = "slingFemale", source = "request.slingFemale")
     @Mapping(target = "slingUnsexed", source = "request.slingUnsexed")
@@ -43,7 +44,6 @@ public interface CollectionEntryMapper {
     @Mapping(target = "adultMale", source = "request.adultMale")
     @Mapping(target = "adultFemale", source = "request.adultFemale")
     @Mapping(target = "adultUnsexed", source = "request.adultUnsexed")
-    @Mapping(target = "featuredImageUrl", source = "request.featuredImageUrl")
     @Mapping(target = "customInfo", source = "request.customInfo")
     UpdateCollectionEntryRequest toUpdateRequest(CollectionEntryEntity entry,
                                                  CreateCollectionEntryRequest request);

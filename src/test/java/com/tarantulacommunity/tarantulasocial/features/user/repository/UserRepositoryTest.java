@@ -57,4 +57,41 @@ public class UserRepositoryTest {
     void existsByUsername_returnsFalse_whenNoMatch() {
         assertFalse(userRepository.existsByUsername("nonexistent"));
     }
+
+    @Test
+    void existsByIdAndProfilePicKey_returnsTrue_whenKeyMatchesCurrentRow() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setProfilePicKey("profile-pictures/current.jpg");
+        em.persistAndFlush(user);
+
+        assertTrue(userRepository.existsByIdAndProfilePicKey(user.getId(), "profile-pictures/current.jpg"));
+    }
+
+    @Test
+    void existsByIdAndProfilePicKey_returnsFalse_whenKeyIsStale() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setProfilePicKey("profile-pictures/current.jpg");
+        em.persistAndFlush(user);
+
+        // simulates a concurrent upload having already moved the key past what we expect
+        assertFalse(userRepository.existsByIdAndProfilePicKey(user.getId(), "profile-pictures/stale.jpg"));
+    }
+
+    @Test
+    void existsByIdAndFavoriteImageKey_returnsTrue_whenKeyMatchesCurrentRow() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setFavoriteImageKey("favorite-images/current.jpg");
+        em.persistAndFlush(user);
+
+        assertTrue(userRepository.existsByIdAndFavoriteImageKey(user.getId(), "favorite-images/current.jpg"));
+    }
+
+    @Test
+    void existsByIdAndFavoriteImageKey_returnsFalse_whenKeyIsStale() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setFavoriteImageKey("favorite-images/current.jpg");
+        em.persistAndFlush(user);
+
+        assertFalse(userRepository.existsByIdAndFavoriteImageKey(user.getId(), "favorite-images/stale.jpg"));
+    }
 }

@@ -44,6 +44,8 @@ class CollectionEntryEntityTest {
         assertEquals(0, saved.getAdultMale());
         assertEquals(0, saved.getAdultFemale());
         assertEquals(0, saved.getAdultUnsexed());
+        assertNotNull(saved.getImages());
+        assertTrue(saved.getImages().isEmpty());
     }
 
     @Test
@@ -119,18 +121,6 @@ class CollectionEntryEntityTest {
     }
 
     @Test
-    void featuredImageUrlTooLongFailsBeanValidation() {
-        UserEntity user = TestUtilities.verifiedUser("9", "9");
-        SpeciesEntity species = TestUtilities.validSpecies(2009L, "Lampropelma violaceopes");
-
-        CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
-        entry.setFeaturedImageUrl("a".repeat(2049)); // exceeds max length of 2048
-
-        Set<ConstraintViolation<CollectionEntryEntity>> violations = validator.validate(entry);
-        assertEquals(1, violations.size());
-    }
-
-    @Test
     void validEntryWithCountsAndOptionalFieldsPersistsSuccessfully() {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("10", "10"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2010L, "Theraphosa blondi"));
@@ -139,14 +129,12 @@ class CollectionEntryEntityTest {
         entry.setAdultFemale(1);
         entry.setSlingUnsexed(3);
         entry.setCustomInfo("Kept at 78F, fed weekly");
-        entry.setFeaturedImageUrl("https://example.com/goliath.jpg");
 
         CollectionEntryEntity saved = em.persistFlushFind(entry);
 
         assertEquals(1, saved.getAdultFemale());
         assertEquals(3, saved.getSlingUnsexed());
         assertEquals("Kept at 78F, fed weekly", saved.getCustomInfo());
-        assertEquals("https://example.com/goliath.jpg", saved.getFeaturedImageUrl());
     }
 
     @Test
@@ -184,5 +172,47 @@ class CollectionEntryEntityTest {
 
         assertNotNull(updated.getVersion());
         assertEquals(versionBefore + 1, updated.getVersion());
+    }
+
+    // ---------- images relationship (replaces the old featuredImageUrl field) ----------
+
+    @Test
+    void images_cascadePersistsWhenAddedToEntry() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("12", "12"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2012L, "Nhandu chromatus"));
+        CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
+
+        CollectionImageEntity image = CollectionImageEntity.builder()
+                .collection(entry)
+                .s3Key("collection-images/x/photo.jpg")
+                .displayOrder(0)
+                .build();
+        entry.getImages().add(image);
+
+        CollectionEntryEntity saved = em.persistFlushFind(entry);
+
+        assertEquals(1, saved.getImages().size());
+        assertEquals("collection-images/x/photo.jpg", saved.getImages().getFirst().getS3Key());
+    }
+
+    @Test
+    void images_orphanRemoval_deletesImageWhenRemovedFromList() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("13", "13"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(2013L, "Euathlus sp."));
+        CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
+
+        CollectionImageEntity image = CollectionImageEntity.builder()
+                .collection(entry)
+                .s3Key("collection-images/y/photo.jpg")
+                .displayOrder(0)
+                .build();
+        entry.getImages().add(image);
+        entry = em.persistFlushFind(entry);
+
+        Long imageId = entry.getImages().getFirst().getId();
+        entry.getImages().clear();
+        em.persistAndFlush(entry);
+
+        assertNull(em.find(CollectionImageEntity.class, imageId));
     }
 }

@@ -36,11 +36,11 @@ class MessageMapperTest {
     void testToResponse() {
         UserEntity sender = TestUtilities.verifiedUser("1", "1");
         sender.setId(1L);
-        sender.setProfilePicUrl("https://example.com/sender.jpg");
+        sender.setProfilePicKey("profile-pictures/sender.jpg");
 
         UserEntity recipient = TestUtilities.verifiedUser("2", "2");
         recipient.setId(2L);
-        recipient.setProfilePicUrl("https://example.com/recipient.jpg");
+        recipient.setProfilePicKey("profile-pictures/recipient.jpg");
 
         MessageEntity message = TestUtilities.validMessage(sender, recipient, "Hello!", thread);
         message.setId(1L);
@@ -56,11 +56,11 @@ class MessageMapperTest {
         assertNotNull(response.getSender());
         assertEquals(sender.getId(), response.getSender().getId());
         assertEquals(sender.getUsername(), response.getSender().getUsername());
-        assertEquals(sender.getProfilePicUrl(), response.getSender().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/sender.jpg", response.getSender().getProfilePicUrl());
         assertNotNull(response.getRecipient());
         assertEquals(recipient.getId(), response.getRecipient().getId());
         assertEquals(recipient.getUsername(), response.getRecipient().getUsername());
-        assertEquals(recipient.getProfilePicUrl(), response.getRecipient().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/recipient.jpg", response.getRecipient().getProfilePicUrl());
     }
 
     @Test
@@ -108,11 +108,11 @@ class MessageMapperTest {
     void testToResponseWithDifferentUsers() {
         UserEntity sender = TestUtilities.verifiedUser("7", "7");
         sender.setId(7L);
-        sender.setProfilePicUrl("https://example.com/sender7.jpg");
+        sender.setProfilePicKey("profile-pictures/sender7.jpg");
 
         UserEntity recipient = TestUtilities.verifiedUser("8", "8");
         recipient.setId(8L);
-        recipient.setProfilePicUrl("https://example.com/recipient8.jpg");
+        recipient.setProfilePicKey("profile-pictures/recipient8.jpg");
 
         MessageEntity message = TestUtilities.validMessage(sender, recipient, "Another message", thread);
         message.setId(4L);
@@ -123,8 +123,8 @@ class MessageMapperTest {
         assertNotNull(response);
         assertEquals("test7", response.getSender().getUsername());
         assertEquals("test8", response.getRecipient().getUsername());
-        assertEquals("https://example.com/sender7.jpg", response.getSender().getProfilePicUrl());
-        assertEquals("https://example.com/recipient8.jpg", response.getRecipient().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/sender7.jpg", response.getSender().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/recipient8.jpg", response.getRecipient().getProfilePicUrl());
     }
 
     @Test
@@ -150,11 +150,11 @@ class MessageMapperTest {
     void testToResponseMapsAllFields() {
         UserEntity sender = TestUtilities.verifiedUser("11", "11");
         sender.setId(11L);
-        sender.setProfilePicUrl("https://example.com/sender11.jpg");
+        sender.setProfilePicKey("profile-pictures/sender11.jpg");
 
         UserEntity recipient = TestUtilities.verifiedUser("12", "12");
         recipient.setId(12L);
-        recipient.setProfilePicUrl("https://example.com/recipient12.jpg");
+        recipient.setProfilePicKey("profile-pictures/recipient12.jpg");
 
         MessageEntity message = TestUtilities.validMessage(sender, recipient, "Complete message test", thread);
         message.setId(6L);

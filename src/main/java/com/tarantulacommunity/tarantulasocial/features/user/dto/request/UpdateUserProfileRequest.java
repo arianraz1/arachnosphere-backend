@@ -12,9 +12,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UpdateUserProfileRequest {
 
-    @Size(max = 2048)
-    private String profilePicUrl;
-
     @Size(max = 1000)
     private String bio;
 }

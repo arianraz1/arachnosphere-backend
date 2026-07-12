@@ -6,7 +6,9 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUs
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.s3.S3StorageService;
 import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,40 +16,53 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
 class UserMapperTest {
 
-    @Autowired
+    private S3StorageService s3StorageService;
     private UserMapper userMapper;
+
+    @BeforeEach
+    void setUp() {
+        s3StorageService = mock(S3StorageService.class);
+        userMapper = new UserMapperImpl();
+        userMapper.setS3StorageService(s3StorageService);
+    }
 
     @Test
     void testToProfileResponse() {
         UserEntity user = TestUtilities.verifiedUser("1", "1");
         user.setId(1L);
-        user.setProfilePicUrl("https://example.com/pic.jpg");
+        user.setProfilePicKey("profile-pictures/pic.jpg");
         user.setBio("I love tarantulas!");
-        user.setFavoriteImageUrl("https://example.com/favorite.jpg");
+        user.setFavoriteImageKey("favorite-images/favorite.jpg");
         user.setFavoriteCaption("My Brazilian Black");
         user.setCreatedAt(LocalDateTime.now());
+
+        when(s3StorageService.getImageUrl("profile-pictures/pic.jpg"))
+                .thenReturn("https://cdn.example.com/profile-pictures/pic.jpg");
+        when(s3StorageService.getImageUrl("favorite-images/favorite.jpg"))
+                .thenReturn("https://cdn.example.com/favorite-images/favorite.jpg");
 
         UserProfileResponse response = userMapper.toProfileResponse(user);
 
         assertNotNull(response);
         assertEquals(user.getId(), response.getId());
         assertEquals(user.getUsername(), response.getUsername());
-        assertEquals(user.getProfilePicUrl(), response.getProfilePicUrl());
+        assertEquals("https://cdn.example.com/profile-pictures/pic.jpg", response.getProfilePicUrl());
         assertEquals(user.getBio(), response.getBio());
-        assertEquals(user.getFavoriteImageUrl(), response.getFavoriteImageUrl());
+        assertEquals("https://cdn.example.com/favorite-images/favorite.jpg", response.getFavoriteImageUrl());
         assertEquals(user.getFavoriteCaption(), response.getFavoriteCaption());
         assertEquals(user.getCreatedAt(), response.getCreatedAt());
     }
 
     @Test
-    void testToProfileResponseWithNullOptionalFields() {
+    void testToProfileResponseWithNullKeysSkipsS3Calls() {
         UserEntity user = TestUtilities.verifiedUser("2", "2");
         user.setId(2L);
         user.setCreatedAt(LocalDateTime.now());
+        // profilePicKey / favoriteImageKey left null
 
         UserProfileResponse response = userMapper.toProfileResponse(user);
 
@@ -58,50 +73,47 @@ class UserMapperTest {
         assertNull(response.getBio());
         assertNull(response.getFavoriteImageUrl());
         assertNull(response.getFavoriteCaption());
+        verifyNoInteractions(s3StorageService);
     }
 
     @Test
     void testToSummaryResponse() {
-        // Arrange
         UserEntity user = TestUtilities.verifiedUser("3", "3");
         user.setId(3L);
-        user.setProfilePicUrl("https://example.com/pic.jpg");
+        user.setProfilePicKey("profile-pictures/pic.jpg");
 
-        // Act
+        when(s3StorageService.getImageUrl("profile-pictures/pic.jpg"))
+                .thenReturn("https://cdn.example.com/profile-pictures/pic.jpg");
+
         UserSummaryResponse response = userMapper.toSummaryResponse(user);
 
-        // Assert
         assertNotNull(response);
         assertEquals(user.getId(), response.getId());
         assertEquals(user.getUsername(), response.getUsername());
-        assertEquals(user.getProfilePicUrl(), response.getProfilePicUrl());
+        assertEquals("https://cdn.example.com/profile-pictures/pic.jpg", response.getProfilePicUrl());
     }
 
     @Test
-    void testToSummaryResponseWithNullProfilePic() {
-        // Arrange
+    void testToSummaryResponseWithNullProfilePicKeySkipsS3Call() {
         UserEntity user = TestUtilities.verifiedUser("4", "4");
         user.setId(4L);
-        // profilePicUrl is null
+        // profilePicKey is null
 
-        // Act
         UserSummaryResponse response = userMapper.toSummaryResponse(user);
 
-        // Assert
         assertNotNull(response);
         assertEquals(user.getId(), response.getId());
         assertEquals(user.getUsername(), response.getUsername());
         assertNull(response.getProfilePicUrl());
+        verifyNoInteractions(s3StorageService);
     }
 
     @Test
     void testToSignupResponse() {
-        // Arrange
         UserEntity user = TestUtilities.verifiedUser("5", "5");
         user.setId(5L);
         user.setCreatedAt(LocalDateTime.now());
 
-        // Act
         UserSignupResponse response = userMapper.toSignupResponse(user);
 
         assertNotNull(response);
@@ -118,12 +130,10 @@ class UserMapperTest {
         user.setVersion(0L);
 
         UpdateUserProfileRequest request = new UpdateUserProfileRequest();
-        request.setProfilePicUrl("https://example.com/new-pic.jpg");
         request.setBio("Updated bio!");
 
         userMapper.updateProfileFromRequest(request, user);
 
-        assertEquals("https://example.com/new-pic.jpg", user.getProfilePicUrl());
         assertEquals("Updated bio!", user.getBio());
         assertEquals(6L, user.getId());
         assertEquals(TestUtilities.verifiedUser("6", "6").getEmail(), user.getEmail());
@@ -133,13 +143,14 @@ class UserMapperTest {
     void testUpdateProfileFromRequestIgnoresImmutableFields() {
         UserEntity user = TestUtilities.verifiedUser("7", "7");
         user.setId(7L);
+        user.setProfilePicKey("profile-pictures/original.jpg");
         Long originalId = user.getId();
         String originalEmail = user.getEmail();
         String originalUsername = user.getUsername();
         String originalPassword = user.getPassword();
+        String originalProfilePicKey = user.getProfilePicKey();
 
         UpdateUserProfileRequest request = new UpdateUserProfileRequest();
-        request.setProfilePicUrl("https://example.com/pic.jpg");
         request.setBio("New bio");
 
         userMapper.updateProfileFromRequest(request, user);
@@ -148,22 +159,20 @@ class UserMapperTest {
         assertEquals(originalEmail, user.getEmail());
         assertEquals(originalUsername, user.getUsername());
         assertEquals(originalPassword, user.getPassword());
+        assertEquals(originalProfilePicKey, user.getProfilePicKey());
     }
 
     @Test
-    void testUpdateProfileFromRequestWithNullValues() {
+    void testUpdateProfileFromRequestWithNullValue() {
         UserEntity user = TestUtilities.verifiedUser("8", "8");
         user.setId(8L);
-        user.setProfilePicUrl("https://example.com/pic.jpg");
         user.setBio("Old bio");
 
         UpdateUserProfileRequest request = new UpdateUserProfileRequest();
-        request.setProfilePicUrl(null);
         request.setBio(null);
 
         userMapper.updateProfileFromRequest(request, user);
 
-        assertNull(user.getProfilePicUrl());
         assertNull(user.getBio());
     }
 
@@ -174,12 +183,10 @@ class UserMapperTest {
         user.setVersion(0L);
 
         UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest();
-        request.setFavoriteImageUrl("https://example.com/favorite.jpg");
         request.setFavoriteCaption("My GBB");
 
         userMapper.updateFavoriteFromRequest(request, user);
 
-        assertEquals("https://example.com/favorite.jpg", user.getFavoriteImageUrl());
         assertEquals("My GBB", user.getFavoriteCaption());
     }
 
@@ -187,36 +194,32 @@ class UserMapperTest {
     void testUpdateFavoriteFromRequestIgnoresImmutableFields() {
         UserEntity user = TestUtilities.verifiedUser("10", "10");
         user.setId(10L);
-        String originalProfilePicUrl = "https://example.com/pic.jpg";
+        user.setProfilePicKey("profile-pictures/pic.jpg");
+        user.setFavoriteImageKey("favorite-images/original.jpg");
         String originalBio = "My bio";
-        user.setProfilePicUrl(originalProfilePicUrl);
         user.setBio(originalBio);
 
         UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest();
-        request.setFavoriteImageUrl("https://example.com/favorite.jpg");
         request.setFavoriteCaption("Sling GBB");
 
         userMapper.updateFavoriteFromRequest(request, user);
 
-        assertEquals(originalProfilePicUrl, user.getProfilePicUrl());
+        assertEquals("profile-pictures/pic.jpg", user.getProfilePicKey());
+        assertEquals("favorite-images/original.jpg", user.getFavoriteImageKey());
         assertEquals(originalBio, user.getBio());
     }
 
     @Test
-    void testUpdateFavoriteFromRequestWithNullValues() {
+    void testUpdateFavoriteFromRequestWithNullValue() {
         UserEntity user = TestUtilities.verifiedUser("11", "11");
         user.setId(11L);
-        user.setFavoriteImageUrl("https://example.com/favorite.jpg");
         user.setFavoriteCaption("Old caption");
 
         UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest();
-        request.setFavoriteImageUrl(null);
         request.setFavoriteCaption(null);
 
         userMapper.updateFavoriteFromRequest(request, user);
 
-        assertNull(user.getFavoriteImageUrl());
         assertNull(user.getFavoriteCaption());
     }
 }
-

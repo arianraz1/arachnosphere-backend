@@ -115,6 +115,35 @@ public class CollectionEntryRepositoryTest {
         assertFalse(repository.existsByUserAndSpecies(user, species));
     }
 
+    // ---------- existsByIdAndUserId (missing from original suite; backs the
+    // ownership check used everywhere in CollectionImageService) ----------
+
+    @Test
+    void existsByIdAndUserId_returnsTrue_whenEntryBelongsToUser() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
+
+        assertTrue(repository.existsByIdAndUserId(entry.getId(), user.getId()));
+    }
+
+    @Test
+    void existsByIdAndUserId_returnsFalse_whenEntryBelongsToDifferentUser() {
+        UserEntity owner = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        UserEntity otherUser = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(owner, species));
+
+        assertFalse(repository.existsByIdAndUserId(entry.getId(), otherUser.getId()));
+    }
+
+    @Test
+    void existsByIdAndUserId_returnsFalse_whenEntryDoesNotExist() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+
+        assertFalse(repository.existsByIdAndUserId(999L, user.getId()));
+    }
+
     @Test
     void findBySpecies_returnsAllEntriesForSpecies() {
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));

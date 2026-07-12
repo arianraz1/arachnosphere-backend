@@ -4,7 +4,9 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.CreateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionImageResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionImageService;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import org.junit.jupiter.api.Test;
@@ -18,8 +20,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +37,9 @@ class CollectionEntryControllerTest {
 
     @Mock
     private CollectionEntryService collectionEntryService;
+
+    @Mock
+    private CollectionImageService collectionImageService;
 
     @InjectMocks
     private CollectionEntryController collectionEntryController;
@@ -93,6 +101,36 @@ class CollectionEntryControllerTest {
     }
 
     @Test
+    void searchByUser_shouldReturnEmptyPage_whenNoResults() {
+        Page<CollectionEntryResponse> emptyPage = Page.empty();
+
+        when(collectionEntryService.searchEntriesByUser(eq(1L), eq("nonexistent"), any(Pageable.class)))
+                .thenReturn(emptyPage);
+
+        ResponseEntity<Page<CollectionEntryResponse>> response =
+                collectionEntryController.searchByUser(1L, "nonexistent", PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
+    void searchByUser_shouldUseDefaultQueryWhenEmpty() {
+        CollectionEntryResponse entry = new CollectionEntryResponse();
+        entry.setId(1L);
+        Page<CollectionEntryResponse> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+
+        when(collectionEntryService.searchEntriesByUser(eq(1L), eq(""), any(PageRequest.class)))
+                .thenReturn(page);
+
+        ResponseEntity<Page<CollectionEntryResponse>> response =
+                collectionEntryController.searchByUser(1L, "", PageRequest.of(0, 20));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+    }
+
+    @Test
     void getBySpecies_shouldReturnListOfEntries() {
         CollectionEntryResponse entry = new CollectionEntryResponse();
         entry.setId(1L);
@@ -114,6 +152,16 @@ class CollectionEntryControllerTest {
 
         assertThrows(GlobalExceptionHandler.SpeciesNotFoundException.class,
                 () -> collectionEntryController.getBySpecies(99L));
+    }
+
+    @Test
+    void getBySpecies_shouldReturnEmptyListWhenNoEntries() {
+        when(collectionEntryService.getEntriesBySpecies(99L)).thenReturn(List.of());
+
+        ResponseEntity<List<CollectionEntryResponse>> response = collectionEntryController.getBySpecies(99L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
     }
 
     // ---------- CREATE (INSERT) ----------
@@ -242,43 +290,111 @@ class CollectionEntryControllerTest {
                 () -> collectionEntryController.delete(1L, userDetailsOf(99L)));
     }
 
+    // ---------- IMAGES (missing from original suite) ----------
+
     @Test
-    void searchByUser_shouldReturnEmptyPage_whenNoResults() {
-        Page<CollectionEntryResponse> emptyPage = Page.empty();
+    void listImages_shouldReturnListOfImages() {
+        CollectionImageResponse image = new CollectionImageResponse(1L, "https://cdn/img.jpg", "cap", false, 0);
+        when(collectionImageService.listImages(10L)).thenReturn(List.of(image));
 
-        when(collectionEntryService.searchEntriesByUser(eq(1L), eq("nonexistent"), any(Pageable.class)))
-                .thenReturn(emptyPage);
+        ResponseEntity<List<CollectionImageResponse>> response = collectionEntryController.listImages(10L);
 
-        ResponseEntity<Page<CollectionEntryResponse>> response =
-                collectionEntryController.searchByUser(1L, "nonexistent", PageRequest.of(0, 20));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsExactly(image);
+    }
+
+    @Test
+    void listImages_shouldReturnEmptyListWhenNoImages() {
+        when(collectionImageService.listImages(10L)).thenReturn(List.of());
+
+        ResponseEntity<List<CollectionImageResponse>> response = collectionEntryController.listImages(10L);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEmpty();
     }
 
     @Test
-    void searchByUser_shouldUseDefaultQueryWhenEmpty() {
-        CollectionEntryResponse entry = new CollectionEntryResponse();
-        entry.setId(1L);
-        Page<CollectionEntryResponse> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+    void uploadImage_shouldReturnCreatedImage() {
+        MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
+        CollectionImageResponse expected = new CollectionImageResponse(1L, "https://cdn/img.jpg", "caption", false, 0);
 
-        when(collectionEntryService.searchEntriesByUser(eq(1L), eq(""), any(PageRequest.class)))
-                .thenReturn(page);
+        when(collectionImageService.uploadImage(eq(1L), eq(10L), eq(file), eq("caption")))
+                .thenReturn(expected);
 
-        ResponseEntity<Page<CollectionEntryResponse>> response =
-                collectionEntryController.searchByUser(1L, "", PageRequest.of(0, 20));
+        ResponseEntity<CollectionImageResponse> response =
+                collectionEntryController.uploadImage(10L, file, "caption", userDetailsOf(1L));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(expected);
     }
 
     @Test
-    void getBySpecies_shouldReturnEmptyListWhenNoEntries() {
-        when(collectionEntryService.getEntriesBySpecies(99L)).thenReturn(List.of());
+    void uploadImage_shouldThrowWhenLimitExceeded() {
+        MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
 
-        ResponseEntity<List<CollectionEntryResponse>> response = collectionEntryController.getBySpecies(99L);
+        when(collectionImageService.uploadImage(eq(1L), eq(10L), eq(file), isNull()))
+                .thenThrow(new GlobalExceptionHandler.ImageLimitExceededException("Maximum of 5 images per collection entry reached"));
+
+        assertThrows(GlobalExceptionHandler.ImageLimitExceededException.class,
+                () -> collectionEntryController.uploadImage(10L, file, null, userDetailsOf(1L)));
+    }
+
+    @Test
+    void uploadImage_shouldThrowWhenUnauthorized() {
+        MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
+
+        when(collectionImageService.uploadImage(eq(99L), eq(10L), eq(file), isNull()))
+                .thenThrow(new AccessDeniedException("You do not have permission to modify this collection entry"));
+
+        assertThrows(AccessDeniedException.class,
+                () -> collectionEntryController.uploadImage(10L, file, null, userDetailsOf(99L)));
+    }
+
+    @Test
+    void deleteImage_shouldReturnNoContent() {
+        ResponseEntity<Void> response = collectionEntryController.deleteImage(10L, 5L, userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(collectionImageService).deleteImage(1L, 10L, 5L);
+    }
+
+    @Test
+    void deleteImage_shouldThrowWhenImageNotFound() {
+        doThrow(new GlobalExceptionHandler.ImageNotFoundException("Image not found in this collection entry"))
+                .when(collectionImageService).deleteImage(1L, 10L, 99L);
+
+        assertThrows(GlobalExceptionHandler.ImageNotFoundException.class,
+                () -> collectionEntryController.deleteImage(10L, 99L, userDetailsOf(1L)));
+    }
+
+    @Test
+    void deleteImage_shouldThrowWhenUnauthorized() {
+        doThrow(new AccessDeniedException("You do not have permission to modify this collection entry"))
+                .when(collectionImageService).deleteImage(99L, 10L, 5L);
+
+        assertThrows(AccessDeniedException.class,
+                () -> collectionEntryController.deleteImage(10L, 5L, userDetailsOf(99L)));
+    }
+
+    @Test
+    void setFeatured_shouldReturnUpdatedImage() {
+        CollectionImageResponse expected = new CollectionImageResponse(5L, "https://cdn/img.jpg", null, true, 0);
+
+        when(collectionImageService.setFeatured(1L, 10L, 5L)).thenReturn(expected);
+
+        ResponseEntity<CollectionImageResponse> response =
+                collectionEntryController.setFeatured(10L, 5L, userDetailsOf(1L));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEmpty();
+        assertThat(response.getBody().isFeatured()).isTrue();
+    }
+
+    @Test
+    void setFeatured_shouldThrowWhenUnauthorized() {
+        doThrow(new AccessDeniedException("You do not have permission to modify this collection entry"))
+                .when(collectionImageService).setFeatured(99L, 10L, 5L);
+
+        assertThrows(AccessDeniedException.class,
+                () -> collectionEntryController.setFeatured(10L, 5L, userDetailsOf(99L)));
     }
 }

@@ -19,7 +19,6 @@ class CreateCollectionEntryRequestTest {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
         request.setAdultFemale(1);
-        request.setFeaturedImageUrl("https://example.com/spider.jpg");
         request.setCustomInfo("Kept at 78F");
 
         Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
@@ -101,16 +100,6 @@ class CreateCollectionEntryRequestTest {
     }
 
     @Test
-    void featuredImageUrlTooLongFailsValidation() {
-        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
-        request.setSpeciesId(1L);
-        request.setFeaturedImageUrl("a".repeat(2049)); // exceeds 2048
-
-        Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
-        assertEquals(1, violations.size());
-    }
-
-    @Test
     void customInfoTooLongFailsValidation() {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
@@ -118,6 +107,16 @@ class CreateCollectionEntryRequestTest {
 
         Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
         assertEquals(1, violations.size());
+    }
+
+    @Test
+    void customInfoAtMaxLengthPassesValidation() {
+        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
+        request.setSpeciesId(1L);
+        request.setCustomInfo("a".repeat(1000)); // exactly at max
+
+        Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
+        assertTrue(violations.isEmpty());
     }
 
     @Test
@@ -136,11 +135,20 @@ class CreateCollectionEntryRequestTest {
         request.setAdultMale(0);
         request.setAdultFemale(1);
         request.setAdultUnsexed(0);
-        request.setFeaturedImageUrl("https://example.com/spider.jpg");
         request.setCustomInfo("Kept at 78F, fed weekly");
 
         Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }
-}
 
+    @Test
+    void negativeCountsAndLongCustomInfoFailValidation() {
+        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
+        request.setSpeciesId(1L);
+        request.setSlingMale(-1);
+        request.setCustomInfo("b".repeat(1001));
+
+        Set<ConstraintViolation<CreateCollectionEntryRequest>> violations = validator.validate(request);
+        assertEquals(2, violations.size());
+    }
+}

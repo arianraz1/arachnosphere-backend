@@ -1,0 +1,33 @@
+package com.tarantulacommunity.tarantulasocial.s3;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+
+import java.net.URI;
+
+@Configuration
+@ConfigurationProperties(prefix = "aws.s3")
+@Data
+public class S3Config {
+
+    private String bucket;
+    private String region;
+    private String endpointUrl;
+
+    @Bean
+    public S3Client s3Client() {
+        var builder = S3Client.builder()
+                .region(Region.of(region));
+
+        if (endpointUrl != null && !endpointUrl.isBlank()) {
+            builder.endpointOverride(URI.create(endpointUrl));
+        }
+
+        return builder.build();
+    }
+}

@@ -6,6 +6,7 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionImageResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.repository.CollectionEntryRepository;
@@ -24,11 +25,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CollectionEntryServiceTest {
@@ -44,6 +45,9 @@ class CollectionEntryServiceTest {
 
     @Mock
     private CollectionEntryMapper collectionEntryMapper;
+
+    @Mock
+    private CollectionImageService collectionImageService;
 
     @InjectMocks
     private CollectionEntryService collectionEntryService;
@@ -68,11 +72,15 @@ class CollectionEntryServiceTest {
         entryResponse.setId(1L);
     }
 
+    // Every path returning a CollectionEntryResponse/OwnerResponse now also populates
+    // images via collectionImageService, so existing tests stub that dependency too.
+
     @Test
     void getEntriesByUser_returnsAllEntries() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
 
         List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
 
@@ -91,10 +99,41 @@ class CollectionEntryServiceTest {
     void getEntriesByUser_returnsEmpty_whenNoEntries() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(collectionEntryRepository.findByUser(user)).thenReturn(List.of());
+        when(collectionImageService.listImagesByCollectionIds(List.of())).thenReturn(Map.of());
 
         List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getEntriesByUser_populatesImagesFromBatchLookup() {
+        CollectionImageResponse image = new CollectionImageResponse(100L, "https://cdn/img.jpg", "cap", true, 0);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L)))
+                .thenReturn(Map.of(1L, List.of(image)));
+
+        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+
+        assertEquals(List.of(image), result.getFirst().getImages());
+        // confirms the batched call is used, not per-entry listImages()
+        verify(collectionImageService, never()).listImages(anyLong());
+    }
+
+    @Test
+    void getEntriesByUser_entryWithNoImages_defaultsToEmptyList() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
+
+        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+
+        assertNotNull(result.getFirst().getImages());
+        assertTrue(result.getFirst().getImages().isEmpty());
     }
 
     @Test
@@ -105,6 +144,7 @@ class CollectionEntryServiceTest {
         when(collectionEntryRepository.findByUserAndSpecies_ScientificNameContainingIgnoreCase(
                 user, "Chromato", PageRequest.of(0, 10))).thenReturn(page);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
 
         Page<CollectionEntryResponse> result = collectionEntryService
                 .searchEntriesByUser(1L, "Chromato", PageRequest.of(0, 10));
@@ -126,6 +166,7 @@ class CollectionEntryServiceTest {
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
         when(collectionEntryRepository.findBySpecies(species)).thenReturn(List.of(entry));
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
 
         List<CollectionEntryResponse> result = collectionEntryService.getEntriesBySpecies(1L);
 
@@ -144,6 +185,7 @@ class CollectionEntryServiceTest {
     void getEntriesBySpecies_returnsEmpty_whenNoOwners() {
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
         when(collectionEntryRepository.findBySpecies(species)).thenReturn(List.of());
+        when(collectionImageService.listImagesByCollectionIds(List.of())).thenReturn(Map.of());
 
         List<CollectionEntryResponse> result = collectionEntryService.getEntriesBySpecies(1L);
 
@@ -162,6 +204,7 @@ class CollectionEntryServiceTest {
         when(collectionEntryMapper.toEntity(request)).thenReturn(entry);
         when(collectionEntryRepository.save(entry)).thenReturn(entry);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImages(1L)).thenReturn(List.of());
 
         CollectionEntryService.EntryResult result = collectionEntryService.createEntry(1L, request);
 
@@ -186,6 +229,7 @@ class CollectionEntryServiceTest {
         when(collectionEntryMapper.toUpdateRequest(entry, request)).thenReturn(updateRequest);
         when(collectionEntryRepository.save(entry)).thenReturn(entry);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImages(1L)).thenReturn(List.of());
 
         CollectionEntryService.EntryResult result = collectionEntryService.createEntry(1L, request);
 
@@ -222,6 +266,7 @@ class CollectionEntryServiceTest {
         when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
         when(collectionEntryRepository.save(entry)).thenReturn(entry);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImages(1L)).thenReturn(List.of());
 
         CollectionEntryResponse result = collectionEntryService.updateEntry(1L, 1L, request);
 
@@ -279,11 +324,29 @@ class CollectionEntryServiceTest {
         CollectionEntryOwnerResponse ownerResponse = new CollectionEntryOwnerResponse();
         ownerResponse.setId(1L);
         when(collectionEntryMapper.toOwnerResponse(entry)).thenReturn(ownerResponse);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
 
         List<CollectionEntryOwnerResponse> result = collectionEntryService.getOwnersBySpecies(1L);
 
         assertEquals(1, result.size());
         assertEquals(ownerResponse, result.getFirst());
+    }
+
+    @Test
+    void getOwnersBySpecies_populatesImagesFromBatchLookup() {
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
+        when(collectionEntryRepository.findBySpecies(species)).thenReturn(List.of(entry));
+
+        CollectionEntryOwnerResponse ownerResponse = new CollectionEntryOwnerResponse();
+        when(collectionEntryMapper.toOwnerResponse(entry)).thenReturn(ownerResponse);
+
+        CollectionImageResponse image = new CollectionImageResponse(100L, "https://cdn/img.jpg", null, false, 0);
+        when(collectionImageService.listImagesByCollectionIds(List.of(1L)))
+                .thenReturn(Map.of(1L, List.of(image)));
+
+        List<CollectionEntryOwnerResponse> result = collectionEntryService.getOwnersBySpecies(1L);
+
+        assertEquals(List.of(image), result.getFirst().getImages());
     }
 
     @Test

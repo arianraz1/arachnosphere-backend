@@ -6,6 +6,7 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionImageEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class CollectionEntryMapperTest {
     void testToResponse() {
         UserEntity user = TestUtilities.verifiedUser("1", "1");
         user.setId(1L);
-        user.setProfilePicUrl("https://example.com/user.jpg");
+        user.setProfilePicKey("profile-pictures/user.jpg");
 
         SpeciesEntity species = TestUtilities.validSpecies(123456L, "Grammostola rosea");
         species.setId(1L);
@@ -45,7 +46,6 @@ class CollectionEntryMapperTest {
         entry.setAdultMale(0);
         entry.setAdultFemale(1);
         entry.setAdultUnsexed(0);
-        entry.setFeaturedImageUrl("https://example.com/featured.jpg");
         entry.setCustomInfo("Beautiful specimens!");
 
         CollectionEntryResponse response = collectionEntryMapper.toResponse(entry);
@@ -56,7 +56,7 @@ class CollectionEntryMapperTest {
         assertNotNull(response.getUser());
         assertEquals(1L, response.getUser().getId());
         assertEquals("test1", response.getUser().getUsername());
-        assertEquals("https://example.com/user.jpg", response.getUser().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/user.jpg", response.getUser().getProfilePicUrl());
 
         assertNotNull(response.getSpecies());
         assertEquals(1L, response.getSpecies().getId());
@@ -76,8 +76,29 @@ class CollectionEntryMapperTest {
         assertEquals(1, response.getAdultFemale());
         assertEquals(0, response.getAdultUnsexed());
 
-        assertEquals("https://example.com/featured.jpg", response.getFeaturedImageUrl());
         assertEquals("Beautiful specimens!", response.getCustomInfo());
+    }
+
+    @Test
+    void testToResponse_imagesAreNotMapped_setSeparatelyByService() {
+        UserEntity user = TestUtilities.verifiedUser("99", "99");
+        user.setId(99L);
+
+        SpeciesEntity species = TestUtilities.validSpecies(999999L, "Grammostola rosea");
+        species.setId(99L);
+
+        CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
+        entry.setId(99L);
+        entry.getImages().add(CollectionImageEntity.builder()
+                .collection(entry)
+                .s3Key("collection-images/99/photo.jpg")
+                .build());
+
+        CollectionEntryResponse response = collectionEntryMapper.toResponse(entry);
+
+        // @Mapping(target = "images", ignore = true) - CollectionEntryService is
+        // responsible for populating this field via CollectionImageService, not the mapper.
+        assertNull(response.getImages());
     }
 
     @Test
@@ -117,13 +138,11 @@ class CollectionEntryMapperTest {
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
         entry.setId(3L);
-        entry.setFeaturedImageUrl(null);
         entry.setCustomInfo(null);
 
         CollectionEntryResponse response = collectionEntryMapper.toResponse(entry);
 
         assertNotNull(response);
-        assertNull(response.getFeaturedImageUrl());
         assertNull(response.getCustomInfo());
     }
 
@@ -143,7 +162,6 @@ class CollectionEntryMapperTest {
         request.setAdultMale(1);
         request.setAdultFemale(1);
         request.setAdultUnsexed(0);
-        request.setFeaturedImageUrl("https://example.com/featured.jpg");
         request.setCustomInfo("Custom details");
 
         CollectionEntryEntity entity = collectionEntryMapper.toEntity(request);
@@ -166,7 +184,6 @@ class CollectionEntryMapperTest {
         assertEquals(1, entity.getAdultFemale());
         assertEquals(0, entity.getAdultUnsexed());
 
-        assertEquals("https://example.com/featured.jpg", entity.getFeaturedImageUrl());
         assertEquals("Custom details", entity.getCustomInfo());
     }
 
@@ -211,7 +228,6 @@ class CollectionEntryMapperTest {
         request.setAdultMale(0);
         request.setAdultFemale(2);
         request.setAdultUnsexed(0);
-        request.setFeaturedImageUrl("https://example.com/new-featured.jpg");
         request.setCustomInfo("Updated info");
 
         collectionEntryMapper.updateEntityFromRequest(request, entity);
@@ -220,7 +236,6 @@ class CollectionEntryMapperTest {
         assertEquals(2, entity.getSlingFemale());
         assertEquals(1, entity.getSlingUnsexed());
         assertEquals(2, entity.getAdultFemale());
-        assertEquals("https://example.com/new-featured.jpg", entity.getFeaturedImageUrl());
         assertEquals("Updated info", entity.getCustomInfo());
 
         assertEquals(4L, entity.getId());
@@ -268,13 +283,11 @@ class CollectionEntryMapperTest {
         entry.setSlingFemale(1);
         entry.setJuvenileMale(1);
         entry.setAdultFemale(2);
-        entry.setFeaturedImageUrl("https://example.com/featured.jpg");
         entry.setCustomInfo("Goliath Birdeater");
 
         CreateCollectionEntryRequest createRequest = new CreateCollectionEntryRequest();
         createRequest.setSlingMale(2);
         createRequest.setSlingFemale(2);
-        createRequest.setFeaturedImageUrl("https://example.com/new-featured.jpg");
         createRequest.setCustomInfo("New info");
 
         UpdateCollectionEntryRequest updateRequest = collectionEntryMapper.toUpdateRequest(entry, createRequest);
@@ -282,7 +295,6 @@ class CollectionEntryMapperTest {
         assertNotNull(updateRequest);
         assertEquals(2, updateRequest.getSlingMale());
         assertEquals(2, updateRequest.getSlingFemale());
-        assertEquals("https://example.com/new-featured.jpg", updateRequest.getFeaturedImageUrl());
         assertEquals("New info", updateRequest.getCustomInfo());
     }
 
@@ -302,7 +314,6 @@ class CollectionEntryMapperTest {
         UpdateCollectionEntryRequest updateRequest = collectionEntryMapper.toUpdateRequest(entry, createRequest);
 
         assertNotNull(updateRequest);
-        assertNull(updateRequest.getFeaturedImageUrl());
         assertNull(updateRequest.getCustomInfo());
     }
 
@@ -349,7 +360,7 @@ class CollectionEntryMapperTest {
     void testToOwnerResponse_shouldMapEntityToOwnerDto() {
         UserEntity user = TestUtilities.verifiedUser("9", "9");
         user.setId(9L);
-        user.setProfilePicUrl("https://example.com/owner-avatar.jpg");
+        user.setProfilePicKey("profile-pictures/owner-avatar.jpg");
 
         SpeciesEntity species = TestUtilities.validSpecies(901234L, "Lasiodora parahybana");
         species.setId(9L);
@@ -368,7 +379,6 @@ class CollectionEntryMapperTest {
         entry.setAdultMale(0);
         entry.setAdultFemale(1);
         entry.setAdultUnsexed(0);
-        entry.setFeaturedImageUrl("https://example.com/owner-featured.jpg");
         entry.setCustomInfo("This is my favorite tarantula!");
 
         CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entry);
@@ -377,7 +387,7 @@ class CollectionEntryMapperTest {
         assertEquals(9L, response.getId());
         assertEquals("test9", response.getUser().getUsername());
         assertEquals(9L, response.getUser().getId());
-        assertEquals("https://example.com/owner-avatar.jpg", response.getUser().getProfilePicUrl());
+        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/owner-avatar.jpg", response.getUser().getProfilePicUrl());
 
         assertEquals(10, response.getSlingMale());
         assertEquals(5, response.getSlingFemale());
@@ -392,7 +402,26 @@ class CollectionEntryMapperTest {
         assertEquals(1, response.getAdultFemale());
         assertEquals(0, response.getAdultUnsexed());
 
-        assertEquals("https://example.com/owner-featured.jpg", response.getFeaturedImageUrl());
         assertEquals("This is my favorite tarantula!", response.getCustomInfo());
+    }
+
+    @Test
+    void testToOwnerResponse_imagesAreNotMapped_setSeparatelyByService() {
+        UserEntity user = TestUtilities.verifiedUser("10", "10");
+        user.setId(10L);
+
+        SpeciesEntity species = TestUtilities.validSpecies(101010L, "Lasiodora parahybana");
+        species.setId(10L);
+
+        CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, species);
+        entry.setId(10L);
+        entry.getImages().add(CollectionImageEntity.builder()
+                .collection(entry)
+                .s3Key("collection-images/10/photo.jpg")
+                .build());
+
+        CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entry);
+
+        assertNull(response.getImages());
     }
 }

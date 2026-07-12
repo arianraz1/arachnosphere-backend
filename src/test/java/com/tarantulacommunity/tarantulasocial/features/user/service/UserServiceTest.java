@@ -127,14 +127,17 @@ public class UserServiceTest {
         UserEntity user = new UserEntity();
         user.setId(1L);
         user.setUsername("testuser");
-        user.setProfilePicUrl("https://example.com/profile.jpg");
+        user.setProfilePicKey("profile-pictures/abc.jpg");
         user.setBio("This is a bio");
+        user.setFavoriteImageKey("favorite-images/xyz.jpg");
         user.setFavoriteCaption("This is a caption");
-        user.setFavoriteImageUrl("https://example.com/favorite.jpg");
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        UserProfileResponse expectedResponse = new UserProfileResponse(1L, "testuser", "https://example.com/profile.jpg", "This is a bio", "This is a caption", "https://example.com/favorite.jpg", null);
+        UserProfileResponse expectedResponse = new UserProfileResponse(
+                1L, "testuser", "https://cdn.example.com/profile-pictures/abc.jpg",
+                "This is a bio", "https://cdn.example.com/favorite-images/xyz.jpg",
+                "This is a caption", null);
         when(userMapper.toProfileResponse(user)).thenReturn(expectedResponse);
 
         UserProfileResponse result = userService.getProfile(1L);
@@ -155,7 +158,7 @@ public class UserServiceTest {
 
     @Test
     void updateProfile_updatesAndReturnsResponse() {
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest("https://example.com/pic.jpg", "My bio");
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest("My bio");
 
         UserEntity user = new UserEntity();
         user.setId(1L);
@@ -164,7 +167,7 @@ public class UserServiceTest {
         when(userRepository.save(user)).thenReturn(user);
 
         UserProfileResponse expectedResponse = new UserProfileResponse(1L, "testuser",
-                "https://example.com/pic.jpg", "My bio", null, null, null);
+                null, "My bio", null, null, null);
         when(userMapper.toProfileResponse(user)).thenReturn(expectedResponse);
 
         UserProfileResponse result = userService.updateProfile(1L, request);
@@ -179,13 +182,12 @@ public class UserServiceTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                userService.updateProfile(99L, new UpdateUserProfileRequest(null, null)));
+                userService.updateProfile(99L, new UpdateUserProfileRequest(null)));
     }
 
     @Test
     void updateFavorite_updatesAndReturnsResponse() {
-        UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest(
-                "https://example.com/tarantula.jpg", "My favorite GBB");
+        UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest("My favorite GBB");
 
         UserEntity user = new UserEntity();
         user.setId(1L);
@@ -194,7 +196,7 @@ public class UserServiceTest {
         when(userRepository.save(user)).thenReturn(user);
 
         UserProfileResponse expectedResponse = new UserProfileResponse(1L, "testuser", null, null,
-                "https://example.com/tarantula.jpg", "My favorite GBB", null);
+                null, "My favorite GBB", null);
         when(userMapper.toProfileResponse(user)).thenReturn(expectedResponse);
 
         UserProfileResponse result = userService.updateFavorite(1L, request);
@@ -209,6 +211,6 @@ public class UserServiceTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
-                userService.updateFavorite(99L, new UpdateUserFavoriteTarantulaRequest(null, null)));
+                userService.updateFavorite(99L, new UpdateUserFavoriteTarantulaRequest(null)));
     }
 }

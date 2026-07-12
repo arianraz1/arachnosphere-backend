@@ -5,10 +5,10 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -71,9 +71,8 @@ public class CollectionEntryEntity {
     @Column(nullable = false)
     private int adultUnsexed = 0;
 
-    @Size(max = 2048)
-    @Column(length = 2048)
-    private String featuredImageUrl;
+    @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CollectionImageEntity> images = new ArrayList<>();
 
     @Size(max = 1000)
     @Column(length = 1000)

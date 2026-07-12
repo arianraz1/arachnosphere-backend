@@ -45,9 +45,6 @@ public class CreateCollectionEntryRequest {
     @Min(0)
     private int adultUnsexed;
 
-    @Size(max = 2048)
-    private String featuredImageUrl;
-
     @Size(max = 1000)
     private String customInfo;
 }

@@ -28,4 +28,6 @@ public interface CollectionEntryRepository extends JpaRepository<CollectionEntry
     Optional<CollectionEntryEntity> findByUserAndSpecies(UserEntity user, SpeciesEntity species);
 
     boolean existsByUserAndSpecies(UserEntity user, SpeciesEntity species);
+
+    boolean existsByIdAndUserId(Long collectionId, Long userId);
 }

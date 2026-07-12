@@ -5,6 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.requ
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.request.UpdateCollectionEntryRequest;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryResponse;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionImageResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.mapper.CollectionEntryMapper;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.repository.CollectionEntryRepository;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -31,34 +33,35 @@ public class CollectionEntryService {
     private final CollectionEntryMapper collectionEntryMapper;
     private final UserRepository userRepository;
     private final SpeciesRepository speciesRepository;
+    private final CollectionImageService collectionImageService;
 
     public List<CollectionEntryResponse> getEntriesByUser(Long userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
-        return collectionEntryRepository.findByUser(user)
-                .stream()
-                .map(collectionEntryMapper::toResponse)
-                .toList();
+        List<CollectionEntryEntity> entries = collectionEntryRepository.findByUser(user);
+        return toResponsesWithImages(entries);
     }
 
     public List<CollectionEntryResponse> getEntriesBySpecies(Long speciesId) {
         SpeciesEntity species = speciesRepository.findById(speciesId)
                 .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(speciesId));
 
-        return collectionEntryRepository.findBySpecies(species)
-                .stream()
-                .map(collectionEntryMapper::toResponse)
-                .toList();
+        List<CollectionEntryEntity> entries = collectionEntryRepository.findBySpecies(species);
+        return toResponsesWithImages(entries);
     }
 
     public Page<CollectionEntryResponse> searchEntriesByUser(Long userId, String query, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
-        return collectionEntryRepository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, query, pageable)
-                .map(collectionEntryMapper::toResponse);
+        Page<CollectionEntryEntity> page = collectionEntryRepository
+                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, query, pageable);
+
+        Map<Long, List<CollectionImageResponse>> imagesByEntryId =
+                collectionImageService.listImagesByCollectionIds(idsOf(page.getContent()));
+
+        return page.map(entity -> toResponseWithImages(entity, imagesByEntryId));
     }
 
     @Transactional
@@ -82,7 +85,7 @@ public class CollectionEntryService {
         entry.setUser(user);
         entry.setSpecies(species);
         CollectionEntryEntity saved = collectionEntryRepository.save(entry);
-        return new EntryResult(collectionEntryMapper.toResponse(saved), true);
+        return new EntryResult(toResponseWithImages(saved), true);
     }
 
     @Transactional
@@ -115,17 +118,55 @@ public class CollectionEntryService {
     private CollectionEntryResponse applyUpdate(CollectionEntryEntity entry,
                                                 UpdateCollectionEntryRequest request) {
         collectionEntryMapper.updateEntityFromRequest(request, entry);
-        return collectionEntryMapper.toResponse(collectionEntryRepository.save(entry));
+        return toResponseWithImages(collectionEntryRepository.save(entry));
     }
 
     public List<CollectionEntryOwnerResponse> getOwnersBySpecies(Long speciesId) {
         SpeciesEntity species = speciesRepository.findById(speciesId)
                 .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(speciesId));
 
-        return collectionEntryRepository.findBySpecies(species)
-                .stream()
-                .map(collectionEntryMapper::toOwnerResponse)
+        List<CollectionEntryEntity> entries = collectionEntryRepository.findBySpecies(species);
+
+        Map<Long, List<CollectionImageResponse>> imagesByEntryId =
+                collectionImageService.listImagesByCollectionIds(idsOf(entries));
+
+        return entries.stream()
+                .map(entity -> {
+                    CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entity);
+                    response.setImages(imagesByEntryId.getOrDefault(entity.getId(), List.of()));
+                    return response;
+                })
                 .collect(Collectors.toList());
+    }
+
+    // --- single-entity helpers (create/update: only ever one row, N+1 doesn't apply) ---
+
+    private CollectionEntryResponse toResponseWithImages(CollectionEntryEntity entity) {
+        CollectionEntryResponse response = collectionEntryMapper.toResponse(entity);
+        response.setImages(collectionImageService.listImages(entity.getId()));
+        return response;
+    }
+
+    // --- batch helpers (list/search: one query for all entities' images) ---
+
+    private List<CollectionEntryResponse> toResponsesWithImages(List<CollectionEntryEntity> entries) {
+        Map<Long, List<CollectionImageResponse>> imagesByEntryId =
+                collectionImageService.listImagesByCollectionIds(idsOf(entries));
+
+        return entries.stream()
+                .map(entity -> toResponseWithImages(entity, imagesByEntryId))
+                .toList();
+    }
+
+    private CollectionEntryResponse toResponseWithImages(CollectionEntryEntity entity,
+                                                         Map<Long, List<CollectionImageResponse>> imagesByEntryId) {
+        CollectionEntryResponse response = collectionEntryMapper.toResponse(entity);
+        response.setImages(imagesByEntryId.getOrDefault(entity.getId(), List.of()));
+        return response;
+    }
+
+    private List<Long> idsOf(List<CollectionEntryEntity> entries) {
+        return entries.stream().map(CollectionEntryEntity::getId).toList();
     }
 
     public record EntryResult(CollectionEntryResponse entry, boolean created) {}

@@ -12,9 +12,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UpdateUserFavoriteTarantulaRequest {
 
-    @Size(max = 2048)
-    private String favoriteImageUrl;
-
     @Size(max = 255)
     private String favoriteCaption;
 }

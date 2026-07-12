@@ -126,6 +126,26 @@ public class GlobalExceptionHandler {
         }
     }
 
+    // new
+    public static class ImageUploadException extends RuntimeException {
+        public ImageUploadException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    // new
+    public static class ImageLimitExceededException extends RuntimeException {
+        public ImageLimitExceededException(String message) {
+            super(message);
+        }
+    }
+
+    // new
+    public static class ImageNotFoundException extends RuntimeException {
+        public ImageNotFoundException(String message) {
+            super(message);
+        }
+    }
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -288,6 +308,28 @@ public class GlobalExceptionHandler {
             MissingRequestHeaderException e) {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("Missing required header: " + e.getHeaderName()));
+    }
+
+    // new
+    @ExceptionHandler(ImageNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleImageNotFound(ImageNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    // new
+    @ExceptionHandler(ImageLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleImageLimitExceeded(ImageLimitExceededException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
+    // new
+    @ExceptionHandler(ImageUploadException.class)
+    public ResponseEntity<ErrorResponse> handleImageUploadFailure(ImageUploadException e) {
+        log.error("Image upload failed", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Image upload failed"));
     }
 
     public record ErrorResponse(String message) {

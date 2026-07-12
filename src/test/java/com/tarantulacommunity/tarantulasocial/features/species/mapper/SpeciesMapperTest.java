@@ -2,7 +2,9 @@ package com.tarantulacommunity.tarantulasocial.features.species.mapper;
 
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionImageResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionEntryEntity;
+import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionImageEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
@@ -190,7 +192,7 @@ class SpeciesMapperTest {
 
         UserEntity user = TestUtilities.verifiedUser("1", "dockeruser");
         user.setId(1L);
-        user.setProfilePicUrl("https://example.com/avatar.jpg");
+        user.setProfilePicKey("https://example.com/avatar.jpg");
 
         CollectionEntryEntity entry = TestUtilities.validCollectionEntry(user, speciesEntity);
         entry.setId(10L);
@@ -206,7 +208,12 @@ class SpeciesMapperTest {
         entry.setAdultMale(1);
         entry.setAdultFemale(1);
         entry.setAdultUnsexed(0);
-        entry.setFeaturedImageUrl("https://example.com/owner-featured.jpg");
+        CollectionImageEntity image = CollectionImageEntity.builder()
+                .s3Key("https://example.com/owner-featured.jpg")
+                .featured(true)
+                .displayOrder(0)
+                .build();
+        entry.setImages(List.of(image));
         entry.setCustomInfo("This is my favorite tarantula!");
 
         CollectionEntryOwnerResponse owner = new CollectionEntryOwnerResponse();
@@ -215,7 +222,7 @@ class SpeciesMapperTest {
         UserSummaryResponse userSummary = new UserSummaryResponse(
                 user.getId(),
                 user.getUsername(),
-                user.getProfilePicUrl()
+                user.getProfilePicKey()
         );
         owner.setUser(userSummary);
         owner.setSlingMale(entry.getSlingMale());
@@ -230,7 +237,14 @@ class SpeciesMapperTest {
         owner.setAdultMale(entry.getAdultMale());
         owner.setAdultFemale(entry.getAdultFemale());
         owner.setAdultUnsexed(entry.getAdultUnsexed());
-        owner.setFeaturedImageUrl(entry.getFeaturedImageUrl());
+        CollectionImageResponse imageResponse = new CollectionImageResponse(
+                image.getId(),
+                image.getS3Key(),
+                image.getCaption(),
+                image.isFeatured(),
+                image.getDisplayOrder()
+        );
+        owner.setImages(List.of(imageResponse));
         owner.setCustomInfo(entry.getCustomInfo());
 
         List<CollectionEntryOwnerResponse> owners = List.of(owner);

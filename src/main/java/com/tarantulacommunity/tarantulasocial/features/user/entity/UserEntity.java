@@ -43,17 +43,17 @@ public class UserEntity {
     @Column(nullable = false, length = 60)
     private String password;
 
-    @Size(max = 2048)
-    @Column(length = 2048)
-    private String profilePicUrl;
+    @Size(max = 512)
+    @Column(length = 512)
+    private String profilePicKey;
 
     @Size(max = 1000)
     @Column(length = 1000)
     private String bio;
 
-    @Size(max = 2048)
-    @Column(length = 2048)
-    private String favoriteImageUrl;
+    @Size(max = 512)
+    @Column(length = 512)
+    private String favoriteImageKey;
 
     @Size(max = 255)
     @Column(length = 255)
