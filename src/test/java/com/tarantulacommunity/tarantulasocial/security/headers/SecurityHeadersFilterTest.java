@@ -39,7 +39,12 @@ class SecurityHeadersFilterTest {
     void doFilterInternal_shouldAddContentSecurityPolicy() throws ServletException, IOException {
         securityHeadersFilter.doFilterInternal(request, response, filterChain);
 
-        verify(response).setHeader(eq("Content-Security-Policy"), any(String.class));
+        String expectedCsp = "default-src 'self'; " +
+                "frame-ancestors 'none'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "img-src 'self' data:;";
+        verify(response).setHeader("Content-Security-Policy", expectedCsp);
         verify(filterChain).doFilter(request, response);
     }
 

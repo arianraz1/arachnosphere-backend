@@ -27,10 +27,13 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         // Content Security Policy - Restrict resources that can be loaded
-        // For API-only backend, we can be restrictive since we don't serve HTML
+        // Allow Swagger UI to load its own resources
         response.setHeader("Content-Security-Policy",
-                "default-src 'none'; " +
-                "frame-ancestors 'none';");
+                "default-src 'self'; " +
+                "frame-ancestors 'none'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "img-src 'self' data:;");
 
         // Prevent clickjacking attacks
         response.setHeader("X-Frame-Options", "DENY");

@@ -7,9 +7,9 @@ import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDeta
 import com.tarantulacommunity.tarantulasocial.security.auth.service.AuthService;
 import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.dto.request.ResetPasswordRequest;
-import com.tarantulacommunity.tarantulasocial.security.email.service.EmailVerificationService;
-import com.tarantulacommunity.tarantulasocial.security.password.service.PasswordResetService;
-import com.tarantulacommunity.tarantulasocial.security.refresh_token.properties.CookieProperties;
+import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailVerificationService;
+import com.tarantulacommunity.tarantulasocial.security.features.password.service.PasswordResetService;
+import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties.CookieProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

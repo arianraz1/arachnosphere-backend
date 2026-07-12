@@ -9,9 +9,9 @@ import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDeta
 import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.dto.response.LoginResponse;
 import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
-import com.tarantulacommunity.tarantulasocial.security.email.service.EmailVerificationService;
-import com.tarantulacommunity.tarantulasocial.security.refresh_token.service.RefreshTokenService;
-import com.tarantulacommunity.tarantulasocial.security.refresh_token.util.CookieUtil;
+import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailVerificationService;
+import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.service.RefreshTokenService;
+import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.util.CookieUtil;
 import com.tarantulacommunity.tarantulasocial.security.auth.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
