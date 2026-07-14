@@ -1,6 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties;
 
-import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties.CookieProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

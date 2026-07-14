@@ -5,7 +5,6 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import com.tarantulacommunity.tarantulasocial.security.entity.RefreshTokenEntity;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.repository.RefreshTokenRepository;
-import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

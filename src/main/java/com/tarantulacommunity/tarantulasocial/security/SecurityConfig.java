@@ -1,12 +1,12 @@
 package com.tarantulacommunity.tarantulasocial.security;
 
-import com.tarantulacommunity.tarantulasocial.security.headers.SecurityHeadersFilter;
-import com.tarantulacommunity.tarantulasocial.security.logging.RequestLoggingFilter;
 import com.tarantulacommunity.tarantulasocial.security.auth.filter.JwtAuthFilter;
 import com.tarantulacommunity.tarantulasocial.security.auth.service.CustomUserDetailsService;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filter.IpRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filter.UserRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties.CookieProperties;
+import com.tarantulacommunity.tarantulasocial.security.headers.SecurityHeadersFilter;
+import com.tarantulacommunity.tarantulasocial.security.logging.RequestLoggingFilter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

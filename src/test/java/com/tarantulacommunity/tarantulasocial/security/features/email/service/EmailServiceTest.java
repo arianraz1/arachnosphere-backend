@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.security.features.email.service;
 import com.sendgrid.Request;
 import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
-import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

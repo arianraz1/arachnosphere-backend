@@ -2,7 +2,6 @@ package com.tarantulacommunity.tarantulasocial.security.features.refresh_token.u
 
 import com.tarantulacommunity.tarantulasocial.security.auth.properties.JwtProperties;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties.CookieProperties;
-import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.util.CookieUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseCookie;

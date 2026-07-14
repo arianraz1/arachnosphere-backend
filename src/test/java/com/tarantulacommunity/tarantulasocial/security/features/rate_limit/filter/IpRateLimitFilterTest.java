@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filt
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filter.IpRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;

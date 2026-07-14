@@ -1,6 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties;
 
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitProperties;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

@@ -2,17 +2,17 @@ package com.tarantulacommunity.tarantulasocial.features.user.service;
 
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.features.user.event.FavoriteImageReplacedEvent;
+import com.tarantulacommunity.tarantulasocial.features.user.event.ProfileImageReplacedEvent;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.s3.S3StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import com.tarantulacommunity.tarantulasocial.features.user.event.FavoriteImageReplacedEvent;
-import com.tarantulacommunity.tarantulasocial.features.user.event.ProfileImageReplacedEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @Service

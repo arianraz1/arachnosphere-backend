@@ -1,6 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.security.features.rate_limit.util;
 
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.util.ClientIpResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 

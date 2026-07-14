@@ -3,8 +3,8 @@ package com.tarantulacommunity.tarantulasocial.security.features.password.servic
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import com.tarantulacommunity.tarantulasocial.security.features.password.repository.PasswordResetTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

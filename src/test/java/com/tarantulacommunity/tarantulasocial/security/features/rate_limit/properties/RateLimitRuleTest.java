@@ -1,6 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties;
 
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
 import io.github.bucket4j.Bandwidth;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;

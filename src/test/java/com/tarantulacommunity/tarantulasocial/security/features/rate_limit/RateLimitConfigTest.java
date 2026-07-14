@@ -1,14 +1,13 @@
 package com.tarantulacommunity.tarantulasocial.security.features.rate_limit;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.RateLimitConfig;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitProperties;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
 import io.github.bucket4j.Bucket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.http.HttpMethod;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.util.List;

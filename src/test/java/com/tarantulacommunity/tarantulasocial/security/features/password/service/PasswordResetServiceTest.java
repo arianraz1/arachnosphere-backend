@@ -3,10 +3,9 @@ package com.tarantulacommunity.tarantulasocial.security.features.password.servic
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import com.tarantulacommunity.tarantulasocial.security.features.password.repository.PasswordResetTokenRepository;
-import com.tarantulacommunity.tarantulasocial.security.features.password.service.PasswordResetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

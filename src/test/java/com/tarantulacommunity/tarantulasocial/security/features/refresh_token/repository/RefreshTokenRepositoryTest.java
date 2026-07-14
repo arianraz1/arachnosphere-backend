@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.security.features.refresh_token.r
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.entity.RefreshTokenEntity;
-import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.repository.RefreshTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

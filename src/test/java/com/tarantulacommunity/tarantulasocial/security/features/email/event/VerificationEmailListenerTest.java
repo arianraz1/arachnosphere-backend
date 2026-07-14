@@ -1,7 +1,5 @@
 package com.tarantulacommunity.tarantulasocial.security.features.email.event;
 
-import com.tarantulacommunity.tarantulasocial.security.features.email.event.VerificationEmailListener;
-import com.tarantulacommunity.tarantulasocial.security.features.email.event.VerificationEmailRequestedEvent;
 import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

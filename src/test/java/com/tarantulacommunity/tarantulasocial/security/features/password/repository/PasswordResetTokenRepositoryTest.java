@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.security.features.password.reposi
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.entity.PasswordResetTokenEntity;
-import com.tarantulacommunity.tarantulasocial.security.features.password.repository.PasswordResetTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

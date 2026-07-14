@@ -6,12 +6,12 @@ import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepos
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.auth.mapper.AuthMapper;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
+import com.tarantulacommunity.tarantulasocial.security.auth.util.JwtUtil;
 import com.tarantulacommunity.tarantulasocial.security.dto.request.LoginRequest;
 import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
 import com.tarantulacommunity.tarantulasocial.security.features.email.service.EmailVerificationService;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.service.RefreshTokenService;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.util.CookieUtil;
-import com.tarantulacommunity.tarantulasocial.security.auth.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
