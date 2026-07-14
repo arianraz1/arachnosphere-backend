@@ -38,15 +38,18 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
 
     private final Cache<String, Bucket> ipRateLimitCache;
     private final List<RateLimitRule> ipRateLimitRules;
+    private final RateLimitRule defaultRateLimitRule;
     private final HandlerExceptionResolver exceptionResolver;
 
     public IpRateLimitFilter(
             @Qualifier("ipRateLimitCache") Cache<String, Bucket> ipRateLimitCache,
             @Qualifier("ipRateLimitRules") List<RateLimitRule> ipRateLimitRules,
+            @Qualifier("defaultRateLimitRule") RateLimitRule defaultRateLimitRule,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver
     ) {
         this.ipRateLimitCache = ipRateLimitCache;
         this.ipRateLimitRules = ipRateLimitRules;
+        this.defaultRateLimitRule = defaultRateLimitRule;
         this.exceptionResolver = exceptionResolver;
     }
 
@@ -55,11 +58,8 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        RateLimitRule rule = findMatchingRule(request);
-        if (rule == null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        RateLimitRule matchedRule = findMatchingRule(request);
+        final RateLimitRule rule = (matchedRule != null) ? matchedRule : defaultRateLimitRule;
 
         String clientIp = ClientIpResolver.resolve(request);
         String key = "ip:" + clientIp + ":" + rule.name();

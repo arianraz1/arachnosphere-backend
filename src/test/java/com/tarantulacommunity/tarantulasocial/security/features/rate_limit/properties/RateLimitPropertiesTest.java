@@ -158,5 +158,55 @@ class RateLimitPropertiesTest {
         // Register limit should be updated
         assertThat(props.getRegister().getCapacity()).isEqualTo(99);
     }
+
+    @Test
+    void shouldHaveDefaultCsrfLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getCsrf().getCapacity()).isEqualTo(20);
+        assertThat(props.getCsrf().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void shouldHaveDefaultResendVerificationLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getResendVerification().getCapacity()).isEqualTo(5);
+        assertThat(props.getResendVerification().getRefillPeriod()).isEqualTo(Duration.ofHours(1));
+    }
+
+    @Test
+    void shouldHaveDefaultVerifyEmailLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getVerifyEmail().getCapacity()).isEqualTo(10);
+        assertThat(props.getVerifyEmail().getRefillPeriod()).isEqualTo(Duration.ofHours(1));
+    }
+
+    @Test
+    void shouldHaveDefaultDefaultLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getDefaultLimit().getCapacity()).isEqualTo(300);
+        assertThat(props.getDefaultLimit().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void shouldHaveAllLimitsAtInitializationIncludingNewFields() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getLogin()).isNotNull();
+        assertThat(props.getRegister()).isNotNull();
+        assertThat(props.getForgotPassword()).isNotNull();
+        assertThat(props.getResetPassword()).isNotNull();
+        assertThat(props.getRefresh()).isNotNull();
+        assertThat(props.getMessageSend()).isNotNull();
+        assertThat(props.getCollectionWrite()).isNotNull();
+        assertThat(props.getProfileUpdate()).isNotNull();
+        assertThat(props.getCsrf()).isNotNull();
+        assertThat(props.getResendVerification()).isNotNull();
+        assertThat(props.getVerifyEmail()).isNotNull();
+        assertThat(props.getDefaultLimit()).isNotNull();
+    }
 }
 

@@ -139,7 +139,7 @@ class RateLimitConfigTest {
 
         assertThat(rules)
                 .filteredOn(r -> "collection-write".equals(r.name()))
-                .hasSize(3); // POST, PUT, DELETE
+                .hasSize(5); // POST, PUT, DELETE
     }
 
     @Test
@@ -172,7 +172,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(loginRule).isNotNull();
-        assertThat(loginRule.pathPattern()).isEqualTo("/api/auth/login");
+        assertThat(loginRule.pathPattern()).isEqualTo("/api/v1/auth/login");
     }
 
     @Test
@@ -247,7 +247,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/auth/register");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/auth/register");
     }
 
     @Test
@@ -260,7 +260,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/auth/forgot-password");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/auth/forgot-password");
     }
 
     @Test
@@ -273,7 +273,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/auth/reset-password");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/auth/reset-password");
     }
 
     @Test
@@ -286,7 +286,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/auth/refresh");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/auth/refresh");
     }
 
     @Test
@@ -299,7 +299,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/messages");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages");
     }
 
     @Test
@@ -312,7 +312,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/users/*/profile");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/users/*/profile");
     }
 
     @Test
@@ -399,6 +399,58 @@ class RateLimitConfigTest {
     void parseDuration_shouldReturnDefaultForEmptyString() {
         Duration duration = ReflectionTestUtils.invokeMethod(config, "parseDuration", "");
         assertThat(duration).isEqualTo(Duration.ofHours(2));
+    }
+
+    @Test
+    void shouldIncludeFavoriteUpdateRuleInUserRules() {
+        List<RateLimitRule> rules = config.userRateLimitRules(properties);
+
+        assertThat(rules).anyMatch(r -> "favorite-update".equals(r.name()));
+    }
+
+    @Test
+    void shouldIncludeCsrfRuleInIpRules() {
+        List<RateLimitRule> rules = config.ipRateLimitRules(properties);
+
+        assertThat(rules).anyMatch(r -> "csrf".equals(r.name()));
+    }
+
+    @Test
+    void shouldIncludeResendVerificationRuleInIpRules() {
+        List<RateLimitRule> rules = config.ipRateLimitRules(properties);
+
+        assertThat(rules).anyMatch(r -> "resend-verification".equals(r.name()));
+    }
+
+    @Test
+    void shouldIncludeVerifyEmailRuleInIpRules() {
+        List<RateLimitRule> rules = config.ipRateLimitRules(properties);
+
+        assertThat(rules).anyMatch(r -> "verify-email".equals(r.name()));
+    }
+
+    @Test
+    void shouldConfigureAdminSyncRuleWithNestedWildcardPath() {
+        List<RateLimitRule> rules = config.userRateLimitRules(properties);
+
+        RateLimitRule rule = rules.stream()
+                .filter(r -> "admin-sync".equals(r.name()))
+                .findFirst()
+                .orElse(null);
+
+        assertThat(rule).isNotNull();
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/admin/species/sync/**");
+    }
+
+    @Test
+    void shouldCreateDefaultRateLimitRuleBean() {
+        RateLimitRule rule = config.defaultRateLimitRule(properties);
+
+        assertThat(rule).isNotNull();
+        assertThat(rule.name()).isEqualTo("default");
+        assertThat(rule.method()).isNull();
+        assertThat(rule.pathPattern()).isEqualTo("/**");
+        assertThat(rule.capacity()).isEqualTo(properties.getDefaultLimit().getCapacity());
     }
 }
 

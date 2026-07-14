@@ -389,6 +389,21 @@ class GlobalExceptionHandlerTest {
 
 
     @Test
+    void testHandleNoHandlerFound() {
+        NoHandlerFoundException exception = new NoHandlerFoundException(
+                "GET",
+                "/unknown-endpoint",
+                org.springframework.http.HttpHeaders.EMPTY
+        );
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleNoHandlerFound(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("The requested endpoint does not exist", response.getBody().message());
+    }
+
+    @Test
     void testHandleMissingParam() {
         org.springframework.web.bind.MissingServletRequestParameterException exception =
             new org.springframework.web.bind.MissingServletRequestParameterException("param", "String");
@@ -422,5 +437,41 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Missing required header: Authorization", response.getBody().message());
+    }
+
+    @Test
+    void testHandleImageNotFound() {
+        GlobalExceptionHandler.ImageNotFoundException exception =
+            new GlobalExceptionHandler.ImageNotFoundException("Image not found");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleImageNotFound(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("Image not found", response.getBody().message());
+    }
+
+    @Test
+    void testHandleImageLimitExceeded() {
+        GlobalExceptionHandler.ImageLimitExceededException exception =
+            new GlobalExceptionHandler.ImageLimitExceededException("Limit exceeded");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleImageLimitExceeded(exception);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("Limit exceeded", response.getBody().message());
+    }
+
+    @Test
+    void testHandleImageUploadFailure() {
+        GlobalExceptionHandler.ImageUploadException exception =
+            new GlobalExceptionHandler.ImageUploadException("Upload failed", new RuntimeException());
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+            handler.handleImageUploadFailure(exception);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("Image upload failed", response.getBody().message());
     }
 }

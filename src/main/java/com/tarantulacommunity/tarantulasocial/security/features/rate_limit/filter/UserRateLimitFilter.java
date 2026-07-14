@@ -35,15 +35,18 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
 
     private final Cache<String, Bucket> userRateLimitCache;
     private final List<RateLimitRule> userRateLimitRules;
+    private final RateLimitRule defaultRateLimitRule;
     private final HandlerExceptionResolver exceptionResolver;
 
     public UserRateLimitFilter(
             @Qualifier("userRateLimitCache") Cache<String, Bucket> userRateLimitCache,
             @Qualifier("userRateLimitRules") List<RateLimitRule> userRateLimitRules,
+            @Qualifier("defaultRateLimitRule") RateLimitRule defaultRateLimitRule,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver
     ) {
         this.userRateLimitCache = userRateLimitCache;
         this.userRateLimitRules = userRateLimitRules;
+        this.defaultRateLimitRule = defaultRateLimitRule;
         this.exceptionResolver = exceptionResolver;
     }
 
@@ -52,23 +55,11 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        RateLimitRule rule = findMatchingRule(request);
-        if (rule == null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        RateLimitRule matchedRule = findMatchingRule(request);
+        final RateLimitRule rule = (matchedRule != null) ? matchedRule : defaultRateLimitRule;
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
-            // Not logged in — let it fall through; Spring Security's own
-            // authorizeHttpRequests rules will reject it with 401/403 anyway.
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (isAdmin) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -86,7 +77,6 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
-        // Add rate limit headers to response
         response.setHeader("X-RateLimit-Limit", String.valueOf(rule.capacity()));
         response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
         response.setHeader("X-RateLimit-Reset", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));

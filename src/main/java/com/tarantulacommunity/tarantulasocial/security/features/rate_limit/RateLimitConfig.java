@@ -71,46 +71,61 @@ public class RateLimitConfig {
     @Bean
     public List<RateLimitRule> ipRateLimitRules(RateLimitProperties props) {
         return List.of(
-                new RateLimitRule("login", HttpMethod.POST, "/api/auth/login",
+                new RateLimitRule("login", HttpMethod.POST, "/api/v1/auth/login",
                         props.getLogin().getCapacity(), props.getLogin().getRefillPeriod()),
-                new RateLimitRule("register", HttpMethod.POST, "/api/auth/register",
+                new RateLimitRule("register", HttpMethod.POST, "/api/v1/auth/register",
                         props.getRegister().getCapacity(), props.getRegister().getRefillPeriod()),
-                new RateLimitRule("forgot-password", HttpMethod.POST, "/api/auth/forgot-password",
+                new RateLimitRule("forgot-password", HttpMethod.POST, "/api/v1/auth/forgot-password",
                         props.getForgotPassword().getCapacity(), props.getForgotPassword().getRefillPeriod()),
-                new RateLimitRule("reset-password", HttpMethod.POST, "/api/auth/reset-password",
+                new RateLimitRule("reset-password", HttpMethod.POST, "/api/v1/auth/reset-password",
                         props.getResetPassword().getCapacity(), props.getResetPassword().getRefillPeriod()),
-                new RateLimitRule("refresh", HttpMethod.POST, "/api/auth/refresh",
-                        props.getRefresh().getCapacity(), props.getRefresh().getRefillPeriod())
+                new RateLimitRule("refresh", HttpMethod.POST, "/api/v1/auth/refresh",
+                        props.getRefresh().getCapacity(), props.getRefresh().getRefillPeriod()),
+                new RateLimitRule("csrf", HttpMethod.GET, "/api/v1/auth/csrf",
+                        props.getCsrf().getCapacity(), props.getCsrf().getRefillPeriod()),
+                new RateLimitRule("resend-verification", HttpMethod.POST, "/api/v1/auth/resend-verification",
+                        props.getResendVerification().getCapacity(), props.getResendVerification().getRefillPeriod()),
+                new RateLimitRule("verify-email", HttpMethod.GET, "/api/v1/auth/verify-email",
+                        props.getVerifyEmail().getCapacity(), props.getVerifyEmail().getRefillPeriod())
         );
     }
 
     @Bean
     public List<RateLimitRule> userRateLimitRules(RateLimitProperties props) {
         return List.of(
-                new RateLimitRule("message-send", HttpMethod.POST, "/api/messages",
+                new RateLimitRule("message-send", HttpMethod.POST, "/api/v1/messages",
                         props.getMessageSend().getCapacity(), props.getMessageSend().getRefillPeriod()),
 
-                // All three share the SAME name -> same bucket per user, so a
-                // user can't get 3x the effective budget by mixing operations.
-                new RateLimitRule("collection-write", HttpMethod.POST, "/api/collection",
+                // All entries below share the SAME name -> same bucket per user, so a
+                // user can't get Nx the effective budget by mixing operations.
+                new RateLimitRule("collection-write", HttpMethod.POST, "/api/v1/collection",
                         props.getCollectionWrite().getCapacity(), props.getCollectionWrite().getRefillPeriod()),
-                new RateLimitRule("collection-write", HttpMethod.PUT, "/api/collection/*",
+                new RateLimitRule("collection-write", HttpMethod.PUT, "/api/v1/collection/*",
                         props.getCollectionWrite().getCapacity(), props.getCollectionWrite().getRefillPeriod()),
-                new RateLimitRule("collection-write", HttpMethod.DELETE, "/api/collection/*",
+                new RateLimitRule("collection-write", HttpMethod.DELETE, "/api/v1/collection/*",
                         props.getCollectionWrite().getCapacity(), props.getCollectionWrite().getRefillPeriod()),
-
-                new RateLimitRule("profile-update", HttpMethod.PUT, "/api/users/*/profile",
+                new RateLimitRule("collection-write", HttpMethod.PUT, "/api/v1/collection/*/images/*/featured",
+                        props.getCollectionWrite().getCapacity(), props.getCollectionWrite().getRefillPeriod()),
+                new RateLimitRule("collection-write", HttpMethod.DELETE, "/api/v1/collection/*/images/*",
+                        props.getCollectionWrite().getCapacity(), props.getCollectionWrite().getRefillPeriod()),
+                new RateLimitRule("profile-update", HttpMethod.PUT, "/api/v1/users/*/profile",
                         props.getProfileUpdate().getCapacity(), props.getProfileUpdate().getRefillPeriod()),
-                new RateLimitRule("favorite-update", HttpMethod.PUT, "/api/users/*/favorite",
+                new RateLimitRule("favorite-update", HttpMethod.PUT, "/api/v1/users/*/favorite",
                         props.getProfileUpdate().getCapacity(), props.getProfileUpdate().getRefillPeriod()),
-                new RateLimitRule("image-upload", HttpMethod.POST, "/api/users/*/profile/image",
+                new RateLimitRule("image-upload", HttpMethod.POST, "/api/v1/users/*/profile/image",
                         props.getImageUpload().getCapacity(), props.getImageUpload().getRefillPeriod()),
-                new RateLimitRule("image-upload", HttpMethod.POST, "/api/users/*/favorite/image",
+                new RateLimitRule("image-upload", HttpMethod.POST, "/api/v1/users/*/favorite/image",
                         props.getImageUpload().getCapacity(), props.getImageUpload().getRefillPeriod()),
-                new RateLimitRule("image-upload", HttpMethod.POST, "/api/collection/**/images",
+                new RateLimitRule("image-upload", HttpMethod.POST, "/api/v1/collection/**/images",
                         props.getImageUpload().getCapacity(), props.getImageUpload().getRefillPeriod()),
-                new RateLimitRule("admin-sync", HttpMethod.POST, "/api/admin/species/sync*",
+                new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**",
                         props.getAdminSpeciesSync().getCapacity(), props.getAdminSpeciesSync().getRefillPeriod())
         );
+    }
+
+    @Bean
+    public RateLimitRule defaultRateLimitRule(RateLimitProperties props) {
+        return new RateLimitRule("default", null, "/**",
+                props.getDefaultLimit().getCapacity(), props.getDefaultLimit().getRefillPeriod());
     }
 }

@@ -36,6 +36,7 @@ class IpRateLimitFilterTest {
     private IpRateLimitFilter filter;
     private Cache<String, Bucket> cache;
     private List<RateLimitRule> rules;
+    private RateLimitRule defaultRateLimitRule;
 
     @Mock
     private FilterChain filterChain;
@@ -50,12 +51,18 @@ class IpRateLimitFilterTest {
     void setUp() {
         cache = Caffeine.newBuilder().maximumSize(10).build();
         rules = List.of(
-                new RateLimitRule("login", HttpMethod.POST, "/api/auth/login", 10, Duration.ofMinutes(15)),
-                new RateLimitRule("register", HttpMethod.POST, "/api/auth/register", 3, Duration.ofHours(1)),
-                new RateLimitRule("forgot-password", HttpMethod.POST, "/api/auth/forgot-password", 5, Duration.ofHours(1))
+                new RateLimitRule("login", HttpMethod.POST, "/api/v1/auth/login", 10, Duration.ofMinutes(15)),
+                new RateLimitRule("register", HttpMethod.POST, "/api/v1/auth/register", 3, Duration.ofHours(1)),
+                new RateLimitRule("forgot-password", HttpMethod.POST, "/api/v1/auth/forgot-password", 5, Duration.ofHours(1)),
+                new RateLimitRule("reset-password", HttpMethod.POST, "/api/v1/auth/reset-password", 10, Duration.ofHours(1)),
+                new RateLimitRule("refresh", HttpMethod.POST, "/api/v1/auth/refresh", 30, Duration.ofHours(1)),
+                new RateLimitRule("csrf", HttpMethod.GET, "/api/v1/auth/csrf", 20, Duration.ofMinutes(1)),
+                new RateLimitRule("resend-verification", HttpMethod.POST, "/api/v1/auth/resend-verification", 5, Duration.ofHours(1)),
+                new RateLimitRule("verify-email", HttpMethod.GET, "/api/v1/auth/verify-email", 10, Duration.ofHours(1))
         );
+        defaultRateLimitRule = new RateLimitRule("default", null, "/**", 300, Duration.ofMinutes(1));
 
-        filter = new IpRateLimitFilter(cache, rules, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, rules, defaultRateLimitRule, exceptionResolver);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
     }
@@ -63,7 +70,7 @@ class IpRateLimitFilterTest {
     @Test
     void shouldAllowRequestWhenBucketNotExceeded() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
@@ -75,14 +82,12 @@ class IpRateLimitFilterTest {
     @Test
     void shouldAllowMultipleRequestsUpToCapacity() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
-        // First request - should pass
         filter.doFilterInternal(request, response, filterChain);
         verify(filterChain).doFilter(request, response);
 
-        // Second request - should still pass (within 10 capacity)
         filter.doFilterInternal(request, response, filterChain);
         verify(filterChain, times(2)).doFilter(request, response);
     }
@@ -90,45 +95,165 @@ class IpRateLimitFilterTest {
     @Test
     void shouldRejectRequestWhenBucketExceeded() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/register");
+        request.setRequestURI("/api/v1/auth/register");
         request.setRemoteAddr("192.168.1.1");
 
-        // Register has capacity of 3, let's exceed it
         for (int i = 0; i < 3; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
 
-        // Fourth request should be rejected
         filter.doFilterInternal(request, response, filterChain);
 
-        // Should have called exception resolver on the 4th request
         verify(exceptionResolver).resolveException(eq(request), eq(response), isNull(),
                 any(GlobalExceptionHandler.RateLimitExceededException.class));
     }
 
     @Test
-    void shouldPassThroughRequestWhenNoRuleMatches() throws Exception {
+    void shouldEnforceResetPasswordLimit() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/reset-password");
+        request.setRemoteAddr("192.168.1.1");
+
+        // reset-password capacity is 10
+        for (int i = 0; i < 10; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(exceptionResolver).resolveException(eq(request), eq(response), isNull(),
+                any(GlobalExceptionHandler.RateLimitExceededException.class));
+    }
+
+    @Test
+    void shouldAllowResetPasswordWithinLimit() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/reset-password");
+        request.setRemoteAddr("192.168.1.1");
+
+        for (int i = 0; i < 10; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+
+        verify(filterChain, times(10)).doFilter(request, response);
+        verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldContainResetPasswordRuleNameInCacheKey() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/reset-password");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("reset-password");
+    }
+
+    @Test
+    void shouldEnforceRefreshLimit() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/refresh");
+        request.setRemoteAddr("192.168.1.1");
+
+        // refresh capacity is 30
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(exceptionResolver).resolveException(eq(request), eq(response), isNull(),
+                any(GlobalExceptionHandler.RateLimitExceededException.class));
+    }
+
+    @Test
+    void shouldAllowRefreshWithinLimit() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/refresh");
+        request.setRemoteAddr("192.168.1.1");
+
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+
+        verify(filterChain, times(30)).doFilter(request, response);
+        verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldContainRefreshRuleNameInCacheKey() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/refresh");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("refresh");
+    }
+
+    @Test
+    void shouldGiveResetPasswordAndRefreshSeparateBuckets() throws Exception {
+        request.setRemoteAddr("192.168.1.1");
+        request.setMethod("POST");
+
+        request.setRequestURI("/api/v1/auth/reset-password");
+        for (int i = 0; i < 10; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+
+        request.setRequestURI("/api/v1/auth/refresh");
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+
+        // Both should have succeeded fully since they're independent buckets
+        verify(filterChain, times(40)).doFilter(request, response);
+        verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldFallBackToDefaultRuleWhenNoSpecificRuleMatches() throws Exception {
         request.setMethod("GET");
-        request.setRequestURI("/api/auth/some-unknown-endpoint");
+        request.setRequestURI("/api/v1/auth/some-unknown-endpoint");
+        request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
         verify(filterChain).doFilter(request, response);
         verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("default");
+    }
+
+    @Test
+    void shouldEnforceDefaultRuleCapacityWhenExceeded() throws Exception {
+        List<RateLimitRule> emptyRules = List.of();
+        RateLimitRule strictDefault = new RateLimitRule("default", null, "/**", 1, Duration.ofMinutes(1));
+        filter = new IpRateLimitFilter(cache, emptyRules, strictDefault, exceptionResolver);
+
+        request.setMethod("GET");
+        request.setRequestURI("/api/v1/species/search/all");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+
+        filter.doFilterInternal(request, response, filterChain);
+        verify(exceptionResolver).resolveException(eq(request), eq(response), isNull(),
+                any(GlobalExceptionHandler.RateLimitExceededException.class));
     }
 
     @Test
     void shouldCreateSeparateBucketsForDifferentIps() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
 
-        // First IP makes 10 requests (fills bucket)
         request.setRemoteAddr("192.168.1.1");
         for (int i = 0; i < 10; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
 
-        // Different IP should have its own bucket (capacity 10)
         request.setRemoteAddr("192.168.1.2");
         filter.doFilterInternal(request, response, filterChain);
 
@@ -139,15 +264,13 @@ class IpRateLimitFilterTest {
     void shouldCreateSeparateBucketsForDifferentRules() throws Exception {
         request.setRemoteAddr("192.168.1.1");
 
-        // Login: capacity 10
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         for (int i = 0; i < 10; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
 
-        // Register: capacity 3 (different rule, separate bucket)
-        request.setRequestURI("/api/auth/register");
+        request.setRequestURI("/api/v1/auth/register");
         for (int i = 0; i < 3; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
@@ -158,12 +281,11 @@ class IpRateLimitFilterTest {
     @Test
     void shouldUseXForwardedForHeaderForIpResolution() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.addHeader("X-Forwarded-For", "203.0.113.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
-        // The key should contain the X-Forwarded-For IP
         assertThat(cache.asMap()).hasSize(1);
         assertThat(cache.asMap().keySet().stream().findFirst().get())
                 .contains("203.0.113.1");
@@ -171,14 +293,13 @@ class IpRateLimitFilterTest {
 
     @Test
     void shouldHandlePathPatternMatching() throws Exception {
-        // Setup a rule with wildcard
         List<RateLimitRule> rulesWithWildcard = List.of(
-                new RateLimitRule("collection", HttpMethod.DELETE, "/api/collection/*", 5, Duration.ofMinutes(1))
+                new RateLimitRule("collection", HttpMethod.DELETE, "/api/v1/collection/*", 5, Duration.ofMinutes(1))
         );
-        filter = new IpRateLimitFilter(cache, rulesWithWildcard, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver);
 
         request.setMethod("DELETE");
-        request.setRequestURI("/api/collection/123");
+        request.setRequestURI("/api/v1/collection/123");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
@@ -187,29 +308,53 @@ class IpRateLimitFilterTest {
     }
 
     @Test
-    void shouldNotMatchWildcardPathOutsidePattern() throws Exception {
-        List<RateLimitRule> rulesWithWildcard = List.of(
-                new RateLimitRule("collection", HttpMethod.DELETE, "/api/collection/*", 5, Duration.ofMinutes(1))
+    void shouldMatchAdminSyncNestedPaths() throws Exception {
+        List<RateLimitRule> adminRules = List.of(
+                new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**", 5, Duration.ofMinutes(5))
         );
-        filter = new IpRateLimitFilter(cache, rulesWithWildcard, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, adminRules, defaultRateLimitRule, exceptionResolver);
+
+        request.setMethod("POST");
+        request.setRemoteAddr("192.168.1.1");
+
+        request.setRequestURI("/api/v1/admin/species/sync");
+        filter.doFilterInternal(request, response, filterChain);
+
+        request.setRequestURI("/api/v1/admin/species/sync/photos");
+        filter.doFilterInternal(request, response, filterChain);
+
+        request.setRequestURI("/api/v1/admin/species/sync/photos/full");
+        filter.doFilterInternal(request, response, filterChain);
+
+        // All three should draw from the SAME bucket (same rule name)
+        assertThat(cache.asMap()).hasSize(1);
+    }
+
+    @Test
+    void shouldFallThroughToDefaultForNonMatchingWildcard() throws Exception {
+        List<RateLimitRule> rulesWithWildcard = List.of(
+                new RateLimitRule("collection", HttpMethod.DELETE, "/api/v1/collection/*", 5, Duration.ofMinutes(1))
+        );
+        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver);
 
         request.setMethod("DELETE");
-        request.setRequestURI("/api/user/123");
+        request.setRequestURI("/api/v1/user/123");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
         verify(filterChain).doFilter(request, response);
         verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("default");
     }
 
     @Test
     void shouldPassExceptionWithRetryAfterSeconds() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/register");
+        request.setRequestURI("/api/v1/auth/register");
         request.setRemoteAddr("192.168.1.1");
 
-        // Exceed capacity
         for (int i = 0; i < 4; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
@@ -224,7 +369,7 @@ class IpRateLimitFilterTest {
     @Test
     void shouldReuseExistingBucketForSameIpAndRule() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
@@ -233,7 +378,6 @@ class IpRateLimitFilterTest {
         filter.doFilterInternal(request, response, filterChain);
         int cacheSizeAfterSecondRequest = cache.asMap().size();
 
-        // Cache size should not increase (same bucket reused)
         assertThat(cacheSizeAfterFirstRequest).isEqualTo(cacheSizeAfterSecondRequest);
         assertThat(cacheSizeAfterFirstRequest).isEqualTo(1);
     }
@@ -241,31 +385,32 @@ class IpRateLimitFilterTest {
     @Test
     void shouldCacheBucketPerKey() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
-        // Should have one bucket for: ip:192.168.1.1:login
         assertThat(cache.asMap()).hasSize(1);
     }
 
     @Test
-    void shouldHandleMethodNotMatching() throws Exception {
+    void shouldFallBackToDefaultWhenMethodNotMatching() throws Exception {
         request.setMethod("GET");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
         verify(filterChain).doFilter(request, response);
         verify(exceptionResolver, never()).resolveException(any(), any(), any(), any());
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("default");
     }
 
     @Test
     void shouldContainRuleNameInCacheKey() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
@@ -277,19 +422,17 @@ class IpRateLimitFilterTest {
     @Test
     void shouldBlockAllRequestsWithOneCapacity() throws Exception {
         List<RateLimitRule> strictRules = List.of(
-                new RateLimitRule("strict", HttpMethod.POST, "/api/auth/login", 1, Duration.ofMinutes(1))
+                new RateLimitRule("strict", HttpMethod.POST, "/api/v1/auth/login", 1, Duration.ofMinutes(1))
         );
-        filter = new IpRateLimitFilter(cache, strictRules, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, strictRules, defaultRateLimitRule, exceptionResolver);
 
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
-        // First request should pass
         filter.doFilterInternal(request, response, filterChain);
         verify(filterChain).doFilter(request, response);
 
-        // Second request should be rejected
         filter.doFilterInternal(request, response, filterChain);
         verify(exceptionResolver).resolveException(eq(request), eq(response), isNull(),
                 any(GlobalExceptionHandler.RateLimitExceededException.class));
@@ -298,10 +441,9 @@ class IpRateLimitFilterTest {
     @Test
     void shouldRejectWithMessageContainingRetryAfter() throws Exception {
         request.setMethod("POST");
-        request.setRequestURI("/api/auth/register");
+        request.setRequestURI("/api/v1/auth/register");
         request.setRemoteAddr("192.168.1.1");
 
-        // Exceed capacity
         for (int i = 0; i < 4; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
@@ -312,6 +454,45 @@ class IpRateLimitFilterTest {
         GlobalExceptionHandler.RateLimitExceededException rateLimitEx =
                 (GlobalExceptionHandler.RateLimitExceededException) exceptionCaptor.getValue();
         assertThat(rateLimitEx.getRetryAfterSeconds()).isGreaterThan(0);
+    }
+
+    @Test
+    void shouldRateLimitCsrfEndpoint() throws Exception {
+        request.setMethod("GET");
+        request.setRequestURI("/api/v1/auth/csrf");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("csrf");
+    }
+
+    @Test
+    void shouldRateLimitVerifyEmailEndpoint() throws Exception {
+        request.setMethod("GET");
+        request.setRequestURI("/api/v1/auth/verify-email");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("verify-email");
+    }
+
+    @Test
+    void shouldRateLimitResendVerificationEndpoint() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/auth/resend-verification");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertThat(cache.asMap().keySet().stream().findFirst().get())
+                .contains("resend-verification");
     }
 }
 
