@@ -158,7 +158,21 @@ class JwtAuthFilterTest {
     }
 
     @Test
-    void shouldSetEmptyAuthoritiesWhenEmailNotVerified() throws Exception {
+    void shouldSetEmailVerifiedAttributeTrueWhenVerified() throws Exception {
+        Cookie cookie = new Cookie("access_token", "valid.jwt.token");
+        request.setCookies(cookie);
+
+        given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
+        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
+
+        filter.doFilterInternal(request, response, chain);
+
+        assertThat(request.getAttribute("emailVerified")).isEqualTo(true);
+    }
+
+    @Test
+    void shouldSetEmailVerifiedAttributeFalseWhenNotVerified() throws Exception {
         Cookie cookie = new Cookie("access_token", "valid.jwt.token");
         request.setCookies(cookie);
 
@@ -170,25 +184,21 @@ class JwtAuthFilterTest {
 
         filter.doFilterInternal(request, response, chain);
 
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(auth).isNotNull();
-        assertThat(auth.getAuthorities()).isEmpty();
+        assertThat(request.getAttribute("emailVerified")).isEqualTo(false);
     }
 
     @Test
-    void shouldSetFullAuthoritiesWhenEmailVerified() throws Exception {
+    void shouldNotSetEmailVerifiedAttributeWhenUserNotFound() throws Exception {
         Cookie cookie = new Cookie("access_token", "valid.jwt.token");
         request.setCookies(cookie);
 
         given(jwtUtil.isValid("valid.jwt.token")).willReturn(true);
-        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(5L);
-        given(userRepository.findById(5L)).willReturn(Optional.of(validUser));
+        given(jwtUtil.extractUserId("valid.jwt.token")).willReturn(99L);
+        given(userRepository.findById(99L)).willReturn(Optional.empty());
 
         filter.doFilterInternal(request, response, chain);
 
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(auth).isNotNull();
-        assertThat(auth.getAuthorities()).isNotEmpty();
+        assertThat(request.getAttribute("emailVerified")).isNull();
     }
 
     @Test

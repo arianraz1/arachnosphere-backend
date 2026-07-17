@@ -5,6 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.response.Mess
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.s3.S3Config;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
 
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.buildExpectedImageUrl;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -21,6 +23,9 @@ class MessageMapperTest {
     private MessageMapper messageMapper;
 
     private ThreadEntity thread;
+
+    @Autowired
+    private S3Config s3Config;
 
     @BeforeEach
     void setUp() {
@@ -56,11 +61,21 @@ class MessageMapperTest {
         assertNotNull(response.getSender());
         assertEquals(sender.getId(), response.getSender().getId());
         assertEquals(sender.getUsername(), response.getSender().getUsername());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/sender.jpg", response.getSender().getProfilePicUrl());
+
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/sender.jpg"),
+                response.getSender().getProfilePicUrl()
+        );
+
+
         assertNotNull(response.getRecipient());
         assertEquals(recipient.getId(), response.getRecipient().getId());
         assertEquals(recipient.getUsername(), response.getRecipient().getUsername());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/recipient.jpg", response.getRecipient().getProfilePicUrl());
+
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/recipient.jpg"),
+                response.getRecipient().getProfilePicUrl()
+        );
     }
 
     @Test
@@ -123,8 +138,16 @@ class MessageMapperTest {
         assertNotNull(response);
         assertEquals("test7", response.getSender().getUsername());
         assertEquals("test8", response.getRecipient().getUsername());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/sender7.jpg", response.getSender().getProfilePicUrl());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/recipient8.jpg", response.getRecipient().getProfilePicUrl());
+
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/sender7.jpg"),
+                response.getSender().getProfilePicUrl()
+        );
+
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/recipient8.jpg"),
+                response.getRecipient().getProfilePicUrl()
+        );
     }
 
     @Test

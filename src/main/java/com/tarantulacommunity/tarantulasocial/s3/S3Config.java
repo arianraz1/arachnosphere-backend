@@ -19,13 +19,19 @@ public class S3Config {
     private String region;
     private String endpointUrl;
 
+    public boolean isUsingCustomEndpoint() {
+        return endpointUrl != null && !endpointUrl.isBlank();
+    }
+
     @Bean
     public S3Client s3Client() {
         var builder = S3Client.builder()
                 .region(Region.of(region));
 
-        if (endpointUrl != null && !endpointUrl.isBlank()) {
-            builder.endpointOverride(URI.create(endpointUrl));
+        if (isUsingCustomEndpoint()) {
+            builder
+                    .endpointOverride(URI.create(endpointUrl))
+                    .forcePathStyle(true);
         }
 
         return builder.build();

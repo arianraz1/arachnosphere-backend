@@ -9,14 +9,19 @@ import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.C
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.entity.CollectionImageEntity;
 import com.tarantulacommunity.tarantulasocial.features.species.entity.SpeciesEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.s3.S3Config;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.buildExpectedImageUrl;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class CollectionEntryMapperTest {
+
+    @Autowired
+    private S3Config s3Config;
 
     @Autowired
     private CollectionEntryMapper collectionEntryMapper;
@@ -56,7 +61,10 @@ class CollectionEntryMapperTest {
         assertNotNull(response.getUser());
         assertEquals(1L, response.getUser().getId());
         assertEquals("test1", response.getUser().getUsername());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/user.jpg", response.getUser().getProfilePicUrl());
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/user.jpg"),
+                response.getUser().getProfilePicUrl()
+        );
 
         assertNotNull(response.getSpecies());
         assertEquals(1L, response.getSpecies().getId());
@@ -387,7 +395,10 @@ class CollectionEntryMapperTest {
         assertEquals(9L, response.getId());
         assertEquals("test9", response.getUser().getUsername());
         assertEquals(9L, response.getUser().getId());
-        assertEquals("https://tarantula-images-test.s3.us-east-1.amazonaws.com/profile-pictures/owner-avatar.jpg", response.getUser().getProfilePicUrl());
+        assertEquals(
+                buildExpectedImageUrl(s3Config, "profile-pictures/owner-avatar.jpg"),
+                response.getUser().getProfilePicUrl()
+        );
 
         assertEquals(10, response.getSlingMale());
         assertEquals(5, response.getSlingFemale());

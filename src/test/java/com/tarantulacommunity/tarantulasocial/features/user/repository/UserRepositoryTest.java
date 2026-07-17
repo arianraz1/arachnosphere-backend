@@ -6,9 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
@@ -93,5 +97,56 @@ public class UserRepositoryTest {
         em.persistAndFlush(user);
 
         assertFalse(userRepository.existsByIdAndFavoriteImageKey(user.getId(), "favorite-images/stale.jpg"));
+    }
+
+    private UserEntity persistUnverifiedUserWithCreatedAt(String suffix, LocalDateTime createdAt) {
+        UserEntity user = TestUtilities.unverifiedUser(suffix, suffix);
+        em.persistAndFlush(user);
+
+        em.getEntityManager()
+                .createNativeQuery("""
+                UPDATE users
+                SET created_at = :createdAt
+                WHERE id = :id
+                """)
+                .setParameter("createdAt", createdAt)
+                .setParameter("id", user.getId())
+                .executeUpdate();
+
+        em.clear();
+
+        return em.find(UserEntity.class, user.getId());
+    }
+
+    @Test
+    void findByEmailVerifiedFalseAndCreatedAtBefore_excludesVerifiedUsers() {
+        UserEntity verifiedOld = TestUtilities.verifiedUser("verifiedold", "verifiedold");
+        em.persist(verifiedOld);
+        em.flush();
+        ReflectionTestUtils.setField(verifiedOld, "createdAt", LocalDateTime.now().minusDays(8));
+        em.persistFlushFind(verifiedOld);
+
+        List<UserEntity> result = userRepository.findByEmailVerifiedFalseAndCreatedAtBefore(
+                LocalDateTime.now().minusDays(7));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByEmailVerifiedFalseAndCreatedAtBetween_returnsUsersInWindow() {
+        LocalDateTime now = LocalDateTime.now();
+
+        persistUnverifiedUserWithCreatedAt("day6", now.minusDays(6).minusHours(1));
+        persistUnverifiedUserWithCreatedAt("day3", now.minusDays(3));
+        persistUnverifiedUserWithCreatedAt("day8", now.minusDays(8));
+
+        List<UserEntity> result =
+                userRepository.findByEmailVerifiedFalseAndCreatedAtBetween(
+                        now.minusDays(7),
+                        now.minusDays(6)
+                );
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getUsername()).isEqualTo("testday6");
     }
 }

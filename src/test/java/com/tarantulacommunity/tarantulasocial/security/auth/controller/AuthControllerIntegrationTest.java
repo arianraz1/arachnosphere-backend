@@ -18,6 +18,7 @@ import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.se
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -69,8 +70,8 @@ class AuthControllerIntegrationTest {
     @MockitoBean
     private EmailService emailService;
 
-    private final String uriPath = "/api/v1/auth";
-    private final String messageUriPath = "/api/v1/messages";
+    private final String uriPath = apiBasePath() + "/auth";
+    private final String messageUriPath = apiBasePath() + "/messages";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -150,7 +151,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void shouldReturn403WhenUnverifiedUserAccessesProtectedEndpoint() throws Exception {
+    void shouldAllowUnverifiedUserToViewInbox() throws Exception {
         createUser("unverified@test.com", "unverified", "pass123", false);
 
         MvcResult loginResult = mockMvc.perform(post(uriPath + "/login")
@@ -165,6 +166,28 @@ class AuthControllerIntegrationTest {
 
         mockMvc.perform(get(messageUriPath + "/inbox")
                         .cookie(new Cookie("access_token", accessToken))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn403WhenUnverifiedUserSendsMessage() throws Exception {
+        createUser("unverified@test.com", "unverified", "pass123", false);
+
+        MvcResult loginResult = mockMvc.perform(post(uriPath + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new LoginRequest("unverified@test.com", "pass123")))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String accessToken = loginResult.getResponse().getCookie("access_token").getValue();
+
+        mockMvc.perform(post(messageUriPath)
+                        .cookie(new Cookie("access_token", accessToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
                         .with(csrf()))
                 .andExpect(status().isForbidden());
     }

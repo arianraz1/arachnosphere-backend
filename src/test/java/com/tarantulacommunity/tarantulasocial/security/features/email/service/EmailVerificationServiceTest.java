@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.features.email.event.DeletionWarningEmailRequestedEvent;
 import com.tarantulacommunity.tarantulasocial.security.features.email.event.VerificationEmailRequestedEvent;
 import com.tarantulacommunity.tarantulasocial.security.features.email.repository.EmailVerificationTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -147,5 +147,82 @@ class EmailVerificationServiceTest {
         verify(tokenRepository).delete(expired);
         verifyNoInteractions(userRepository);
         assertThat(user.isEmailVerified()).isFalse();
+    }
+
+    @Test
+    void sendDeletionWarningEmail_noExistingToken_generatesNewTokenAndPublishesEvent() {
+        given(tokenRepository.findByUserId(1L)).willReturn(Optional.empty());
+
+        emailVerificationService.sendDeletionWarningEmail(user);
+
+        verify(tokenRepository).deleteByUserId(1L);
+
+        ArgumentCaptor<EmailVerificationTokenEntity> tokenCaptor = ArgumentCaptor.forClass(EmailVerificationTokenEntity.class);
+        verify(tokenRepository).save(tokenCaptor.capture());
+        EmailVerificationTokenEntity saved = tokenCaptor.getValue();
+        assertThat(saved.getUser()).isEqualTo(user);
+        assertThat(saved.getToken()).hasSize(64);
+
+        ArgumentCaptor<DeletionWarningEmailRequestedEvent> eventCaptor =
+                ArgumentCaptor.forClass(DeletionWarningEmailRequestedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        DeletionWarningEmailRequestedEvent event = eventCaptor.getValue();
+        assertThat(event.userId()).isEqualTo(1L);
+        assertThat(event.email()).isEqualTo("user@example.com");
+        assertThat(event.verificationLink()).contains(saved.getToken());
+    }
+
+    @Test
+    void sendDeletionWarningEmail_expiredExistingToken_generatesNewTokenAndPublishesEvent() {
+        EmailVerificationTokenEntity expired = new EmailVerificationTokenEntity();
+        expired.setUser(user);
+        expired.setToken("expired-token");
+        expired.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        given(tokenRepository.findByUserId(1L)).willReturn(Optional.of(expired));
+
+        emailVerificationService.sendDeletionWarningEmail(user);
+
+        verify(tokenRepository).deleteByUserId(1L);
+        verify(tokenRepository).save(any(EmailVerificationTokenEntity.class));
+        verify(eventPublisher).publishEvent(any(DeletionWarningEmailRequestedEvent.class));
+    }
+
+    @Test
+    void sendDeletionWarningEmail_validExistingToken_reusesTokenWithoutRegenerating() {
+        EmailVerificationTokenEntity existing = new EmailVerificationTokenEntity();
+        existing.setUser(user);
+        existing.setToken("still-valid-token");
+        existing.setExpiresAt(LocalDateTime.now().plusHours(12));
+
+        given(tokenRepository.findByUserId(1L)).willReturn(Optional.of(existing));
+
+        emailVerificationService.sendDeletionWarningEmail(user);
+
+        verify(tokenRepository, never()).deleteByUserId(anyLong());
+        verify(tokenRepository, never()).save(any());
+
+        ArgumentCaptor<DeletionWarningEmailRequestedEvent> eventCaptor =
+                ArgumentCaptor.forClass(DeletionWarningEmailRequestedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().verificationLink()).contains("still-valid-token");
+    }
+
+    @Test
+    void sendDeletionWarningEmail_doesNotEnforceResendCooldown() {
+        // Unlike sendVerificationEmail, this is a system-triggered job, not a user resend click,
+        // and must not be blocked by the 60s cooldown.
+        EmailVerificationTokenEntity existing = new EmailVerificationTokenEntity();
+        existing.setUser(user);
+        existing.setToken("just-created-token");
+        existing.setExpiresAt(LocalDateTime.now().plusHours(23));
+        ReflectionTestUtils.setField(existing, "createdAt", LocalDateTime.now().minusSeconds(5)); // well within cooldown
+
+        given(tokenRepository.findByUserId(1L)).willReturn(Optional.of(existing));
+
+        assertThatCode(() -> emailVerificationService.sendDeletionWarningEmail(user))
+                .doesNotThrowAnyException();
+
+        verify(eventPublisher).publishEvent(any(DeletionWarningEmailRequestedEvent.class));
     }
 }

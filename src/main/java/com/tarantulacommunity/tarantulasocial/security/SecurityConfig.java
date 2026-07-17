@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.security;
 
 import com.tarantulacommunity.tarantulasocial.security.auth.filter.JwtAuthFilter;
 import com.tarantulacommunity.tarantulasocial.security.auth.service.CustomUserDetailsService;
+import com.tarantulacommunity.tarantulasocial.security.features.email.filter.EmailVerificationFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filter.IpRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filter.UserRateLimitFilter;
 import com.tarantulacommunity.tarantulasocial.security.features.refresh_token.properties.CookieProperties;
@@ -52,6 +53,7 @@ public class SecurityConfig {
     private final UserRateLimitFilter userRateLimitFilter;
     private final RequestLoggingFilter requestLoggingFilter;
     private final SecurityHeadersFilter securityHeadersFilter;
+    private final EmailVerificationFilter emailVerificationFilter;
 
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
@@ -183,6 +185,7 @@ public class SecurityConfig {
                 // SecurityContextHolder already has the resolved principal
                 // (or doesn't, for anonymous requests, which it skips).
                 .addFilterAfter(userRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(emailVerificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
                         .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
@@ -209,9 +212,12 @@ public class SecurityConfig {
         config.setExposedHeaders(List.of(
                 "X-CSRF-TOKEN",
                 "X-XSRF-TOKEN",
-                "X-RateLimit-Limit",
-                "X-RateLimit-Remaining",
-                "X-RateLimit-Reset",
+                "X-RateLimit-Limit-IP",
+                "X-RateLimit-Remaining-IP",
+                "X-RateLimit-Reset-IP",
+                "X-RateLimit-Limit-User",
+                "X-RateLimit-Remaining-User",
+                "X-RateLimit-Reset-User",
                 "Retry-After"
         ));
 

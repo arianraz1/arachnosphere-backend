@@ -41,7 +41,7 @@ public class UserServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void register_savesUserAndReturnsSignupResponse() {
+    void register_savesUserAndReturnsEntity() {
         UserRegisterRequest request = new UserRegisterRequest("TEST@Example.COM", "TestUser", "password123");
 
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
@@ -56,14 +56,12 @@ public class UserServiceTest {
 
         when(userRepository.save(any(UserEntity.class))).thenReturn(savedUser);
 
-        UserSignupResponse expectedResponse = new UserSignupResponse(1L, "test@example.com", "testuser", null, false);
-        when(userMapper.toSignupResponse(savedUser)).thenReturn(expectedResponse);
+        UserEntity result = userService.registerUser(request);
 
-        UserSignupResponse result = userService.registerUser(request);
-
-        assertEquals(expectedResponse, result);
+        assertEquals(savedUser, result);
         verify(userRepository).save(any(UserEntity.class));
         verify(passwordEncoder).encode("password123");
+        verifyNoInteractions(userMapper);
     }
 
     @Test
@@ -74,7 +72,6 @@ public class UserServiceTest {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(userMapper.toSignupResponse(any())).thenReturn(new UserSignupResponse());
 
         userService.registerUser(request);
 
@@ -91,7 +88,6 @@ public class UserServiceTest {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(userMapper.toSignupResponse(any())).thenReturn(new UserSignupResponse());
 
         userService.registerUser(request);
 

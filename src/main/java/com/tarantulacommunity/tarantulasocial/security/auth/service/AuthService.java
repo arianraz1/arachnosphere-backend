@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.security.auth.service;
 
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.auth.mapper.AuthMapper;
@@ -32,14 +33,13 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final CookieUtil cookieUtil;
     private final AuthMapper authMapper;
+    private final UserMapper userMapper;
     private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public AuthResult register(UserRegisterRequest request) {
-        UserSignupResponse signupResponse = userService.registerUser(request);
-
-        UserEntity user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalStateException("User not found after registration"));
+        UserEntity user = userService.registerUser(request);
+        UserSignupResponse signupResponse = userMapper.toSignupResponse(user);
 
         emailVerificationService.sendVerificationEmail(user);
 

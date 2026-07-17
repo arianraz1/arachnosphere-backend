@@ -75,6 +75,13 @@ public class S3StorageService {
             return null;
         }
 
+        if (s3Config.isUsingCustomEndpoint()) {
+            return String.format("%s/%s/%s",
+                    s3Config.getEndpointUrl(),
+                    s3Config.getBucket(),
+                    key);
+        }
+
         return String.format("https://%s.s3.%s.amazonaws.com/%s",
                 s3Config.getBucket(),
                 s3Config.getRegion(),

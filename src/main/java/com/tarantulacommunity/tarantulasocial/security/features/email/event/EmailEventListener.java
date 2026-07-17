@@ -10,7 +10,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class VerificationEmailListener {
+public class EmailEventListener {
 
     private final EmailService emailService;
 
@@ -18,11 +18,20 @@ public class VerificationEmailListener {
     public void onVerificationEmailRequested(VerificationEmailRequestedEvent event) {
         try {
             emailService.sendVerificationEmail(event.email(), event.username(), event.verificationLink());
-        } catch (RuntimeException ex) {
+        } catch (Exception e) {
             // Token is already committed to the DB at this point — the user can still verify
             // manually if they have the link, or hit /resend-verification. Don't let a
             // SendGrid failure surface as a 500 on register/resend, since the DB write already succeeded.
-            log.error("Failed to send verification email to user id {}: {}", event.userId(), ex.getMessage());
+            log.error("Failed to send verification email to user id {}: {}", event.userId(), e.getMessage());
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDeletionWarningEmailRequested(DeletionWarningEmailRequestedEvent event) {
+        try {
+            emailService.sendDeletionWarningEmail(event.email(), event.username(), event.verificationLink());
+        } catch (Exception e) {
+            log.error("Failed to send deletion warning email for userId {}: {}", event.userId(), e.getMessage(), e);
         }
     }
 }

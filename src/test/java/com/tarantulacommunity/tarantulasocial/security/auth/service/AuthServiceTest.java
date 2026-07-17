@@ -1,7 +1,9 @@
 package com.tarantulacommunity.tarantulasocial.security.auth.service;
 
+import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
+import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.auth.mapper.AuthMapper;
@@ -32,8 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -45,6 +46,7 @@ class AuthServiceTest {
     @Mock private JwtUtil jwtUtil;
     @Mock private CookieUtil cookieUtil;
     @Mock private AuthMapper authMapper;
+    @Mock private UserMapper userMapper;
     @Mock private Authentication authentication;
     @Mock private EmailVerificationService emailVerificationService;
 
@@ -137,9 +139,10 @@ class AuthServiceTest {
         regReq.setEmail("new@example.com");
         regReq.setUsername("newuser");
         regReq.setPassword("pass");
+
         UserSignupResponse signupResponse = new UserSignupResponse();
-        given(userService.registerUser(regReq)).willReturn(signupResponse);
-        given(userRepository.findByEmail("new@example.com")).willReturn(Optional.of(user));
+        given(userService.registerUser(regReq)).willReturn(user);
+        given(userMapper.toSignupResponse(user)).willReturn(signupResponse);
         given(jwtUtil.generateAccessToken(1L, "user@example.com")).willReturn("acc");
         given(refreshTokenService.issue(user)).willReturn("ref");
         given(cookieUtil.accessTokenCookie("acc")).willReturn(ResponseCookie.from("a", "a").build());
@@ -149,21 +152,23 @@ class AuthServiceTest {
 
         assertThat(result.responseBody()).isEqualTo(signupResponse);
         verify(emailVerificationService).sendVerificationEmail(user);
+        verify(userRepository, never()).findByEmail(any());
     }
 
     @Test
-    void registerShouldThrowWhenUserNotFoundAfterRegistration() {
+    void registerShouldPropagateExceptionFromUserService() {
         UserRegisterRequest regReq = new UserRegisterRequest();
-        regReq.setEmail("ghost@example.com");
-        regReq.setUsername("ghost");
+        regReq.setEmail("taken@example.com");
+        regReq.setUsername("taken");
         regReq.setPassword("pass");
-        given(userService.registerUser(regReq)).willReturn(new UserSignupResponse());
-        given(userRepository.findByEmail("ghost@example.com")).willReturn(Optional.empty());
+
+        given(userService.registerUser(regReq))
+                .willThrow(new GlobalExceptionHandler.EmailAlreadyTakenException("taken@example.com"));
 
         assertThatThrownBy(() -> authService.register(regReq))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(GlobalExceptionHandler.EmailAlreadyTakenException.class);
 
-        verifyNoInteractions(emailVerificationService);
+        verifyNoInteractions(emailVerificationService, userMapper);
     }
 
     @Test

@@ -71,9 +71,9 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
         // Add rate limit headers to response
-        response.setHeader("X-RateLimit-Limit", String.valueOf(rule.capacity()));
-        response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
-        response.setHeader("X-RateLimit-Reset", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
+        response.setHeader("X-RateLimit-Limit-IP", String.valueOf(rule.capacity()));
+        response.setHeader("X-RateLimit-Remaining-IP", String.valueOf(probe.getRemainingTokens()));
+        response.setHeader("X-RateLimit-Reset-IP", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
 
         if (probe.isConsumed()) {
             filterChain.doFilter(request, response);

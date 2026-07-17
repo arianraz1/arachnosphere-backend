@@ -55,19 +55,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         userRepository.findById(userId).ifPresent(user -> {
                             CustomUserDetails userDetails = new CustomUserDetails(user, adminUserId);
 
-                            List<GrantedAuthority> authorities = user.isEmailVerified()
-                                    ? new ArrayList<>(userDetails.getAuthorities())
-                                    : List.of();
-
                             UsernamePasswordAuthenticationToken auth =
                                     UsernamePasswordAuthenticationToken.authenticated(
                                             userDetails,
                                             null,
-                                            authorities
+                                            userDetails.getAuthorities()
                                     );
 
                             auth.setDetails(new WebAuthenticationDetails(request));
                             SecurityContextHolder.getContext().setAuthentication(auth);
+
+                            request.setAttribute("emailVerified", user.isEmailVerified());
                         });
                     });
         }

@@ -97,16 +97,23 @@ class ThreadEntityTest {
     }
 
     @Test
-    void updatedAtChangesOnUpdate() {
+    void updatedAtChangesOnUpdate() throws InterruptedException {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("7", "7"));
         ThreadEntity thread = em.persistFlushFind(TestUtilities.validThread(user));
 
         LocalDateTime originalUpdatedAt = thread.getUpdatedAt();
-        thread.setUpdatedAt(LocalDateTime.now().plusSeconds(1));
-        ThreadEntity updated = em.persistFlushFind(thread);
+
+        Thread.sleep(100);
+
+        thread.setUpdatedAt(LocalDateTime.now());
+        em.persistFlushFind(thread);
+
+        em.clear();
+        ThreadEntity updated = em.find(ThreadEntity.class, thread.getId());
 
         assertTrue(updated.getUpdatedAt().isAfter(originalUpdatedAt));
     }
+
 
     @Test
     void messagesListIsEmptyByDefault() {

@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.entity.EmailVerificationTokenEntity;
+import com.tarantulacommunity.tarantulasocial.security.features.email.event.DeletionWarningEmailRequestedEvent;
 import com.tarantulacommunity.tarantulasocial.security.features.email.event.VerificationEmailRequestedEvent;
 import com.tarantulacommunity.tarantulasocial.security.features.email.repository.EmailVerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
@@ -52,9 +53,31 @@ public class EmailVerificationService {
         tokenEntity.setExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRY_HOURS));
         tokenRepository.save(tokenEntity);
 
-        String verificationLink = baseUrl + "/api/auth/verify-email?token=" + token;
+        String verificationLink = baseUrl + "/api/v1/auth/verify-email?token=" + token;
 
         eventPublisher.publishEvent(new VerificationEmailRequestedEvent(
+                user.getId(), user.getEmail(), user.getUsername(), verificationLink));
+    }
+
+    @Transactional
+    public void sendDeletionWarningEmail(UserEntity user) {
+        String token = tokenRepository.findByUserId(user.getId())
+                .filter(t -> t.getExpiresAt().isAfter(LocalDateTime.now()))
+                .map(EmailVerificationTokenEntity::getToken)
+                .orElseGet(() -> {
+                    tokenRepository.deleteByUserId(user.getId());
+                    String newToken = generateToken();
+                    EmailVerificationTokenEntity tokenEntity = new EmailVerificationTokenEntity();
+                    tokenEntity.setUser(user);
+                    tokenEntity.setToken(newToken);
+                    tokenEntity.setExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRY_HOURS));
+                    tokenRepository.save(tokenEntity);
+                    return newToken;
+                });
+
+        String verificationLink = baseUrl + "/api/v1/auth/verify-email?token=" + token;
+
+        eventPublisher.publishEvent(new DeletionWarningEmailRequestedEvent(
                 user.getId(), user.getEmail(), user.getUsername(), verificationLink));
     }
 

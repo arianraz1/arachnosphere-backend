@@ -24,7 +24,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public UserSignupResponse registerUser(UserRegisterRequest request) {
+    public UserEntity registerUser(UserRegisterRequest request) {
         String normalizedEmail = request.getEmail().toLowerCase().trim();
         String normalizedUsername = request.getUsername().toLowerCase().trim();
 
@@ -40,7 +40,7 @@ public class UserService {
         user.setUsername(normalizedUsername);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        return userMapper.toSignupResponse(userRepository.save(user));
+        return userRepository.save(user);
     }
 
     public UserProfileResponse getProfile(Long userId) {

@@ -77,9 +77,9 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
-        response.setHeader("X-RateLimit-Limit", String.valueOf(rule.capacity()));
-        response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
-        response.setHeader("X-RateLimit-Reset", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
+        response.setHeader("X-RateLimit-Limit-User", String.valueOf(rule.capacity()));
+        response.setHeader("X-RateLimit-Remaining-User", String.valueOf(probe.getRemainingTokens()));
+        response.setHeader("X-RateLimit-Reset-User", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
 
         if (probe.isConsumed()) {
             filterChain.doFilter(request, response);
