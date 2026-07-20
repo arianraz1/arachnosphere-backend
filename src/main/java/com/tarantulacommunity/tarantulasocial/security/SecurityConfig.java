@@ -155,6 +155,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/resend-verification").authenticated()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/species/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/collection/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

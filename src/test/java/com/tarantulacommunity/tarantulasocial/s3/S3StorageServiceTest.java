@@ -220,6 +220,46 @@ class S3StorageServiceTest {
     }
 
     @Test
+    void getImageUrl_usesCustomEndpoint_whenPublicEndpointNotSet() {
+        s3Config.setEndpointUrl("http://localstack:4566");
+
+        String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
+
+        assertEquals("http://localstack:4566/test-bucket/profile-pictures/abc.jpg", url);
+    }
+
+    @Test
+    void getImageUrl_prefersPublicEndpoint_whenBothEndpointsSet() {
+        s3Config.setEndpointUrl("http://localstack:4566");
+        s3Config.setPublicEndpointUrl("http://localhost:4566");
+
+        String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
+
+        assertEquals("http://localhost:4566/test-bucket/profile-pictures/abc.jpg", url);
+    }
+
+    @Test
+    void getImageUrl_ignoresBlankPublicEndpoint_fallsBackToEndpointUrl() {
+        s3Config.setEndpointUrl("http://localstack:4566");
+        s3Config.setPublicEndpointUrl("   ");
+
+        String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
+
+        assertEquals("http://localstack:4566/test-bucket/profile-pictures/abc.jpg", url);
+    }
+
+    @Test
+    void getImageUrl_realAwsBranch_ignoresPublicEndpoint_whenNoCustomEndpointSet() {
+        // publicEndpointUrl set but endpointUrl is not -> isUsingCustomEndpoint() is false,
+        // should still hit the real-AWS branch untouched
+        s3Config.setPublicEndpointUrl("http://localhost:4566");
+
+        String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
+
+        assertEquals("https://test-bucket.s3.us-east-1.amazonaws.com/profile-pictures/abc.jpg", url);
+    }
+
+    @Test
     void getImageUrl_returnsNullWhenKeyIsNull() {
         assertNull(s3StorageService.getImageUrl(null));
     }

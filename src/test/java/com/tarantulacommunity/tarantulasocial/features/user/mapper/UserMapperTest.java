@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.user.mapper;
 import com.tarantulacommunity.tarantulasocial.TestUtilities;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
@@ -219,5 +220,57 @@ class UserMapperTest {
         userMapper.updateFavoriteFromRequest(request, user);
 
         assertNull(user.getFavoriteCaption());
+    }
+
+    @Test
+    void testToMeResponse() {
+        UserEntity user = TestUtilities.verifiedUser("12", "12");
+        user.setId(12L);
+        user.setProfilePicKey("profile-pictures/pic.jpg");
+        user.setBio("I love tarantulas!");
+        user.setFavoriteImageKey("favorite-images/favorite.jpg");
+        user.setFavoriteCaption("My Brazilian Black");
+        user.setEmailVerified(true);
+        user.setCreatedAt(LocalDateTime.now());
+
+        when(s3StorageService.getImageUrl("profile-pictures/pic.jpg"))
+                .thenReturn("https://cdn.example.com/profile-pictures/pic.jpg");
+        when(s3StorageService.getImageUrl("favorite-images/favorite.jpg"))
+                .thenReturn("https://cdn.example.com/favorite-images/favorite.jpg");
+
+        MeResponse response = userMapper.toMeResponse(user);
+
+        assertNotNull(response);
+        assertEquals(user.getId(), response.getId());
+        assertEquals(user.getUsername(), response.getUsername());
+        assertEquals(user.getEmail(), response.getEmail());
+        assertTrue(response.isEmailVerified());
+        assertEquals("https://cdn.example.com/profile-pictures/pic.jpg", response.getProfilePicUrl());
+        assertEquals(user.getBio(), response.getBio());
+        assertEquals("https://cdn.example.com/favorite-images/favorite.jpg", response.getFavoriteImageUrl());
+        assertEquals(user.getFavoriteCaption(), response.getFavoriteCaption());
+        assertEquals(user.getCreatedAt(), response.getCreatedAt());
+    }
+
+    @Test
+    void testToMeResponseWithNullKeysSkipsS3Calls() {
+        UserEntity user = TestUtilities.verifiedUser("13", "13");
+        user.setId(13L);
+        user.setEmailVerified(false);
+        user.setCreatedAt(LocalDateTime.now());
+        // profilePicKey / favoriteImageKey left null
+
+        MeResponse response = userMapper.toMeResponse(user);
+
+        assertNotNull(response);
+        assertEquals(user.getId(), response.getId());
+        assertEquals(user.getUsername(), response.getUsername());
+        assertEquals(user.getEmail(), response.getEmail());
+        assertFalse(response.isEmailVerified());
+        assertNull(response.getProfilePicUrl());
+        assertNull(response.getBio());
+        assertNull(response.getFavoriteImageUrl());
+        assertNull(response.getFavoriteCaption());
+        verifyNoInteractions(s3StorageService);
     }
 }

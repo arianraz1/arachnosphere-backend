@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.user.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserImageService;
@@ -254,5 +255,39 @@ class UserControllerTest {
 
         assertThatThrownBy(() -> userController.uploadFavoriteImage(1L, file, userDetailsOf(1L)))
                 .isInstanceOf(GlobalExceptionHandler.ImageUploadException.class);
+    }
+
+    @Test
+    void getCurrentUser_shouldReturnMeResponseWhenAuthenticated() {
+        MeResponse expectedResponse = new MeResponse();
+        expectedResponse.setId(1L);
+        expectedResponse.setUsername("testuser");
+        expectedResponse.setEmail("test@example.com");
+        expectedResponse.setEmailVerified(true);
+
+        when(userService.getMe(1L)).thenReturn(expectedResponse);
+
+        ResponseEntity<MeResponse> response = userController.getCurrentUser(userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expectedResponse);
+    }
+
+    @Test
+    void getCurrentUser_shouldReturnUnauthorizedWhenUserDetailsIsNull() {
+        ResponseEntity<MeResponse> response = userController.getCurrentUser(null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).isNull();
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void getCurrentUser_shouldThrowWhenUserNotFound() {
+        when(userService.getMe(99L))
+                .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
+
+        assertThatThrownBy(() -> userController.getCurrentUser(userDetailsOf(99L)))
+                .isInstanceOf(GlobalExceptionHandler.UserNotFoundException.class);
     }
 }

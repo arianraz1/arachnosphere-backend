@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
@@ -208,5 +209,47 @@ public class UserServiceTest {
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 userService.updateFavorite(99L, new UpdateUserFavoriteTarantulaRequest(null)));
+    }
+
+    @Test
+    void getMe_returnsMeResponse() {
+        UserEntity user = new UserEntity();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setEmail("test@example.com");
+        user.setEmailVerified(true);
+        user.setProfilePicKey("profile-pictures/abc.jpg");
+        user.setBio("This is a bio");
+        user.setFavoriteImageKey("favorite-images/xyz.jpg");
+        user.setFavoriteCaption("This is a caption");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        MeResponse expectedResponse = new MeResponse();
+        expectedResponse.setId(1L);
+        expectedResponse.setUsername("testuser");
+        expectedResponse.setEmail("test@example.com");
+        expectedResponse.setEmailVerified(true);
+        expectedResponse.setProfilePicUrl("https://cdn.example.com/profile-pictures/abc.jpg");
+        expectedResponse.setBio("This is a bio");
+        expectedResponse.setFavoriteImageUrl("https://cdn.example.com/favorite-images/xyz.jpg");
+        expectedResponse.setFavoriteCaption("This is a caption");
+
+        when(userMapper.toMeResponse(user)).thenReturn(expectedResponse);
+
+        MeResponse result = userService.getMe(1L);
+
+        assertEquals(expectedResponse, result);
+        verify(userRepository).findById(1L);
+        verify(userMapper).toMeResponse(user);
+    }
+
+    @Test
+    void getMe_throwsUserNotFoundException_whenUserNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () -> userService.getMe(99L));
+        verify(userRepository).findById(99L);
+        verify(userMapper, never()).toMeResponse(any());
     }
 }

@@ -82,4 +82,17 @@ class S3ConfigTest {
 
         assertThrows(NullPointerException.class, config::s3Client);
     }
+
+    @Test
+    void publicEndpointUrlGetterSetter() {
+        S3Config config = new S3Config();
+        config.setPublicEndpointUrl("http://localhost:4566");
+        assertEquals("http://localhost:4566", config.getPublicEndpointUrl());
+    }
+
+    @Test
+    void publicEndpointUrl_defaultsToNull() {
+        S3Config config = new S3Config();
+        assertNull(config.getPublicEndpointUrl());
+    }
 }

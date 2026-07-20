@@ -76,8 +76,12 @@ public class S3StorageService {
         }
 
         if (s3Config.isUsingCustomEndpoint()) {
+            String base = (s3Config.getPublicEndpointUrl() != null && !s3Config.getPublicEndpointUrl().isBlank())
+                    ? s3Config.getPublicEndpointUrl()
+                    : s3Config.getEndpointUrl();
+
             return String.format("%s/%s/%s",
-                    s3Config.getEndpointUrl(),
+                    base,
                     s3Config.getBucket(),
                     key);
         }

@@ -2,12 +2,14 @@ package com.tarantulacommunity.tarantulasocial.features.user.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserImageService;
 import com.tarantulacommunity.tarantulasocial.features.user.service.UserService;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +23,14 @@ public class UserController {
 
     private final UserService userService;
     private final UserImageService userImageService;
+
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> getCurrentUser(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.getMe(userDetails.getId()));
+    }
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserProfileResponse> getProfile(@PathVariable Long userId) {

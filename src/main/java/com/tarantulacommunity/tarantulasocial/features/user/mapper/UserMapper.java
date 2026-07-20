@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.features.user.mapper;
 
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
@@ -32,6 +33,12 @@ public abstract class UserMapper {
     public abstract UserSummaryResponse toSummaryResponse(UserEntity user);
 
     public abstract UserSignupResponse toSignupResponse(UserEntity user);
+
+    @Mapping(target = "profilePicUrl", expression =
+            "java(user.getProfilePicKey() == null ? null : s3StorageService.getImageUrl(user.getProfilePicKey()))")
+    @Mapping(target = "favoriteImageUrl", expression =
+            "java(user.getFavoriteImageKey() == null ? null : s3StorageService.getImageUrl(user.getFavoriteImageKey()))")
+    public abstract MeResponse toMeResponse(UserEntity user);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "email", ignore = true)

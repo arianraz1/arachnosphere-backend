@@ -4,11 +4,13 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserFavoriteTarantulaRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UpdateUserProfileRequest;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.request.UserRegisterRequest;
+import com.tarantulacommunity.tarantulasocial.features.user.dto.response.MeResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserProfileResponse;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,10 @@ public class UserService {
 
     public UserProfileResponse getProfile(Long userId) {
         return userMapper.toProfileResponse(findUserOrThrow(userId));
+    }
+
+    public MeResponse getMe(Long userId) {
+        return userMapper.toMeResponse(findUserOrThrow(userId));
     }
 
     @Transactional

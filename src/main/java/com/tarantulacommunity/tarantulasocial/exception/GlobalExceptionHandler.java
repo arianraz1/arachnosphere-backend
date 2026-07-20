@@ -339,6 +339,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("The requested endpoint does not exist"));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
+        log.warn("Validation error: {}", e.getMessage());
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse(e.getMessage()));
+    }
+
     public record ErrorResponse(String message) {
     }
 }

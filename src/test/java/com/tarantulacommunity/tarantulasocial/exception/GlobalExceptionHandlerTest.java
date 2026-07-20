@@ -474,4 +474,26 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertEquals("Image upload failed", response.getBody().message());
     }
+
+    @Test
+    void handleIllegalArgument_returnsBadRequestWithMessage() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        IllegalArgumentException ex = new IllegalArgumentException("File is empty");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalArgument(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("File is empty", response.getBody().message());
+    }
+
+    @Test
+    void handleIllegalArgument_preservesExactMessage_forFileSizeError() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        IllegalArgumentException ex = new IllegalArgumentException("File size exceeds maximum limit of 10MB");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalArgument(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("File size exceeds maximum limit of 10MB", response.getBody().message());
+    }
 }

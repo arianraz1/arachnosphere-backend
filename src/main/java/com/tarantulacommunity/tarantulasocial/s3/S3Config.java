@@ -17,7 +17,8 @@ public class S3Config {
 
     private String bucket;
     private String region;
-    private String endpointUrl;
+    private String endpointUrl;        // internal SDK endpoint (e.g. http://localstack:4566)
+    private String publicEndpointUrl;  // browser-facing endpoint (e.g. http://localhost:4566), dev/LocalStack only
 
     public boolean isUsingCustomEndpoint() {
         return endpointUrl != null && !endpointUrl.isBlank();
