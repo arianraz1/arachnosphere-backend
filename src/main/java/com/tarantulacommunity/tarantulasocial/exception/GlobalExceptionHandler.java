@@ -127,21 +127,18 @@ public class GlobalExceptionHandler {
         }
     }
 
-    // new
     public static class ImageUploadException extends RuntimeException {
         public ImageUploadException(String message, Throwable cause) {
             super(message, cause);
         }
     }
 
-    // new
     public static class ImageLimitExceededException extends RuntimeException {
         public ImageLimitExceededException(String message) {
             super(message);
         }
     }
 
-    // new
     public static class ImageNotFoundException extends RuntimeException {
         public ImageNotFoundException(String message) {
             super(message);
@@ -151,201 +148,195 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(AuthException.class)
-    public ResponseEntity<ErrorResponse> handleAuth(AuthException e) {
+    public ResponseEntity<ApiError> handleAuth(AuthException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "AUTH_ERROR"));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials() {
+    public ResponseEntity<ApiError> handleBadCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("Invalid credentials"));
+                .body(new ApiError("Invalid credentials", "BAD_CREDENTIALS"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied() {
+    public ResponseEntity<ApiError> handleAccessDenied() {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponse("Forbidden"));
+                .body(new ApiError("Forbidden", "ACCESS_DENIED"));
     }
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException e) {
+    public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "USER_NOT_FOUND"));
     }
 
     @ExceptionHandler(SpeciesNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleSpeciesNotFound(SpeciesNotFoundException e) {
+    public ResponseEntity<ApiError> handleSpeciesNotFound(SpeciesNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "SPECIES_NOT_FOUND"));
     }
 
     @ExceptionHandler(MessageNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleMessageNotFound(MessageNotFoundException e) {
+    public ResponseEntity<ApiError> handleMessageNotFound(MessageNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "MESSAGE_NOT_FOUND"));
     }
 
     @ExceptionHandler(CollectionEntryNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleCollectionEntryNotFound(CollectionEntryNotFoundException e) {
+    public ResponseEntity<ApiError> handleCollectionEntryNotFound(CollectionEntryNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "COLLECTION_ENTRY_NOT_FOUND"));
     }
 
     @ExceptionHandler(ThreadNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleThreadNotFound(ThreadNotFoundException e) {
+    public ResponseEntity<ApiError> handleThreadNotFound(ThreadNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "THREAD_NOT_FOUND"));
     }
 
     @ExceptionHandler(EmailAlreadyTakenException.class)
-    public ResponseEntity<ErrorResponse> handleEmailTaken(EmailAlreadyTakenException e) {
+    public ResponseEntity<ApiError> handleEmailTaken(EmailAlreadyTakenException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "EMAIL_ALREADY_TAKEN"));
     }
 
     @ExceptionHandler(UsernameAlreadyTakenException.class)
-    public ResponseEntity<ErrorResponse> handleUsernameTaken(UsernameAlreadyTakenException e) {
+    public ResponseEntity<ApiError> handleUsernameTaken(UsernameAlreadyTakenException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "USERNAME_ALREADY_TAKEN"));
     }
 
     @ExceptionHandler(InvalidMessageException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidMessage(InvalidMessageException e) {
+    public ResponseEntity<ApiError> handleInvalidMessage(InvalidMessageException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "INVALID_MESSAGE"));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException e) {
+    public ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "INVALID_TOKEN"));
     }
 
     @ExceptionHandler(EmailNotVerifiedException.class)
-    public ResponseEntity<ErrorResponse> handleEmailNotVerified(EmailNotVerifiedException e) {
+    public ResponseEntity<ApiError> handleEmailNotVerified(EmailNotVerifiedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "EMAIL_NOT_VERIFIED"));
     }
 
     @ExceptionHandler(TooManyRequestsException.class)
-    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException e) {
+    public ResponseEntity<ApiError> handleTooManyRequests(TooManyRequestsException e) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "TOO_MANY_REQUESTS"));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException e) {
+    public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "UNAUTHORIZED"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(err -> errors.put(err.getField(), err.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(errors);
+        return ResponseEntity.badRequest()
+                .body(new ApiError("Validation failed", "VALIDATION_FAILED", errors));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
+    public ResponseEntity<ApiError> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(new ErrorResponse("HTTP method not supported for this endpoint"));
+                .body(new ApiError("HTTP method not supported for this endpoint", "METHOD_NOT_ALLOWED"));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("Invalid parameter format: " + e.getName()));
+                .body(new ApiError("Invalid parameter format: " + e.getName(), "TYPE_MISMATCH"));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException e) {
+    public ResponseEntity<ApiError> handleMessageNotReadable(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Malformed or missing request body"));
+                .body(new ApiError("Malformed or missing request body", "MALFORMED_REQUEST"));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception e) {
+    public ResponseEntity<ApiError> handleGeneric(Exception e) {
         log.error("Unhandled exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("An unexpected error occurred"));
+                .body(new ApiError("An unexpected error occurred", "INTERNAL_ERROR"));
     }
 
     @ExceptionHandler(RateLimitExceededException.class)
-    public ResponseEntity<ErrorResponse> handleRateLimit(RateLimitExceededException e) {
+    public ResponseEntity<ApiError> handleRateLimit(RateLimitExceededException e) {
         log.warn("Rate limit exceeded: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header("Retry-After", String.valueOf(e.getRetryAfterSeconds()))
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "RATE_LIMIT_EXCEEDED"));
     }
 
-    // new need to add test for
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException e) {
+    public ResponseEntity<ApiError> handleNoResourceFound(NoResourceFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse("The requested resource was not found"));
+                .body(new ApiError("The requested resource was not found", "RESOURCE_NOT_FOUND"));
     }
 
-    // new
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException e) {
+    public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException e) {
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Missing required parameter: " + e.getParameterName()));
+                .body(new ApiError("Missing required parameter: " + e.getParameterName(), "MISSING_PARAMETER"));
     }
 
-    // new
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(
-            ConstraintViolationException e) {
+    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, String> errors = new HashMap<>();
+        e.getConstraintViolations().forEach(violation -> {
+            String path = violation.getPropertyPath().toString();
+            errors.put(path, violation.getMessage());
+        });
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Validation failed"));
+                .body(new ApiError("Validation failed", "VALIDATION_FAILED", errors));
     }
 
-    // new
     @ExceptionHandler(MissingRequestHeaderException.class)
-    public ResponseEntity<ErrorResponse> handleMissingHeader(
-            MissingRequestHeaderException e) {
+    public ResponseEntity<ApiError> handleMissingHeader(MissingRequestHeaderException e) {
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Missing required header: " + e.getHeaderName()));
+                .body(new ApiError("Missing required header: " + e.getHeaderName(), "MISSING_HEADER"));
     }
 
-    // new
     @ExceptionHandler(ImageNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleImageNotFound(ImageNotFoundException e) {
+    public ResponseEntity<ApiError> handleImageNotFound(ImageNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "IMAGE_NOT_FOUND"));
     }
 
-    // new
     @ExceptionHandler(ImageLimitExceededException.class)
-    public ResponseEntity<ErrorResponse> handleImageLimitExceeded(ImageLimitExceededException e) {
+    public ResponseEntity<ApiError> handleImageLimitExceeded(ImageLimitExceededException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(e.getMessage()));
+                .body(new ApiError(e.getMessage(), "IMAGE_LIMIT_EXCEEDED"));
     }
 
-    // new
     @ExceptionHandler(ImageUploadException.class)
-    public ResponseEntity<ErrorResponse> handleImageUploadFailure(ImageUploadException e) {
+    public ResponseEntity<ApiError> handleImageUploadFailure(ImageUploadException e) {
         log.error("Image upload failed", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Image upload failed"));
+                .body(new ApiError("Image upload failed", "IMAGE_UPLOAD_FAILED"));
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoHandlerFound(NoHandlerFoundException ex) {
+    public ResponseEntity<ApiError> handleNoHandlerFound(NoHandlerFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse("The requested endpoint does not exist"));
+                .body(new ApiError("The requested endpoint does not exist", "ENDPOINT_NOT_FOUND"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
+    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException e) {
         log.warn("Validation error: {}", e.getMessage());
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse(e.getMessage()));
-    }
-
-    public record ErrorResponse(String message) {
+                .body(new ApiError(e.getMessage(), "ILLEGAL_ARGUMENT"));
     }
 }
