@@ -13,6 +13,7 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,7 +86,9 @@ public class MessageService {
     }
 
     public Page<ThreadSummaryResponse> getThreadsForUser(Long userId, Pageable pageable) {
-        Page<ThreadEntity> threads = messageRepository.findThreadsByUserId(userId, pageable);
+        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<ThreadEntity> threads = messageRepository.findThreadsByUserId(userId, unsortedPageable);
 
         List<Long> threadIds = threads.map(ThreadEntity::getId).toList();
 
