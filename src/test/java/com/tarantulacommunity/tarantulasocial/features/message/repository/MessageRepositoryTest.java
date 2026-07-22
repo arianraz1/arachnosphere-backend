@@ -182,4 +182,75 @@ public class MessageRepositoryTest {
 
         assertThat(result).isFalse();
     }
+
+    // --- isUserParticipantInThread ---
+
+    @Test
+    void isUserParticipantInThread_returnsTrue_forSenderOrRecipient() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean senderIsParticipant = messageRepository.isUserParticipantInThread(thread.getId(), sender.getId());
+        boolean recipientIsParticipant = messageRepository.isUserParticipantInThread(thread.getId(), recipient.getId());
+
+        assertThat(senderIsParticipant).isTrue();
+        assertThat(recipientIsParticipant).isTrue();
+    }
+
+    @Test
+    void isUserParticipantInThread_returnsFalse_forUnrelatedUser() {
+        UserEntity stranger = em.persistFlushFind(TestUtilities.verifiedUser("9", "9"));
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean result = messageRepository.isUserParticipantInThread(thread.getId(), stranger.getId());
+
+        assertThat(result).isFalse();
+    }
+
+    // --- existsByThreadId ---
+
+    @Test
+    void existsByThreadId_returnsTrue_whenMessagesExist() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hello", thread));
+
+        boolean exists = messageRepository.existsByThreadId(thread.getId());
+
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void existsByThreadId_returnsFalse_whenNoMessages() {
+        boolean exists = messageRepository.existsByThreadId(thread.getId());
+
+        assertThat(exists).isFalse();
+    }
+
+    // --- findLatestVisibleMessagePerThread ---
+
+    @Test
+    void findLatestVisibleMessagePerThread_returnsLatestVisiblePerThread_forUser() {
+        // same thread: create two messages, second is latest
+        MessageEntity m1 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
+        MessageEntity m2 = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second", thread));
+
+        // another thread with one visible message for recipient
+        ThreadEntity otherThread = em.persistFlushFind(TestUtilities.validThread(sender));
+        MessageEntity otherMsg = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Hi", otherThread));
+
+        List<Long> threadIds = List.of(thread.getId(), otherThread.getId());
+
+        // for sender, latest in first thread should be m2, and otherMsg for otherThread
+        List<MessageEntity> latestForSender = messageRepository.findLatestVisibleMessagePerThread(threadIds, sender.getId());
+        assertThat(latestForSender).hasSize(2);
+        // ensure it contains the messages from correct threads
+        assertThat(latestForSender.stream().map(e -> e.getThread().getId()).toList())
+                .containsExactlyInAnyOrder(thread.getId(), otherThread.getId());
+
+        // Hide m2 from recipient; recipient should then see otherMsg for otherThread and still m2 for first thread if visible to recipient
+        m2.setDeletedByRecipient(true);
+        em.persistFlushFind(m2);
+        List<MessageEntity> latestForRecipient = messageRepository.findLatestVisibleMessagePerThread(threadIds, recipient.getId());
+        assertThat(latestForRecipient).hasSize(2);
+        assertThat(latestForRecipient.stream().map(e -> e.getThread().getId()).toList())
+                .containsExactlyInAnyOrder(thread.getId(), otherThread.getId());
+    }
 }

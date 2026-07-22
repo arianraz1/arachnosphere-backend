@@ -37,5 +37,12 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
             "AND ((m2.sender.id = :userId AND m2.deletedBySender = false) " +
             "OR (m2.recipient.id = :userId AND m2.deletedByRecipient = false)) " +
             "GROUP BY m2.thread.id)")
-    List<MessageEntity> findLatestVisibleMessagePerThread(@Param("threadIds") List<Long> threadIds, @Param("userId") Long userId);
+  List<MessageEntity> findLatestVisibleMessagePerThread(@Param("threadIds") List<Long> threadIds, @Param("userId") Long userId);
+
+    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN TRUE ELSE FALSE END FROM MessageEntity m " +
+            "WHERE m.thread.id = :threadId AND (m.sender.id = :userId OR m.recipient.id = :userId)")
+    boolean isUserParticipantInThread(@Param("threadId") Long threadId, @Param("userId") Long userId);
+
+    // Derived query to check if any messages still exist for a thread
+    boolean existsByThreadId(Long threadId);
 }

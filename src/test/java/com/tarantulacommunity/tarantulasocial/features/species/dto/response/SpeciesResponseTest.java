@@ -15,6 +15,7 @@ class SpeciesResponseTest {
         assertNull(response.getScientificName());
         assertNull(response.getCommonName());
         assertNull(response.getImageUrl());
+        assertNull(response.getImageAttribution());
         assertNull(response.getDescription());
     }
 
@@ -22,7 +23,8 @@ class SpeciesResponseTest {
     void testAllArgsConstructor() {
         SpeciesResponse response = new SpeciesResponse(
             1L, 12345L, "Brachypelma hamorii", "Mexican Red Knee",
-            "http://example.com/spider.jpg", "A beautiful tarantula"
+            "http://example.com/spider.jpg", "Photo by John Doe",
+            "A beautiful tarantula"
         );
         
         assertEquals(1L, response.getId());
@@ -30,6 +32,7 @@ class SpeciesResponseTest {
         assertEquals("Brachypelma hamorii", response.getScientificName());
         assertEquals("Mexican Red Knee", response.getCommonName());
         assertEquals("http://example.com/spider.jpg", response.getImageUrl());
+        assertEquals("Photo by John Doe", response.getImageAttribution());
         assertEquals("A beautiful tarantula", response.getDescription());
     }
 
@@ -42,6 +45,7 @@ class SpeciesResponseTest {
         response.setScientificName("Brachypelma hamorii");
         response.setCommonName("Mexican Red Knee");
         response.setImageUrl("http://example.com/spider.jpg");
+        response.setImageAttribution("Photo by Jane Roe");
         response.setDescription("A beautiful tarantula");
         
         assertEquals(1L, response.getId());
@@ -49,6 +53,7 @@ class SpeciesResponseTest {
         assertEquals("Brachypelma hamorii", response.getScientificName());
         assertEquals("Mexican Red Knee", response.getCommonName());
         assertEquals("http://example.com/spider.jpg", response.getImageUrl());
+        assertEquals("Photo by Jane Roe", response.getImageAttribution());
         assertEquals("A beautiful tarantula", response.getDescription());
     }
 }

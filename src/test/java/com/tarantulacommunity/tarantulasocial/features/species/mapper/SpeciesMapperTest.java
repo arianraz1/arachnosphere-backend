@@ -31,6 +31,7 @@ class SpeciesMapperTest {
         species.setId(1L);
         species.setCommonName("Tailless Whip Scorpion");
         species.setImageUrl("https://example.com/tailless-whip.jpg");
+        species.setImageAttribution("Photo by Someone");
         species.setDescription("A fascinating small arachnid known for its unique appearance");
 
         SpeciesResponse response = speciesMapper.toResponse(species);
@@ -41,6 +42,7 @@ class SpeciesMapperTest {
         assertEquals(species.getScientificName(), response.getScientificName());
         assertEquals(species.getCommonName(), response.getCommonName());
         assertEquals(species.getImageUrl(), response.getImageUrl());
+        assertEquals(species.getImageAttribution(), response.getImageAttribution());
         assertEquals(species.getDescription(), response.getDescription());
     }
 
@@ -57,6 +59,7 @@ class SpeciesMapperTest {
         assertEquals("Grammostola rosea", response.getScientificName());
         assertNull(response.getCommonName());
         assertNull(response.getImageUrl());
+        assertNull(response.getImageAttribution());
         assertNull(response.getDescription());
     }
 
@@ -68,6 +71,7 @@ class SpeciesMapperTest {
         species.setScientificName("Acanthoscurria geniculata");
         species.setCommonName("Brazilian Whiteknee Tarantula");
         species.setImageUrl("https://example.com/brazilian-whiteknee.jpg");
+        species.setImageAttribution("CC BY-SA");
         species.setDescription("A large and popular tarantula species from Brazil, known for its docile temperament");
 
         SpeciesResponse response = speciesMapper.toResponse(species);
@@ -77,6 +81,7 @@ class SpeciesMapperTest {
         assertEquals("Acanthoscurria geniculata", response.getScientificName());
         assertEquals("Brazilian Whiteknee Tarantula", response.getCommonName());
         assertEquals("https://example.com/brazilian-whiteknee.jpg", response.getImageUrl());
+        assertEquals("CC BY-SA", response.getImageAttribution());
         assertEquals("A large and popular tarantula species from Brazil, known for its docile temperament",
                 response.getDescription());
     }
@@ -87,6 +92,7 @@ class SpeciesMapperTest {
         species.setId(4L);
         species.setCommonName("Singapore Blue");
         species.setImageUrl("https://example.com/singapore-blue.jpg");
+        species.setImageAttribution("by Photographer");
 
         SpeciesSummaryResponse response = speciesMapper.toSummaryResponse(species);
 
@@ -95,6 +101,7 @@ class SpeciesMapperTest {
         assertEquals(species.getScientificName(), response.getScientificName());
         assertEquals(species.getCommonName(), response.getCommonName());
         assertEquals(species.getImageUrl(), response.getImageUrl());
+        assertEquals(species.getImageAttribution(), response.getImageAttribution());
     }
 
     @Test
@@ -109,6 +116,7 @@ class SpeciesMapperTest {
         assertEquals("Poecilotheria striata", response.getScientificName());
         assertNull(response.getCommonName());
         assertNull(response.getImageUrl());
+        assertNull(response.getImageAttribution());
     }
 
     @Test
@@ -118,6 +126,7 @@ class SpeciesMapperTest {
         species.setScientificName("Omothymus violipes");
         species.setCommonName("Singapore Blue");
         species.setImageUrl("https://example.com/singapore-blue-alt.jpg");
+        species.setImageAttribution("Attribution here");
         species.setDescription("One of the most beautiful tarantulas with vibrant blue coloration");
 
         SpeciesSummaryResponse response = speciesMapper.toSummaryResponse(species);
@@ -126,6 +135,7 @@ class SpeciesMapperTest {
         assertEquals("Omothymus violipes", response.getScientificName());
         assertEquals("Singapore Blue", response.getCommonName());
         assertEquals("https://example.com/singapore-blue-alt.jpg", response.getImageUrl());
+        assertEquals("Attribution here", response.getImageAttribution());
     }
 
     @Test

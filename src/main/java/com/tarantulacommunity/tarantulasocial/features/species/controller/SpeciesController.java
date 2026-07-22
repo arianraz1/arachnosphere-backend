@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.features.species.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
-import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.mapper.SpeciesMapper;
@@ -15,7 +14,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/species")
@@ -32,11 +30,14 @@ public class SpeciesController {
         return ResponseEntity.ok(speciesService.getSpeciesById(id));
     }
 
-    @GetMapping("/{id}/detail")
-    public ResponseEntity<SpeciesDetailResponse> getDetail(@PathVariable Long id) {
-        SpeciesResponse species = speciesService.getSpeciesById(id);
-        List<CollectionEntryOwnerResponse> owners = collectionEntryService.getOwnersBySpecies(id);
-        return ResponseEntity.ok(speciesMapper.toDetailResponse(species, owners));
+    // Split heavy detail endpoint into two endpoints to avoid returning thousands of owners at once
+    // 1) Get single species (already provided by getById)
+    // 2) Get paginated owners for a species
+    @GetMapping("/{id}/owners")
+    public ResponseEntity<Page<CollectionEntryOwnerResponse>> getOwnersBySpecies(
+            @PathVariable Long id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(collectionEntryService.getOwnersBySpecies(id, pageable));
     }
 
     // ---------- HOME PAGE SEARCH (parallel-friendly) ----------

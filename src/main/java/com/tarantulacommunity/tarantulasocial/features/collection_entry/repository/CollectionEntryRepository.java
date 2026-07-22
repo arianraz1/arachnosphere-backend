@@ -24,6 +24,9 @@ public interface CollectionEntryRepository extends JpaRepository<CollectionEntry
     // species detail page: list of owners
     List<CollectionEntryEntity> findBySpecies(SpeciesEntity species);
 
+    // species detail page: paginated list of owners
+    Page<CollectionEntryEntity> findBySpecies(SpeciesEntity species, Pageable pageable);
+
     // duplicate check before create
     Optional<CollectionEntryEntity> findByUserAndSpecies(UserEntity user, SpeciesEntity species);
 

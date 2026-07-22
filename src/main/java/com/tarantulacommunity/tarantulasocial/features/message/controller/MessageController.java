@@ -57,4 +57,13 @@ public class MessageController {
         messageService.deleteMessage(messageId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
+
+    // Soft delete an entire thread from your view
+    @DeleteMapping("/thread/{threadId}")
+    public ResponseEntity<Void> deleteThreadForMe(
+            @PathVariable Long threadId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        messageService.deleteThreadForUser(threadId, userDetails.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

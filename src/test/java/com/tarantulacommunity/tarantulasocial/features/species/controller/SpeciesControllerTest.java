@@ -43,7 +43,7 @@ class SpeciesControllerTest {
 
     @Test
     void getById_shouldReturnSpeciesResponse() {
-        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null, null);
         when(speciesService.getSpeciesById(1L)).thenReturn(expectedResponse);
 
         ResponseEntity<SpeciesResponse> response = speciesController.getById(1L);
@@ -64,28 +64,27 @@ class SpeciesControllerTest {
     }
 
     @Test
-    void getDetail_shouldReturnSpeciesDetailResponse() {
-        SpeciesResponse speciesResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
-        // Use the new DTO for owners
-        CollectionEntryOwnerResponse ownerResponse = new CollectionEntryOwnerResponse();
-        ownerResponse.setId(1L);
-        List<CollectionEntryOwnerResponse> owners = List.of(ownerResponse);
-        SpeciesDetailResponse expectedDetail = new SpeciesDetailResponse(speciesResponse, owners);
+    void getOwnersBySpecies_shouldReturnPaginatedOwners() {
+        CollectionEntryOwnerResponse owner1 = new CollectionEntryOwnerResponse();
+        owner1.setId(1L);
+        CollectionEntryOwnerResponse owner2 = new CollectionEntryOwnerResponse();
+        owner2.setId(2L);
 
-        when(speciesService.getSpeciesById(1L)).thenReturn(speciesResponse);
-        // Mock the new service method
-        when(collectionEntryService.getOwnersBySpecies(1L)).thenReturn(owners);
-        when(speciesMapper.toDetailResponse(speciesResponse, owners)).thenReturn(expectedDetail);
+        Page<CollectionEntryOwnerResponse> page = new PageImpl<>(List.of(owner1, owner2), PageRequest.of(0, 2), 10);
 
-        ResponseEntity<SpeciesDetailResponse> response = speciesController.getDetail(1L);
+        when(collectionEntryService.getOwnersBySpecies(1L, PageRequest.of(0, 2))).thenReturn(page);
+
+        ResponseEntity<Page<CollectionEntryOwnerResponse>> response = speciesController.getOwnersBySpecies(1L, PageRequest.of(0, 2));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(expectedDetail);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getContent()).hasSize(2);
+        assertThat(response.getBody().getTotalElements()).isEqualTo(10);
     }
 
     @Test
     void searchOwned_shouldReturnPageOfSpeciesSummaries() {
-        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null);
+        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
         Page<SpeciesSummaryResponse> page = new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1);
 
         when(speciesService.searchOwnedSpecies(eq("Chromato"), any(PageRequest.class))).thenReturn(page);
@@ -99,7 +98,7 @@ class SpeciesControllerTest {
 
     @Test
     void searchUnowned_shouldReturnPageOfSpeciesSummaries() {
-        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(2L, "Brachypelma hamorii", null, null);
+        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(2L, "Brachypelma hamorii", null, null, null);
         Page<SpeciesSummaryResponse> page = new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1);
 
         when(speciesService.searchUnownedSpecies(eq("Brachy"), any(PageRequest.class))).thenReturn(page);
@@ -113,7 +112,7 @@ class SpeciesControllerTest {
 
     @Test
     void searchAll_shouldReturnPageOfSpeciesSummaries() {
-        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null);
+        SpeciesSummaryResponse summary = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
         Page<SpeciesSummaryResponse> page = new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1);
 
         when(speciesService.searchAllSpecies(eq("Chromato"), any(PageRequest.class))).thenReturn(page);
@@ -162,18 +161,13 @@ class SpeciesControllerTest {
     }
 
     @Test
-    void getDetail_shouldReturnDetailWithEmptyOwners() {
-        SpeciesResponse speciesResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
-        List<CollectionEntryOwnerResponse> emptyOwners = List.of();
-        SpeciesDetailResponse expectedDetail = new SpeciesDetailResponse(speciesResponse, emptyOwners);
+    void getOwnersBySpecies_shouldReturnEmptyPage() {
+        Page<CollectionEntryOwnerResponse> empty = Page.empty();
+        when(collectionEntryService.getOwnersBySpecies(1L, PageRequest.of(0, 20))).thenReturn(empty);
 
-        when(speciesService.getSpeciesById(1L)).thenReturn(speciesResponse);
-        when(collectionEntryService.getOwnersBySpecies(1L)).thenReturn(emptyOwners);
-        when(speciesMapper.toDetailResponse(speciesResponse, emptyOwners)).thenReturn(expectedDetail);
-
-        ResponseEntity<SpeciesDetailResponse> response = speciesController.getDetail(1L);
+        ResponseEntity<Page<CollectionEntryOwnerResponse>> response = speciesController.getOwnersBySpecies(1L, PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(expectedDetail);
+        assertThat(response.getBody()).isEmpty();
     }
 }

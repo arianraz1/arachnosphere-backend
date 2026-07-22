@@ -10,10 +10,10 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 public class SpeciesRepositoryTest {
@@ -257,6 +257,173 @@ public class SpeciesRepositoryTest {
         em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
 
         Page<SpeciesEntity> result = speciesRepository.findOwnedSpeciesByQueryOrderByOwnerCount("", PageRequest.of(0, 10));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void existsByGbifNubKey_returnsTrue_whenExists() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        assertTrue(speciesRepository.existsByGbifNubKey(1L));
+    }
+
+    @Test
+    void existsByGbifNubKey_returnsFalse_whenNotExists() {
+        assertFalse(speciesRepository.existsByGbifNubKey(99L));
+    }
+
+// --- existsByScientificName ---
+
+    @Test
+    void existsByScientificName_returnsTrue_whenExists() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        assertTrue(speciesRepository.existsByScientificName("Chromatopelma cyaneopubescens"));
+    }
+
+    @Test
+    void existsByScientificName_returnsFalse_whenNotExists() {
+        assertFalse(speciesRepository.existsByScientificName("nonexistent"));
+    }
+
+    // --- findAllByImageUrlIsNull ---
+
+    @Test
+    void findAllByImageUrlIsNull_returnsOnlySpeciesWithoutImage() {
+        SpeciesEntity withoutImage = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        SpeciesEntity withImage = TestUtilities.validSpecies(2L, "Brachypelma hamorii");
+        withImage.setImageUrl("https://cdn/img.jpg");
+        em.persistFlushFind(withImage);
+
+        List<SpeciesEntity> result = speciesRepository.findAllByImageUrlIsNull();
+
+        assertEquals(1, result.size());
+        assertEquals(withoutImage, result.getFirst());
+    }
+
+    @Test
+    void findAllByImageUrlIsNull_returnsEmpty_whenAllSpeciesHaveImages() {
+        SpeciesEntity withImage = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
+        withImage.setImageUrl("https://cdn/img.jpg");
+        em.persistFlushFind(withImage);
+
+        List<SpeciesEntity> result = speciesRepository.findAllByImageUrlIsNull();
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findAllByImageUrlIsNull_returnsEmpty_whenNoSpeciesExist() {
+        List<SpeciesEntity> result = speciesRepository.findAllByImageUrlIsNull();
+
+        assertTrue(result.isEmpty());
+    }
+
+// --- findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase ---
+
+    @Test
+    void findByScientificNameOrCommonNameContaining_matchesByScientificName() {
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        Page<SpeciesEntity> result = speciesRepository
+                .findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
+                        "Chromatopelma", "Chromatopelma", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(species, result.getContent().getFirst());
+    }
+
+    @Test
+    void findByScientificNameOrCommonNameContaining_matchesByCommonName() {
+        SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
+        species.setCommonName("Green Bottle Blue");
+        species = em.persistFlushFind(species);
+
+        Page<SpeciesEntity> result = speciesRepository
+                .findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
+                        "Green Bottle Blue", "Green Bottle Blue", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(species, result.getContent().getFirst());
+    }
+
+    @Test
+    void findByScientificNameOrCommonNameContaining_isCaseInsensitive() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        Page<SpeciesEntity> result = speciesRepository
+                .findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
+                        "chromatopelma", "chromatopelma", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void findByScientificNameOrCommonNameContaining_returnsEmpty_whenNoMatch() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        Page<SpeciesEntity> result = speciesRepository
+                .findByScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase(
+                        "nonexistent", "nonexistent", PageRequest.of(0, 10));
+
+        assertTrue(result.isEmpty());
+    }
+
+// --- searchAllSpecies (the @Query the service actually delegates to) ---
+
+    @Test
+    void searchAllSpecies_returnsSpeciesRegardlessOfOwnership() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        SpeciesEntity owned = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        SpeciesEntity unowned = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, owned));
+
+        Page<SpeciesEntity> result = speciesRepository.searchAllSpecies("", PageRequest.of(0, 10));
+
+        assertEquals(2, result.getTotalElements());
+        assertTrue(result.getContent().containsAll(List.of(owned, unowned)));
+    }
+
+    @Test
+    void searchAllSpecies_filtersByScientificName() {
+        SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+
+        Page<SpeciesEntity> result = speciesRepository.searchAllSpecies("Chromatopelma", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(gbb, result.getContent().getFirst());
+    }
+
+    @Test
+    void searchAllSpecies_filtersByCommonName() {
+        SpeciesEntity gbb = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
+        gbb.setCommonName("Green Bottle Blue");
+        gbb = em.persistFlushFind(gbb);
+        em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+
+        Page<SpeciesEntity> result = speciesRepository.searchAllSpecies("Green Bottle Blue", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(gbb, result.getContent().getFirst());
+    }
+
+    @Test
+    void searchAllSpecies_isCaseInsensitive() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        Page<SpeciesEntity> result = speciesRepository.searchAllSpecies("chromatopelma", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void searchAllSpecies_returnsEmpty_whenNoMatch() {
+        em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+
+        Page<SpeciesEntity> result = speciesRepository.searchAllSpecies("nonexistent", PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
     }

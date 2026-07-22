@@ -139,6 +139,22 @@ public class CollectionEntryService {
                 .collect(Collectors.toList());
     }
 
+    public Page<CollectionEntryOwnerResponse> getOwnersBySpecies(Long speciesId, Pageable pageable) {
+        SpeciesEntity species = speciesRepository.findById(speciesId)
+                .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(speciesId));
+
+        Page<CollectionEntryEntity> page = collectionEntryRepository.findBySpecies(species, pageable);
+
+        Map<Long, List<CollectionImageResponse>> imagesByEntryId =
+                collectionImageService.listImagesByCollectionIds(idsOf(page.getContent()));
+
+        return page.map(entity -> {
+            CollectionEntryOwnerResponse response = collectionEntryMapper.toOwnerResponse(entity);
+            response.setImages(imagesByEntryId.getOrDefault(entity.getId(), List.of()));
+            return response;
+        });
+    }
+
     // --- single-entity helpers (create/update: only ever one row, N+1 doesn't apply) ---
 
     private CollectionEntryResponse toResponseWithImages(CollectionEntryEntity entity) {

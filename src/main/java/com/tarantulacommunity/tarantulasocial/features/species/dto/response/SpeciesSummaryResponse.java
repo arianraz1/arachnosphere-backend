@@ -15,4 +15,5 @@ public class SpeciesSummaryResponse {
     private String scientificName;
     private String commonName;
     private String imageUrl;
+    private String imageAttribution;
 }

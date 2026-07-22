@@ -16,5 +16,6 @@ public class SpeciesResponse {
     private String scientificName;
     private String commonName;
     private String imageUrl;
+    private String imageAttribution;
     private String description;
 }

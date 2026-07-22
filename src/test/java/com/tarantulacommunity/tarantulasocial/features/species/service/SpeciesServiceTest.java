@@ -40,7 +40,7 @@ class SpeciesServiceTest {
         SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
         species.setId(1L);
 
-        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null, null);
 
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
         when(speciesMapper.toResponse(species)).thenReturn(expectedResponse);
@@ -61,7 +61,7 @@ class SpeciesServiceTest {
     void getSpeciesByNubGbifKey_returnsSpeciesResponse() {
         SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
 
-        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopescens", null, null, null, null);
 
         when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.of(species));
         when(speciesMapper.toResponse(species)).thenReturn(expectedResponse);
@@ -81,7 +81,7 @@ class SpeciesServiceTest {
     @Test
     void searchUnownedSpecies_returnsPageOfSummaryResponses() {
         SpeciesEntity species = TestUtilities.validSpecies(2L, "Brachypelma hamorii");
-        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(2L, "Brachypelma hamorii", null, null);
+        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(2L, "Brachypelma hamorii", null, null, null);
 
         Page<SpeciesEntity> page = new PageImpl<>(List.of(species));
 
@@ -109,7 +109,7 @@ class SpeciesServiceTest {
         when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.empty());
 
         SpeciesEntity savedSpecies = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
-        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", "GBB", null, null);
+        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", "GBB", null, null, null);
 
         when(speciesRepository.save(any(SpeciesEntity.class))).thenReturn(savedSpecies);
         when(speciesMapper.toResponse(savedSpecies)).thenReturn(expectedResponse);
@@ -123,7 +123,7 @@ class SpeciesServiceTest {
     @Test
     void saveFromGbif_returnsExistingSpecies_whenAlreadyExists() {
         SpeciesEntity existingSpecies = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
-        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", "GBB", null, null);
+        SpeciesResponse expectedResponse = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", "GBB", null, null, null);
 
         when(speciesRepository.findByGbifNubKey(1L)).thenReturn(Optional.of(existingSpecies));
         when(speciesMapper.toResponse(existingSpecies)).thenReturn(expectedResponse);
@@ -137,7 +137,7 @@ class SpeciesServiceTest {
     @Test
     void searchOwnedSpecies_callsOrderByOwnerCountQuery() {
         SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
-        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null);
+        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
 
         Page<SpeciesEntity> page = new PageImpl<>(List.of(species));
 
@@ -154,7 +154,7 @@ class SpeciesServiceTest {
     @Test
     void searchOwnedSpecies_returnsPageOfSummaryResponses() {
         SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
-        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null);
+        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
 
         Page<SpeciesEntity> page = new PageImpl<>(List.of(species));
 
@@ -175,5 +175,51 @@ class SpeciesServiceTest {
         Page<SpeciesSummaryResponse> result = speciesService.searchOwnedSpecies("nonexistent", PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchAllSpecies_returnsPageOfSummaryResponses() {
+        SpeciesEntity species = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
+        SpeciesSummaryResponse summaryResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
+
+        Page<SpeciesEntity> page = new PageImpl<>(List.of(species));
+
+        when(speciesRepository.searchAllSpecies("Chromato", PageRequest.of(0, 10))).thenReturn(page);
+        when(speciesMapper.toSummaryResponse(species)).thenReturn(summaryResponse);
+
+        Page<SpeciesSummaryResponse> result = speciesService.searchAllSpecies("Chromato", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(summaryResponse, result.getContent().getFirst());
+        verify(speciesRepository).searchAllSpecies("Chromato", PageRequest.of(0, 10));
+    }
+
+    @Test
+    void searchAllSpecies_returnsEmpty_whenNoMatch() {
+        when(speciesRepository.searchAllSpecies("nonexistent", PageRequest.of(0, 10)))
+                .thenReturn(Page.empty());
+
+        Page<SpeciesSummaryResponse> result = speciesService.searchAllSpecies("nonexistent", PageRequest.of(0, 10));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchAllSpecies_includesBothOwnedAndUnownedSpecies() {
+        SpeciesEntity owned = TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens");
+        SpeciesEntity unowned = TestUtilities.validSpecies(2L, "Brachypelma hamorii");
+
+        SpeciesSummaryResponse ownedResponse = new SpeciesSummaryResponse(1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesSummaryResponse unownedResponse = new SpeciesSummaryResponse(2L, "Brachypelma hamorii", null, null, null);
+
+        Page<SpeciesEntity> page = new PageImpl<>(List.of(owned, unowned));
+
+        when(speciesRepository.searchAllSpecies("", PageRequest.of(0, 10))).thenReturn(page);
+        when(speciesMapper.toSummaryResponse(owned)).thenReturn(ownedResponse);
+        when(speciesMapper.toSummaryResponse(unowned)).thenReturn(unownedResponse);
+
+        Page<SpeciesSummaryResponse> result = speciesService.searchAllSpecies("", PageRequest.of(0, 10));
+
+        assertEquals(2, result.getTotalElements());
     }
 }

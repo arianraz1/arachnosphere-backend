@@ -11,7 +11,7 @@ class SpeciesDetailResponseTest {
 
     @Test
     void testAllArgsConstructor() {
-        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null, null);
         CollectionEntryOwnerResponse owner = new CollectionEntryOwnerResponse();
         List<CollectionEntryOwnerResponse> owners = List.of(owner);
 
@@ -23,7 +23,7 @@ class SpeciesDetailResponseTest {
 
     @Test
     void testConstructorWithEmptyOwners() {
-        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null, null);
         List<CollectionEntryOwnerResponse> emptyOwners = List.of();
 
         SpeciesDetailResponse response = new SpeciesDetailResponse(species, emptyOwners);
@@ -34,7 +34,7 @@ class SpeciesDetailResponseTest {
 
     @Test
     void testConstructorWithNullOwners() {
-        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null);
+        SpeciesResponse species = new SpeciesResponse(1L, 1L, "Chromatopelma cyaneopubescens", null, null, null, null);
 
         SpeciesDetailResponse response = new SpeciesDetailResponse(species, null);
 
