@@ -12,6 +12,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -405,5 +406,60 @@ public class MessageRepositoryTest {
 
         assertThat(deleted).isEqualTo(0);
         assertThat(messageRepository.findVisibleMessagesByThreadId(thread.getId(), sender.getId(), PageRequest.of(0, 10)).getTotalElements()).isEqualTo(1);
+    }
+
+    // --- findLatestMessageTimestamp ---
+
+    @Test
+    void findLatestMessageTimestamp_returnsMostRecentCreatedAt() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
+        MessageEntity second = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second", thread));
+
+        LocalDateTime result = messageRepository.findLatestMessageTimestamp(thread.getId(), sender.getId());
+
+        assertThat(result).isEqualTo(second.getCreatedAt());
+    }
+
+    @Test
+    void findLatestMessageTimestamp_returnsNull_whenNoMessages() {
+        LocalDateTime result = messageRepository.findLatestMessageTimestamp(thread.getId(), sender.getId());
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findLatestMessageTimestamp_excludesMessagesDeletedBySender() {
+        MessageEntity visible = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Visible", thread));
+        MessageEntity deleted = TestUtilities.validMessage(sender, recipient, "Deleted", thread);
+        deleted.setDeletedBySender(true);
+        em.persistFlushFind(deleted);
+
+        LocalDateTime result = messageRepository.findLatestMessageTimestamp(thread.getId(), sender.getId());
+
+        assertThat(result).isEqualTo(visible.getCreatedAt());
+    }
+
+    @Test
+    void findLatestMessageTimestamp_excludesMessagesDeletedByRecipient() {
+        MessageEntity visible = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Visible", thread));
+        MessageEntity deleted = TestUtilities.validMessage(sender, recipient, "Deleted", thread);
+        deleted.setDeletedByRecipient(true);
+        em.persistFlushFind(deleted);
+
+        LocalDateTime result = messageRepository.findLatestMessageTimestamp(thread.getId(), recipient.getId());
+
+        assertThat(result).isEqualTo(visible.getCreatedAt());
+    }
+
+    @Test
+    void findLatestMessageTimestamp_scopedToGivenThread() {
+        em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "In thread", thread));
+
+        ThreadEntity otherThread = em.persistFlushFind(TestUtilities.validThread(sender));
+        MessageEntity otherMsg = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Other", otherThread));
+
+        LocalDateTime result = messageRepository.findLatestMessageTimestamp(otherThread.getId(), sender.getId());
+
+        assertThat(result).isEqualTo(otherMsg.getCreatedAt());
     }
 }

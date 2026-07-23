@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.UnreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -65,5 +66,12 @@ public class MessageController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         messageService.deleteThreadForUser(threadId, userDetails.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    // Lightweight check for nav badge — does the user have any unread thread at all?
+    @GetMapping("/unread")
+    public ResponseEntity<UnreadStatusResponse> hasUnread(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(new UnreadStatusResponse(messageService.hasUnreadMessages(userDetails.getId())));
     }
 }

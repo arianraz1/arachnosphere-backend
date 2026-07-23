@@ -20,4 +20,5 @@ public class ThreadSummaryResponse {
     private String latestMessagePreview;
     private LocalDateTime latestMessageTimestamp;
     private boolean active;
+    private boolean unread;
 }

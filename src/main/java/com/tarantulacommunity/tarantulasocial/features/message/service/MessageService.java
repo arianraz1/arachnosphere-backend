@@ -6,8 +6,11 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.response.Mess
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadParticipantEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.mapper.MessageMapper;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.MessageRepository;
+import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadParticipantRepository;
+import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadReadState;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -33,6 +37,7 @@ public class MessageService {
     private final MessageMapper messageMapper;
     private final UserRepository userRepository;
     private final ThreadRepository threadRepository;
+    private final ThreadParticipantRepository threadParticipantRepository;
 
     @Transactional
     public MessageResponse sendMessage(Long senderId, SendMessageRequest request) {
@@ -46,7 +51,9 @@ public class MessageService {
         }
 
         ThreadEntity thread;
-        if (request.getThreadId() != null) {
+        boolean newThread = request.getThreadId() == null;
+
+        if (!newThread) {
             thread = threadRepository.findById(request.getThreadId())
                     .orElseThrow(() -> new GlobalExceptionHandler.ThreadNotFoundException(request.getThreadId()));
 
@@ -82,6 +89,19 @@ public class MessageService {
         thread.setUpdatedAt(LocalDateTime.now());
         threadRepository.save(thread);
 
+        // Sender has implicitly "read" up to the message they just sent.
+        if (newThread) {
+            threadParticipantRepository.save(new ThreadParticipantEntity(thread, sender, LocalDateTime.now()));
+            threadParticipantRepository.save(new ThreadParticipantEntity(thread, recipient, null));
+        } else {
+            threadParticipantRepository.markRead(thread.getId(), senderId, LocalDateTime.now());
+            // Defensive: recipient may not have a row yet (e.g. thread predates this feature
+            // and backfill somehow missed them). Ensure it exists without touching last_read_at.
+            if (!threadParticipantRepository.existsByThread_IdAndUser_Id(thread.getId(), recipient.getId())) {
+                threadParticipantRepository.save(new ThreadParticipantEntity(thread, recipient, null));
+            }
+        }
+
         return messageMapper.toResponse(saved);
     }
 
@@ -96,6 +116,11 @@ public class MessageService {
                 .findLatestVisibleMessagePerThread(threadIds, userId)
                 .stream()
                 .collect(Collectors.toMap(m -> m.getThread().getId(), m -> m));
+
+        Map<Long, LocalDateTime> lastReadByThread = threadParticipantRepository
+                .findReadStatesForThreads(threadIds, userId)
+                .stream()
+                .collect(Collectors.toMap(ThreadReadState::getThreadId, ThreadReadState::getLastReadAt));
 
         return threads.map(thread -> {
             MessageEntity latest = latestByThread.get(thread.getId());
@@ -113,6 +138,11 @@ public class MessageService {
                         : latest.getSender().getId();
             }
 
+            LocalDateTime lastReadAt = lastReadByThread.get(thread.getId());
+            boolean unread = latest != null
+                    && !latest.getSender().getId().equals(userId)
+                    && (lastReadAt == null || latest.getCreatedAt().isAfter(lastReadAt));
+
             return new ThreadSummaryResponse(
                     thread.getId(),
                     thread.getSubject(),
@@ -120,7 +150,8 @@ public class MessageService {
                     otherId,
                     latest != null ? latest.getContent().substring(0, Math.min(50, latest.getContent().length())) : "",
                     latest != null ? latest.getCreatedAt() : null,
-                    thread.isActive()
+                    thread.isActive(),
+                    unread
             );
         });
     }
@@ -130,8 +161,44 @@ public class MessageService {
             throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
         }
 
-        return messageRepository.findVisibleMessagesByThreadId(threadId, userId, pageable)
+        Page<MessageResponse> messages = messageRepository.findVisibleMessagesByThreadId(threadId, userId, pageable)
                 .map(messageMapper::toResponse);
+
+        markThreadReadIfNeeded(threadId, userId);
+
+        return messages;
+    }
+
+    private void markThreadReadIfNeeded(Long threadId, Long userId) {
+        LocalDateTime latestMessageAt = messageRepository.findLatestMessageTimestamp(threadId, userId);
+        if (latestMessageAt == null) {
+            return;
+        }
+
+        Optional<ThreadParticipantEntity> participant =
+                threadParticipantRepository.findByThread_IdAndUser_Id(threadId, userId);
+
+        boolean needsUpdate = participant.isEmpty()
+                || participant.get().getLastReadAt() == null
+                || participant.get().getLastReadAt().isBefore(latestMessageAt);
+
+        if (needsUpdate) {
+            markThreadRead(threadId, userId);
+        }
+    }
+
+    @Transactional
+    public void markThreadRead(Long threadId, Long userId) {
+        int updated = threadParticipantRepository.markRead(threadId, userId, LocalDateTime.now());
+        if (updated == 0) {
+            // Participant row missing (pre-feature thread the backfill didn't cover, or
+            // a race with sendMessage). Create it rather than silently no-op.
+            ThreadEntity thread = threadRepository.findById(threadId)
+                    .orElseThrow(() -> new GlobalExceptionHandler.ThreadNotFoundException(threadId));
+            UserEntity user = userRepository.findById(userId)
+                    .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
+            threadParticipantRepository.save(new ThreadParticipantEntity(thread, user, LocalDateTime.now()));
+        }
     }
 
     @Transactional
@@ -168,5 +235,9 @@ public class MessageService {
         if (!messageRepository.existsByThreadId(threadId)) {
             threadRepository.deleteById(threadId);
         }
+    }
+
+    public boolean hasUnreadMessages(Long userId) {
+        return threadParticipantRepository.existsUnreadForUser(userId);
     }
 }

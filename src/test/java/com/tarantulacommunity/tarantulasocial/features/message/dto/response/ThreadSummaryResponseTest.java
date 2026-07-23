@@ -20,6 +20,7 @@ class ThreadSummaryResponseTest {
         assertNull(response.getLatestMessagePreview());
         assertNull(response.getLatestMessageTimestamp());
         assertFalse(response.isActive());
+        assertFalse(response.isUnread());
     }
 
     @Test
@@ -27,7 +28,7 @@ class ThreadSummaryResponseTest {
         LocalDateTime timestamp = LocalDateTime.now();
 
         ThreadSummaryResponse response = new ThreadSummaryResponse(
-                1L, "Subject", "user2", 2L, "Hello...", timestamp, true
+                1L, "Subject", "user2", 2L, "Hello...", timestamp, true, true
         );
 
         assertEquals(1L, response.getThreadId());
@@ -37,6 +38,7 @@ class ThreadSummaryResponseTest {
         assertEquals("Hello...", response.getLatestMessagePreview());
         assertEquals(timestamp, response.getLatestMessageTimestamp());
         assertTrue(response.isActive());
+        assertTrue(response.isUnread());
     }
 
     @Test
@@ -51,6 +53,7 @@ class ThreadSummaryResponseTest {
         response.setLatestMessagePreview("Hello...");
         response.setLatestMessageTimestamp(timestamp);
         response.setActive(true);
+        response.setUnread(true);
 
         assertEquals(1L, response.getThreadId());
         assertEquals("Subject", response.getSubject());
@@ -59,18 +62,20 @@ class ThreadSummaryResponseTest {
         assertEquals("Hello...", response.getLatestMessagePreview());
         assertEquals(timestamp, response.getLatestMessageTimestamp());
         assertTrue(response.isActive());
+        assertTrue(response.isUnread());
     }
 
     @Test
-    void testActiveDefaultsFalseWithNoArgsConstructor() {
+    void testActiveAndUnreadDefaultFalseWithNoArgsConstructor() {
         ThreadSummaryResponse response = new ThreadSummaryResponse();
         assertFalse(response.isActive());
+        assertFalse(response.isUnread());
     }
 
     @Test
     void testNullTimestamp() {
         ThreadSummaryResponse response = new ThreadSummaryResponse(
-                1L, "Subject", "user2", 2L, "Hello...", null, true
+                1L, "Subject", "user2", 2L, "Hello...", null, true, false
         );
         assertNull(response.getLatestMessageTimestamp());
     }
@@ -78,8 +83,16 @@ class ThreadSummaryResponseTest {
     @Test
     void testNullSubject() {
         ThreadSummaryResponse response = new ThreadSummaryResponse(
-                1L, null, "user2", 2L, "Hello...", LocalDateTime.now(), true
+                1L, null, "user2", 2L, "Hello...", LocalDateTime.now(), true, false
         );
         assertNull(response.getSubject());
+    }
+
+    @Test
+    void testUnreadFalse_whenNoNewMessages() {
+        ThreadSummaryResponse response = new ThreadSummaryResponse(
+                1L, "Subject", "user2", 2L, "Hello...", LocalDateTime.now(), true, false
+        );
+        assertFalse(response.isUnread());
     }
 }

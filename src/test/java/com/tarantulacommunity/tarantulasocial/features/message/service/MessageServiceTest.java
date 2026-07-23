@@ -6,8 +6,11 @@ import com.tarantulacommunity.tarantulasocial.features.message.dto.response.Mess
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
+import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadParticipantEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.mapper.MessageMapper;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.MessageRepository;
+import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadParticipantRepository;
+import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadReadState;
 import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
@@ -39,6 +42,7 @@ public class MessageServiceTest {
     @Mock private MessageMapper messageMapper;
     @Mock private UserRepository userRepository;
     @Mock private ThreadRepository threadRepository;
+    @Mock private ThreadParticipantRepository threadParticipantRepository;
 
     @InjectMocks
     private MessageService messageService;
@@ -412,5 +416,221 @@ public class MessageServiceTest {
         messageService.deleteThreadForUser(1L, 1L);
 
         verify(threadRepository, never()).deleteById(anyLong());
+    }
+
+    // --- sendMessage: participant tracking ---
+
+    @Test
+    void sendMessage_createsParticipantRowsForBothUsers_whenNewThread() {
+        SendMessageRequest request = new SendMessageRequest(2L, "hello", "Subject", null);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
+
+        messageService.sendMessage(1L, request);
+
+        ArgumentCaptor<ThreadParticipantEntity> captor = ArgumentCaptor.forClass(ThreadParticipantEntity.class);
+        verify(threadParticipantRepository, times(2)).save(captor.capture());
+
+        List<ThreadParticipantEntity> saved = captor.getAllValues();
+        assertThat(saved).anyMatch(p -> p.getUser().equals(sender) && p.getLastReadAt() != null);
+        assertThat(saved).anyMatch(p -> p.getUser().equals(recipient) && p.getLastReadAt() == null);
+    }
+
+    @Test
+    void sendMessage_marksSenderReadAndEnsuresRecipientRow_whenExistingThread() {
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
+        when(threadParticipantRepository.existsByThread_IdAndUser_Id(1L, 2L)).thenReturn(true);
+
+        messageService.sendMessage(1L, request);
+
+        verify(threadParticipantRepository).markRead(eq(1L), eq(1L), any(LocalDateTime.class));
+        verify(threadParticipantRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_createsMissingRecipientRow_whenExistingThreadAndRecipientRowAbsent() {
+        SendMessageRequest request = new SendMessageRequest(2L, "reply", null, 1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.save(any())).thenReturn(message);
+        when(threadRepository.save(any())).thenReturn(thread);
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
+        when(threadParticipantRepository.existsByThread_IdAndUser_Id(1L, 2L)).thenReturn(false);
+
+        messageService.sendMessage(1L, request);
+
+        ArgumentCaptor<ThreadParticipantEntity> captor = ArgumentCaptor.forClass(ThreadParticipantEntity.class);
+        verify(threadParticipantRepository).save(captor.capture());
+        assertThat(captor.getValue().getUser()).isEqualTo(recipient);
+        assertThat(captor.getValue().getLastReadAt()).isNull();
+    }
+
+    // --- getThreadsForUser: unread computation ---
+
+    @Test
+    void getThreadsForUser_marksUnread_whenLatestMessageFromOtherUserAndNeverRead() {
+        Page<ThreadEntity> threadPage = new PageImpl<>(List.of(thread));
+        message.setSender(recipient);
+        message.setRecipient(sender);
+        message.setCreatedAt(LocalDateTime.now());
+
+        when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(threadPage);
+        when(messageRepository.findLatestVisibleMessagePerThread(any(), eq(1L))).thenReturn(List.of(message));
+        when(threadParticipantRepository.findReadStatesForThreads(any(), eq(1L))).thenReturn(List.of());
+
+        Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
+
+        assertThat(result.getContent().getFirst().isUnread()).isTrue();
+    }
+
+    @Test
+    void getThreadsForUser_marksRead_whenLastReadAfterLatestMessage() {
+        Page<ThreadEntity> threadPage = new PageImpl<>(List.of(thread));
+        LocalDateTime messageTime = LocalDateTime.now().minusMinutes(5);
+        message.setSender(recipient);
+        message.setRecipient(sender);
+        message.setCreatedAt(messageTime);
+
+        ThreadReadState readState = new ThreadReadState() {
+            public Long getThreadId() { return 1L; }
+            public LocalDateTime getLastReadAt() { return messageTime.plusMinutes(1); }
+        };
+
+        when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(threadPage);
+        when(messageRepository.findLatestVisibleMessagePerThread(any(), eq(1L))).thenReturn(List.of(message));
+        when(threadParticipantRepository.findReadStatesForThreads(any(), eq(1L))).thenReturn(List.of(readState));
+
+        Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
+
+        assertThat(result.getContent().getFirst().isUnread()).isFalse();
+    }
+
+    @Test
+    void getThreadsForUser_marksRead_whenLatestMessageIsOwn() {
+        Page<ThreadEntity> threadPage = new PageImpl<>(List.of(thread));
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setCreatedAt(LocalDateTime.now());
+
+        when(messageRepository.findThreadsByUserId(1L, PageRequest.of(0, 20))).thenReturn(threadPage);
+        when(messageRepository.findLatestVisibleMessagePerThread(any(), eq(1L))).thenReturn(List.of(message));
+        when(threadParticipantRepository.findReadStatesForThreads(any(), eq(1L))).thenReturn(List.of());
+
+        Page<ThreadSummaryResponse> result = messageService.getThreadsForUser(1L, PageRequest.of(0, 20));
+
+        assertThat(result.getContent().getFirst().isUnread()).isFalse();
+    }
+
+    // --- getThreadMessages: markThreadReadIfNeeded ---
+
+    @Test
+    void getThreadMessages_marksRead_whenLatestMessageAfterLastRead() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(message)));
+        when(messageMapper.toResponse(message)).thenReturn(new MessageResponse());
+
+        LocalDateTime latest = LocalDateTime.now();
+        when(messageRepository.findLatestMessageTimestamp(1L, 1L)).thenReturn(latest);
+
+        ThreadParticipantEntity participant = new ThreadParticipantEntity(thread, sender, latest.minusMinutes(5));
+        when(threadParticipantRepository.findByThread_IdAndUser_Id(1L, 1L)).thenReturn(Optional.of(participant));
+        when(threadParticipantRepository.markRead(eq(1L), eq(1L), any(LocalDateTime.class))).thenReturn(1); // <-- add this
+
+        messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 20));
+
+        verify(threadParticipantRepository).markRead(eq(1L), eq(1L), any(LocalDateTime.class));
+    }
+
+    @Test
+    void getThreadMessages_doesNotMarkRead_whenAlreadyReadPastLatest() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(message)));
+        when(messageMapper.toResponse(message)).thenReturn(new MessageResponse());
+
+        LocalDateTime latest = LocalDateTime.now();
+        when(messageRepository.findLatestMessageTimestamp(1L, 1L)).thenReturn(latest);
+
+        ThreadParticipantEntity participant = new ThreadParticipantEntity(thread, sender, latest.plusMinutes(1));
+        when(threadParticipantRepository.findByThread_IdAndUser_Id(1L, 1L)).thenReturn(Optional.of(participant));
+
+        messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 20));
+
+        verify(threadParticipantRepository, never()).markRead(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void getThreadMessages_doesNotMarkRead_whenNoMessagesExist() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 20)))
+                .thenReturn(Page.empty());
+        when(messageRepository.findLatestMessageTimestamp(1L, 1L)).thenReturn(null);
+
+        messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 20));
+
+        verify(threadParticipantRepository, never()).markRead(anyLong(), anyLong(), any());
+    }
+
+    // --- markThreadRead ---
+
+    @Test
+    void markThreadRead_updatesExistingParticipant() {
+        when(threadParticipantRepository.markRead(eq(1L), eq(1L), any(LocalDateTime.class))).thenReturn(1);
+
+        messageService.markThreadRead(1L, 1L);
+
+        verify(threadParticipantRepository, never()).save(any());
+    }
+
+    @Test
+    void markThreadRead_createsParticipant_whenRowMissing() {
+        when(threadParticipantRepository.markRead(eq(1L), eq(1L), any(LocalDateTime.class))).thenReturn(0);
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
+
+        messageService.markThreadRead(1L, 1L);
+
+        verify(threadParticipantRepository).save(any(ThreadParticipantEntity.class));
+    }
+
+    @Test
+    void markThreadRead_throwsThreadNotFoundException_whenThreadMissing() {
+        when(threadParticipantRepository.markRead(eq(1L), eq(1L), any(LocalDateTime.class))).thenReturn(0);
+        when(threadRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
+                () -> messageService.markThreadRead(1L, 1L));
+    }
+
+    // --- hasUnreadMessages ---
+
+    @Test
+    void hasUnreadMessages_returnsTrue_whenRepositoryReturnsTrue() {
+        when(threadParticipantRepository.existsUnreadForUser(1L)).thenReturn(true);
+
+        assertTrue(messageService.hasUnreadMessages(1L));
+    }
+
+    @Test
+    void hasUnreadMessages_returnsFalse_whenRepositoryReturnsFalse() {
+        when(threadParticipantRepository.existsUnreadForUser(1L)).thenReturn(false);
+
+        assertFalse(messageService.hasUnreadMessages(1L));
     }
 }

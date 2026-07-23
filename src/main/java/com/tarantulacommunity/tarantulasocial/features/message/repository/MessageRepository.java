@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -70,4 +71,9 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
     @Query("DELETE FROM MessageEntity m WHERE m.thread.id = :threadId " +
            "AND m.deletedBySender = true AND m.deletedByRecipient = true")
     int deleteFullyDeletedMessagesInThread(@Param("threadId") Long threadId);
+
+    @Query("SELECT MAX(m.createdAt) FROM MessageEntity m WHERE m.thread.id = :threadId " +
+            "AND NOT (m.sender.id = :userId AND m.deletedBySender = true) " +
+            "AND NOT (m.recipient.id = :userId AND m.deletedByRecipient = true)")
+    LocalDateTime findLatestMessageTimestamp(@Param("threadId") Long threadId, @Param("userId") Long userId);
 }

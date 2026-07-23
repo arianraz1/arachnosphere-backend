@@ -4,6 +4,7 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.UnreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
@@ -116,7 +117,7 @@ class MessageControllerTest {
 
     @Test
     void inbox_shouldReturnPageOfThreadSummaries() {
-        ThreadSummaryResponse summary = new ThreadSummaryResponse(1L, "Subject", "user2", 2L, "Hello...", LocalDateTime.now(), true);
+        ThreadSummaryResponse summary = new ThreadSummaryResponse(1L, "Subject", "user2", 2L, "Hello...", LocalDateTime.now(), true, false);
         Page<ThreadSummaryResponse> page = new PageImpl<>(List.of(summary), PageRequest.of(0, 20), 1);
 
         when(messageService.getThreadsForUser(eq(1L), any(Pageable.class))).thenReturn(page);
@@ -190,5 +191,27 @@ class MessageControllerTest {
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageController.deleteMessage(1L, userDetailsOf(99L)));
+    }
+
+    // --- hasUnread ---
+
+    @Test
+    void hasUnread_returnsTrue_whenUserHasUnreadMessages() {
+        when(messageService.hasUnreadMessages(1L)).thenReturn(true);
+
+        ResponseEntity<UnreadStatusResponse> response = messageController.hasUnread(userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().unread()).isTrue();
+    }
+
+    @Test
+    void hasUnread_returnsFalse_whenUserHasNoUnreadMessages() {
+        when(messageService.hasUnreadMessages(1L)).thenReturn(false);
+
+        ResponseEntity<UnreadStatusResponse> response = messageController.hasUnread(userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().unread()).isFalse();
     }
 }
