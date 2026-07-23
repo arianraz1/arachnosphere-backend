@@ -6,6 +6,8 @@ import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,12 +16,18 @@ import java.util.Optional;
 @Repository
 public interface CollectionEntryRepository extends JpaRepository<CollectionEntryEntity, Long> {
 
-    // profile page: full collection
-    List<CollectionEntryEntity> findByUser(UserEntity user);
+    // profile page: paginated collection
+    Page<CollectionEntryEntity> findByUser(UserEntity user, Pageable pageable);
 
     // profile page: searchable collection
-    Page<CollectionEntryEntity> findByUserAndSpecies_ScientificNameContainingIgnoreCase(
-            UserEntity user, String scientificName, Pageable pageable);
+    @Query("SELECT c FROM CollectionEntryEntity c " +
+            "WHERE c.user = :user " +
+            "AND (LOWER(c.species.scientificName) LIKE LOWER(CONCAT('%', :term, '%')) " +
+            "OR LOWER(c.species.commonName) LIKE LOWER(CONCAT('%', :term, '%')))")
+    Page<CollectionEntryEntity> searchByUserAndTerm(
+            @Param("user") UserEntity user,
+            @Param("term") String term,
+            Pageable pageable);
 
     // species detail page: list of owners
     List<CollectionEntryEntity> findBySpecies(SpeciesEntity species);

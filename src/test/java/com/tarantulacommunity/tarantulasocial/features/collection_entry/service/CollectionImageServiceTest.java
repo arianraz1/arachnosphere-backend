@@ -95,7 +95,7 @@ class CollectionImageServiceTest {
         MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
 
         when(collectionEntryRepository.existsByIdAndUserId(ENTRY_ID, USER_ID)).thenReturn(true);
-        when(collectionImageRepository.countByCollectionId(ENTRY_ID)).thenReturn(5L);
+        when(collectionImageRepository.countByCollectionId(ENTRY_ID)).thenReturn(6L);
 
         assertThrows(GlobalExceptionHandler.ImageLimitExceededException.class, () ->
                 collectionImageService.uploadImage(USER_ID, ENTRY_ID, file, "caption"));
@@ -284,5 +284,40 @@ class CollectionImageServiceTest {
 
         assertThrows(AccessDeniedException.class, () ->
                 collectionImageService.setFeatured(99L, ENTRY_ID, 51L));
+    }
+
+    // ---------- updateCaption ----------
+
+    @Test
+    void updateCaption_updatesAndReturnsResponse() {
+        CollectionImageEntity image = CollectionImageEntity.builder()
+                .id(50L).collection(entry).s3Key("key-1").caption("old caption").featured(false).displayOrder(0).build();
+
+        when(collectionEntryRepository.existsByIdAndUserId(ENTRY_ID, USER_ID)).thenReturn(true);
+        when(collectionImageRepository.findByIdAndCollectionId(50L, ENTRY_ID)).thenReturn(Optional.of(image));
+        when(collectionImageRepository.save(any(CollectionImageEntity.class))).thenReturn(image);
+        when(s3StorageService.getImageUrl("key-1")).thenReturn("https://cdn/key-1");
+
+        CollectionImageResponse response = collectionImageService.updateCaption(USER_ID, ENTRY_ID, 50L, "new caption");
+
+        assertEquals("new caption", response.getCaption());
+        assertEquals("new caption", image.getCaption());
+    }
+
+    @Test
+    void updateCaption_throwsAccessDeniedException_whenUserDoesNotOwnEntry() {
+        when(collectionEntryRepository.existsByIdAndUserId(ENTRY_ID, 99L)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class,
+                () -> collectionImageService.updateCaption(99L, ENTRY_ID, 50L, "new caption"));
+    }
+
+    @Test
+    void updateCaption_throwsImageNotFoundException_whenImageDoesNotExist() {
+        when(collectionEntryRepository.existsByIdAndUserId(ENTRY_ID, USER_ID)).thenReturn(true);
+        when(collectionImageRepository.findByIdAndCollectionId(99L, ENTRY_ID)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.ImageNotFoundException.class,
+                () -> collectionImageService.updateCaption(USER_ID, ENTRY_ID, 99L, "new caption"));
     }
 }

@@ -145,24 +145,25 @@ class MessageControllerTest {
         MessageResponse msg = new MessageResponse();
         msg.setId(1L);
         msg.setContent("Hello");
+        Page<MessageResponse> page = new PageImpl<>(List.of(msg), PageRequest.of(0, 20), 1);
 
-        when(messageService.getThreadMessages(eq(1L), eq(1L))).thenReturn(List.of(msg));
+        when(messageService.getThreadMessages(eq(1L), eq(1L), any(Pageable.class))).thenReturn(page);
 
-        ResponseEntity<List<MessageResponse>> response =
-                messageController.getThread(1L, userDetailsOf(1L));
+        ResponseEntity<Page<MessageResponse>> response =
+                messageController.getThread(1L, userDetailsOf(1L), PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().getFirst()).isEqualTo(msg);
+        assertThat(response.getBody().getContent().getFirst()).isEqualTo(msg);
     }
 
     @Test
     void getThread_shouldThrowWhenNotPartOfThread() {
-        when(messageService.getThreadMessages(eq(1L), eq(99L)))
+        when(messageService.getThreadMessages(eq(1L), eq(99L), any(Pageable.class)))
                 .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"));
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.getThread(1L, userDetailsOf(99L)));
+                () -> messageController.getThread(1L, userDetailsOf(99L), PageRequest.of(0, 20)));
     }
 
     @Test

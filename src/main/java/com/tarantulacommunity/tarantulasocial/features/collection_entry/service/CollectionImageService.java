@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class CollectionImageService {
 
-    private static final int MAX_IMAGES_PER_ENTRY = 5;
+    private static final int MAX_IMAGES_PER_ENTRY = 6;
 
     private final S3StorageService s3StorageService;
     private final CollectionImageRepository collectionImageRepository;
@@ -111,6 +111,15 @@ public class CollectionImageService {
         target.setFeatured(true);
 
         return toResponse(collectionImageRepository.save(target));
+    }
+
+    public CollectionImageResponse updateCaption(Long userId, Long entryId, Long imageId, String caption) {
+        assertOwnsEntry(userId, entryId);
+
+        CollectionImageEntity image = findImageOrThrow(entryId, imageId);
+        image.setCaption(caption);
+
+        return toResponse(collectionImageRepository.save(image));
     }
 
     private String uploadToS3(MultipartFile file, String folder) {

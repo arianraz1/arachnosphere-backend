@@ -76,32 +76,35 @@ class CollectionEntryServiceTest {
     // images via collectionImageService, so existing tests stub that dependency too.
 
     @Test
-    void getEntriesByUser_returnsAllEntries() {
+    void getEntriesByUser_returnsPageOfEntries() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
-        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        Page<CollectionEntryEntity> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+        when(collectionEntryRepository.findByUser(user, PageRequest.of(0, 20))).thenReturn(page);
         when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+        Page<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L, PageRequest.of(0, 20));
 
-        assertEquals(1, result.size());
-        assertEquals(entryResponse, result.getFirst());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
     }
 
     @Test
     void getEntriesByUser_throwsUserNotFoundException_whenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () -> collectionEntryService.getEntriesByUser(99L));
+        assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
+                () -> collectionEntryService.getEntriesByUser(99L, PageRequest.of(0, 20)));
     }
 
     @Test
     void getEntriesByUser_returnsEmpty_whenNoEntries() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of());
+        Page<CollectionEntryEntity> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+        when(collectionEntryRepository.findByUser(user, PageRequest.of(0, 20))).thenReturn(page);
         when(collectionImageService.listImagesByCollectionIds(List.of())).thenReturn(Map.of());
 
-        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+        Page<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L, PageRequest.of(0, 20));
 
         assertTrue(result.isEmpty());
     }
@@ -111,29 +114,30 @@ class CollectionEntryServiceTest {
         CollectionImageResponse image = new CollectionImageResponse(100L, "https://cdn/img.jpg", "cap", true, 0);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
-        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        Page<CollectionEntryEntity> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+        when(collectionEntryRepository.findByUser(user, PageRequest.of(0, 20))).thenReturn(page);
         when(collectionImageService.listImagesByCollectionIds(List.of(1L)))
                 .thenReturn(Map.of(1L, List.of(image)));
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+        Page<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L, PageRequest.of(0, 20));
 
-        assertEquals(List.of(image), result.getFirst().getImages());
-        // confirms the batched call is used, not per-entry listImages()
+        assertEquals(List.of(image), result.getContent().getFirst().getImages());
         verify(collectionImageService, never()).listImages(anyLong());
     }
 
     @Test
     void getEntriesByUser_entryWithNoImages_defaultsToEmptyList() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(collectionEntryRepository.findByUser(user)).thenReturn(List.of(entry));
-        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        Page<CollectionEntryEntity> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+        when(collectionEntryRepository.findByUser(user, PageRequest.of(0, 20))).thenReturn(page);
         when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        List<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L);
+        Page<CollectionEntryResponse> result = collectionEntryService.getEntriesByUser(1L, PageRequest.of(0, 20));
 
-        assertNotNull(result.getFirst().getImages());
-        assertTrue(result.getFirst().getImages().isEmpty());
+        assertNotNull(result.getContent().getFirst().getImages());
+        assertTrue(result.getContent().getFirst().getImages().isEmpty());
     }
 
     @Test
@@ -141,7 +145,7 @@ class CollectionEntryServiceTest {
         Page<CollectionEntryEntity> page = new PageImpl<>(List.of(entry));
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(collectionEntryRepository.findByUserAndSpecies_ScientificNameContainingIgnoreCase(
+        when(collectionEntryRepository.searchByUserAndTerm(
                 user, "Chromato", PageRequest.of(0, 10))).thenReturn(page);
         when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
         when(collectionImageService.listImagesByCollectionIds(List.of(1L))).thenReturn(Map.of());
@@ -192,11 +196,44 @@ class CollectionEntryServiceTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    void getEntryById_returnsEntry() {
+        when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImages(1L)).thenReturn(List.of());
+
+        CollectionEntryResponse result = collectionEntryService.getEntryById(1L);
+
+        assertEquals(entryResponse, result);
+    }
+
+    @Test
+    void getEntryById_throwsCollectionEntryNotFoundException_whenNotFound() {
+        when(collectionEntryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class, () ->
+                collectionEntryService.getEntryById(99L));
+    }
+
+    @Test
+    void getEntryById_populatesImages() {
+        CollectionImageResponse image = new CollectionImageResponse(100L, "https://cdn/img.jpg", "cap", true, 0);
+
+        when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
+        when(collectionEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+        when(collectionImageService.listImages(1L)).thenReturn(List.of(image));
+
+        CollectionEntryResponse result = collectionEntryService.getEntryById(1L);
+
+        assertEquals(List.of(image), result.getImages());
+    }
+
     // ---------- CREATE (INSERT) ----------
     @Test
     void createEntry_savesAndReturnsEntryResult_whenNoDuplicate() {
         CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
         request.setSpeciesId(1L);
+        request.setAdultMale(1);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
@@ -259,6 +296,30 @@ class CollectionEntryServiceTest {
     }
 
     @Test
+    void createEntry_throwsBadRequestException_whenAllTarantulaCountsAreZero() {
+        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
+        request.setSpeciesId(1L);
+        request.setSlingMale(0);
+        request.setSlingFemale(0);
+        request.setSlingUnsexed(0);
+        request.setJuvenileMale(0);
+        request.setJuvenileFemale(0);
+        request.setJuvenileUnsexed(0);
+        request.setSubadultMale(0);
+        request.setSubadultFemale(0);
+        request.setSubadultUnsexed(0);
+        request.setAdultMale(0);
+        request.setAdultFemale(0);
+        request.setAdultUnsexed(0);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(speciesRepository.findById(1L)).thenReturn(Optional.of(species));
+
+        assertThrows(GlobalExceptionHandler.BadRequestException.class, () ->
+                collectionEntryService.createEntry(1L, request));
+    }
+
+    @Test
     void updateEntry_updatesAndReturnsResponse() {
         UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
         request.setAdultMale(3);
@@ -289,6 +350,28 @@ class CollectionEntryServiceTest {
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class, () ->
                 collectionEntryService.updateEntry(1L, 99L, new UpdateCollectionEntryRequest()));
+    }
+
+    @Test
+    void updateEntry_throwsBadRequestException_whenAllTarantulaCountsAreZero() {
+        UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
+        request.setSlingMale(0);
+        request.setSlingFemale(0);
+        request.setSlingUnsexed(0);
+        request.setJuvenileMale(0);
+        request.setJuvenileFemale(0);
+        request.setJuvenileUnsexed(0);
+        request.setSubadultMale(0);
+        request.setSubadultFemale(0);
+        request.setSubadultUnsexed(0);
+        request.setAdultMale(0);
+        request.setAdultFemale(0);
+        request.setAdultUnsexed(0);
+
+        when(collectionEntryRepository.findById(1L)).thenReturn(Optional.of(entry));
+
+        assertThrows(GlobalExceptionHandler.BadRequestException.class, () ->
+                collectionEntryService.updateEntry(1L, 1L, request));
     }
 
     @Test

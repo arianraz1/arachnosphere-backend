@@ -35,17 +35,18 @@ public class CollectionEntryRepositoryTest {
         CollectionEntryEntity entry1 = em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
         CollectionEntryEntity entry2 = em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
 
-        List<CollectionEntryEntity> result = repository.findByUser(user);
+        Page<CollectionEntryEntity> result = repository.findByUser(user, PageRequest.of(0, 10));
 
-        assertEquals(2, result.size());
-        assertTrue(result.containsAll(List.of(entry1, entry2)));
+        assertEquals(2, result.getTotalElements());
+        assertEquals(2, result.getContent().size());
+        assertTrue(result.getContent().containsAll(List.of(entry1, entry2)));
     }
 
     @Test
     void findByUser_returnsEmpty_whenUserHasNoEntries() {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
 
-        List<CollectionEntryEntity> result = repository.findByUser(user);
+        Page<CollectionEntryEntity> result = repository.findByUser(user, PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
     }
@@ -58,9 +59,47 @@ public class CollectionEntryRepositoryTest {
 
         em.persistFlushFind(TestUtilities.validCollectionEntry(user2, gbb));
 
-        List<CollectionEntryEntity> result = repository.findByUser(user1);
+        Page<CollectionEntryEntity> result = repository.findByUser(user1, PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findByUser_respectsPageSize() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+
+        SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+        SpeciesEntity ph = em.persistFlushFind(TestUtilities.validSpecies(3L, "Poecilotheria metallica"));
+
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, ph));
+
+        Page<CollectionEntryEntity> result = repository.findByUser(user, PageRequest.of(0, 2));
+
+        assertEquals(3, result.getTotalElements());
+        assertEquals(2, result.getContent().size());
+    }
+
+    @Test
+    void findByUser_supportsPagination() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+
+        SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+        SpeciesEntity ph = em.persistFlushFind(TestUtilities.validSpecies(3L, "Poecilotheria metallica"));
+
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, ph));
+
+        Page<CollectionEntryEntity> page1 = repository.findByUser(user, PageRequest.of(0, 2));
+        Page<CollectionEntryEntity> page2 = repository.findByUser(user, PageRequest.of(1, 2));
+
+        assertEquals(3, page1.getTotalElements());
+        assertEquals(2, page1.getContent().size());
+        assertEquals(1, page2.getContent().size());
     }
 
     @Test
@@ -183,7 +222,7 @@ public class CollectionEntryRepositoryTest {
     }
 
     @Test
-    void findByUserAndSpecies_ScientificNameContainingIgnoreCase_returnsMatchingEntries() {
+    void searchByUserAndTerm_returnsMatchingEntries_byScientificName() {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
@@ -192,27 +231,45 @@ public class CollectionEntryRepositoryTest {
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
 
         Page<CollectionEntryEntity> result = repository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, "Chromatopelma", PageRequest.of(0, 10));
+                .searchByUserAndTerm(user, "Chromatopelma", PageRequest.of(0, 10));
 
         assertEquals(1, result.getTotalElements());
         assertEquals(entry1, result.getContent().getFirst());
     }
 
     @Test
-    void findByUserAndSpecies_ScientificNameContainingIgnoreCase_isCaseInsensitive() {
+    void searchByUserAndTerm_returnsMatchingEntries_byCommonName() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        SpeciesEntity gbb = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        gbb.setCommonName("Green Bottle Blue");
+        em.persistFlushFind(gbb);
+        SpeciesEntity bh = em.persistFlushFind(TestUtilities.validSpecies(2L, "Brachypelma hamorii"));
+
+        CollectionEntryEntity entry1 = em.persistFlushFind(TestUtilities.validCollectionEntry(user, gbb));
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user, bh));
+
+        Page<CollectionEntryEntity> result = repository
+                .searchByUserAndTerm(user, "Green Bottle", PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(entry1, result.getContent().getFirst());
+    }
+
+    @Test
+    void searchByUserAndTerm_isCaseInsensitive() {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         CollectionEntryEntity entry = em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 
         Page<CollectionEntryEntity> result = repository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, "chromatopelma", PageRequest.of(0, 10));
+                .searchByUserAndTerm(user, "chromatopelma", PageRequest.of(0, 10));
 
         assertEquals(1, result.getTotalElements());
         assertEquals(entry, result.getContent().getFirst());
     }
 
     @Test
-    void findByUserAndSpecies_ScientificNameContainingIgnoreCase_doesNotReturnOtherUsersEntries() {
+    void searchByUserAndTerm_doesNotReturnOtherUsersEntries() {
         UserEntity user1 = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         UserEntity user2 = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
@@ -220,19 +277,39 @@ public class CollectionEntryRepositoryTest {
         em.persistFlushFind(TestUtilities.validCollectionEntry(user2, species));
 
         Page<CollectionEntryEntity> result = repository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user1, "Chromatopelma", PageRequest.of(0, 10));
+                .searchByUserAndTerm(user1, "Chromatopelma", PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void findByUserAndSpecies_ScientificNameContainingIgnoreCase_returnsEmpty_whenNoMatch() {
+    void searchByUserAndTerm_doesNotReturnOtherUsersEntries_whenMatchingOnCommonName() {
+        // Regression test for the Or-precedence bug: a naive derived query
+        // (findByUserAndScientificNameContainingIgnoreCaseOrCommonNameContainingIgnoreCase)
+        // parses as (user = ?1 AND scientificName LIKE ?2) OR commonName LIKE ?3,
+        // which leaks other users' entries whenever the common name matches.
+        UserEntity user1 = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        UserEntity user2 = em.persistFlushFind(TestUtilities.verifiedUser("2", "2"));
+        SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
+        species.setCommonName("Green Bottle Blue");
+        em.persistFlushFind(species);
+
+        em.persistFlushFind(TestUtilities.validCollectionEntry(user2, species));
+
+        Page<CollectionEntryEntity> result = repository
+                .searchByUserAndTerm(user1, "Green Bottle", PageRequest.of(0, 10));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchByUserAndTerm_returnsEmpty_whenNoMatch() {
         UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
         SpeciesEntity species = em.persistFlushFind(TestUtilities.validSpecies(1L, "Chromatopelma cyaneopubescens"));
         em.persistFlushFind(TestUtilities.validCollectionEntry(user, species));
 
         Page<CollectionEntryEntity> result = repository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, "Nonexistent", PageRequest.of(0, 10));
+                .searchByUserAndTerm(user, "Nonexistent", PageRequest.of(0, 10));
 
         assertTrue(result.isEmpty());
     }

@@ -125,20 +125,13 @@ public class MessageService {
         });
     }
 
-    public List<MessageResponse> getThreadMessages(Long threadId, Long userId) {
+    public Page<MessageResponse> getThreadMessages(Long threadId, Long userId, Pageable pageable) {
         if (!messageRepository.hasVisibleMessageInThread(threadId, userId)) {
             throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
         }
 
-        return messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId)
-                .stream()
-                .filter(m -> {
-                    if (m.getSender().getId().equals(userId)) return !m.isDeletedBySender();
-                    if (m.getRecipient().getId().equals(userId)) return !m.isDeletedByRecipient();
-                    return true;
-                })
-                .map(messageMapper::toResponse)
-                .collect(Collectors.toList());
+        return messageRepository.findVisibleMessagesByThreadId(threadId, userId, pageable)
+                .map(messageMapper::toResponse);
     }
 
     @Transactional
@@ -168,38 +161,10 @@ public class MessageService {
             throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
         }
 
-        List<MessageEntity> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+        messageRepository.markDeletedBySenderForThread(threadId, userId);
+        messageRepository.markDeletedByRecipientForThread(threadId, userId);
+        messageRepository.deleteFullyDeletedMessagesInThread(threadId);
 
-        if (messages.isEmpty()) {
-            return; // nothing to do
-        }
-
-        // Apply per-side soft-delete consistently with deleteMessage
-        for (MessageEntity m : messages) {
-            if (m.getSender() != null && m.getSender().getId().equals(userId)) {
-                m.setDeletedBySender(true);
-            }
-            if (m.getRecipient() != null && m.getRecipient().getId().equals(userId)) {
-                m.setDeletedByRecipient(true);
-            }
-        }
-
-        // Persist: delete fully deleted, save the rest
-        List<MessageEntity> toDelete = messages.stream()
-                .filter(m -> m.isDeletedBySender() && m.isDeletedByRecipient())
-                .toList();
-        List<MessageEntity> toSave = messages.stream()
-                .filter(m -> !(m.isDeletedBySender() && m.isDeletedByRecipient()))
-                .toList();
-
-        if (!toDelete.isEmpty()) {
-            messageRepository.deleteAll(toDelete);
-        }
-        if (!toSave.isEmpty()) {
-            messageRepository.saveAll(toSave);
-        }
-
-        // If there are no messages left in the thread at all, remove the thread itself
         if (!messageRepository.existsByThreadId(threadId)) {
             threadRepository.deleteById(threadId);
         }

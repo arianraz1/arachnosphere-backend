@@ -35,12 +35,16 @@ public class CollectionEntryService {
     private final SpeciesRepository speciesRepository;
     private final CollectionImageService collectionImageService;
 
-    public List<CollectionEntryResponse> getEntriesByUser(Long userId) {
+    public Page<CollectionEntryResponse> getEntriesByUser(Long userId, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
-        List<CollectionEntryEntity> entries = collectionEntryRepository.findByUser(user);
-        return toResponsesWithImages(entries);
+        Page<CollectionEntryEntity> page = collectionEntryRepository.findByUser(user, pageable);
+
+        Map<Long, List<CollectionImageResponse>> imagesByEntryId =
+                collectionImageService.listImagesByCollectionIds(idsOf(page.getContent()));
+
+        return page.map(entity -> toResponseWithImages(entity, imagesByEntryId));
     }
 
     public List<CollectionEntryResponse> getEntriesBySpecies(Long speciesId) {
@@ -51,12 +55,18 @@ public class CollectionEntryService {
         return toResponsesWithImages(entries);
     }
 
+    public CollectionEntryResponse getEntryById(Long entryId) {
+        CollectionEntryEntity entry = collectionEntryRepository.findById(entryId)
+                .orElseThrow(() -> new GlobalExceptionHandler.CollectionEntryNotFoundException(entryId));
+        return toResponseWithImages(entry);
+    }
+
     public Page<CollectionEntryResponse> searchEntriesByUser(Long userId, String query, Pageable pageable) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(userId));
 
         Page<CollectionEntryEntity> page = collectionEntryRepository
-                .findByUserAndSpecies_ScientificNameContainingIgnoreCase(user, query, pageable);
+                .searchByUserAndTerm(user, query, pageable);
 
         Map<Long, List<CollectionImageResponse>> imagesByEntryId =
                 collectionImageService.listImagesByCollectionIds(idsOf(page.getContent()));
@@ -71,6 +81,8 @@ public class CollectionEntryService {
 
         SpeciesEntity species = speciesRepository.findById(request.getSpeciesId())
                 .orElseThrow(() -> new GlobalExceptionHandler.SpeciesNotFoundException(request.getSpeciesId()));
+
+        validateTarantulaCounts(request);
 
         Optional<CollectionEntryEntity> existing = collectionEntryRepository
                 .findByUserAndSpecies(user, species);
@@ -96,6 +108,8 @@ public class CollectionEntryService {
 
         assertOwnership(entry, userId);
 
+        validateTarantulaCounts(request);
+
         return applyUpdate(entry, request);
     }
 
@@ -112,6 +126,28 @@ public class CollectionEntryService {
     private void assertOwnership(CollectionEntryEntity entry, Long userId) {
         if (!entry.getUser().getId().equals(userId)) {
             throw new GlobalExceptionHandler.UnauthorizedException("You do not own this collection entry");
+        }
+    }
+
+    private void validateTarantulaCounts(CreateCollectionEntryRequest request) {
+        int total = request.getSlingMale() + request.getSlingFemale() + request.getSlingUnsexed()
+                + request.getJuvenileMale() + request.getJuvenileFemale() + request.getJuvenileUnsexed()
+                + request.getSubadultMale() + request.getSubadultFemale() + request.getSubadultUnsexed()
+                + request.getAdultMale() + request.getAdultFemale() + request.getAdultUnsexed();
+
+        if (total == 0) {
+            throw new GlobalExceptionHandler.BadRequestException("At least one tarantula must be owned to assert ownership of the species");
+        }
+    }
+
+    private void validateTarantulaCounts(UpdateCollectionEntryRequest request) {
+        int total = request.getSlingMale() + request.getSlingFemale() + request.getSlingUnsexed()
+                + request.getJuvenileMale() + request.getJuvenileFemale() + request.getJuvenileUnsexed()
+                + request.getSubadultMale() + request.getSubadultFemale() + request.getSubadultUnsexed()
+                + request.getAdultMale() + request.getAdultFemale() + request.getAdultUnsexed();
+
+        if (total == 0) {
+            throw new GlobalExceptionHandler.BadRequestException("At least one tarantula must be owned to assert ownership of the species");
         }
     }
 

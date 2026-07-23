@@ -29,8 +29,10 @@ public class CollectionEntryController {
     private final CollectionImageService collectionImageService;
 
     @GetMapping("/users/{userId}/collection")
-    public ResponseEntity<List<CollectionEntryResponse>> getByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(collectionEntryService.getEntriesByUser(userId));
+    public ResponseEntity<Page<CollectionEntryResponse>> getByUser(
+            @PathVariable Long userId,
+            @PageableDefault(size = 20, sort = "species.scientificName") Pageable pageable) {
+        return ResponseEntity.ok(collectionEntryService.getEntriesByUser(userId, pageable));
     }
 
     @GetMapping("/users/{userId}/collection/search")
@@ -39,6 +41,11 @@ public class CollectionEntryController {
             @RequestParam(defaultValue = "") String query,
             @PageableDefault(size = 20, sort = "species.scientificName") Pageable pageable) {
         return ResponseEntity.ok(collectionEntryService.searchEntriesByUser(userId, query, pageable));
+    }
+
+    @GetMapping("/collection/{entryId}")
+    public ResponseEntity<CollectionEntryResponse> getById(@PathVariable Long entryId) {
+        return ResponseEntity.ok(collectionEntryService.getEntryById(entryId));
     }
 
     @GetMapping("/collection/species/{speciesId}")
@@ -101,5 +108,14 @@ public class CollectionEntryController {
             @PathVariable Long imageId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(collectionImageService.setFeatured(userDetails.getId(), entryId, imageId));
+    }
+
+    @PutMapping("/collection/{entryId}/images/{imageId}/caption")
+    public ResponseEntity<CollectionImageResponse> updateCaption(
+            @PathVariable Long entryId,
+            @PathVariable Long imageId,
+            @RequestParam String caption,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(collectionImageService.updateCaption(userDetails.getId(), entryId, imageId, caption));
     }
 }

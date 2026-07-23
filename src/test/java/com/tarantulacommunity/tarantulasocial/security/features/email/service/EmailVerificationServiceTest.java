@@ -40,7 +40,7 @@ class EmailVerificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(emailVerificationService, "baseUrl", "http://localhost:8080");
+        ReflectionTestUtils.setField(emailVerificationService, "frontendUrl", "http://localhost:5173");
         user = new UserEntity();
         user.setId(1L);
         user.setEmail("user@example.com");

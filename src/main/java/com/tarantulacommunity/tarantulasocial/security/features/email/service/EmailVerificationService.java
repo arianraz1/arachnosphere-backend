@@ -27,8 +27,8 @@ public class EmailVerificationService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Value("${app.base-url}")
-    private String baseUrl;
+    @Value("${app.cors.allowed-origin}")
+    private String frontendUrl;
 
     private static final int TOKEN_EXPIRY_HOURS = 24;
     private static final long RESEND_COOLDOWN_SECONDS = 60;
@@ -53,7 +53,7 @@ public class EmailVerificationService {
         tokenEntity.setExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRY_HOURS));
         tokenRepository.save(tokenEntity);
 
-        String verificationLink = baseUrl + "/api/v1/auth/verify-email?token=" + token;
+        String verificationLink = frontendUrl + "/verify-email?token=" + token;
 
         eventPublisher.publishEvent(new VerificationEmailRequestedEvent(
                 user.getId(), user.getEmail(), user.getUsername(), verificationLink));
@@ -75,7 +75,7 @@ public class EmailVerificationService {
                     return newToken;
                 });
 
-        String verificationLink = baseUrl + "/api/v1/auth/verify-email?token=" + token;
+        String verificationLink = frontendUrl + "/verify-email?token=" + token;
 
         eventPublisher.publishEvent(new DeletionWarningEmailRequestedEvent(
                 user.getId(), user.getEmail(), user.getUsername(), verificationLink));

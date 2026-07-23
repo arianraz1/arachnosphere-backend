@@ -5,6 +5,7 @@ import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEnti
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +15,16 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
 
-    List<MessageEntity> findByThreadIdOrderByCreatedAtAsc(Long threadId);
+    @Query("SELECT m FROM MessageEntity m WHERE m.thread.id = :threadId " +
+            "AND NOT (m.sender.id = :userId AND m.deletedBySender = true) " +
+            "AND NOT (m.recipient.id = :userId AND m.deletedByRecipient = true) " +
+            "ORDER BY m.createdAt DESC")
+    Page<MessageEntity> findVisibleMessagesByThreadId(
+            @Param("threadId") Long threadId,
+            @Param("userId") Long userId,
+            Pageable pageable);
+
+    Page<MessageEntity> findByThreadIdOrderByCreatedAtDesc(Long threadId, Pageable pageable);
 
     @Query(value = "SELECT DISTINCT m.thread FROM MessageEntity m " +
             "WHERE (m.sender.id = :userId AND m.deletedBySender = false) " +
@@ -45,4 +55,19 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
 
     // Derived query to check if any messages still exist for a thread
     boolean existsByThreadId(Long threadId);
+
+    @Modifying
+    @Query("UPDATE MessageEntity m SET m.deletedBySender = true " +
+           "WHERE m.thread.id = :threadId AND m.sender.id = :userId AND m.deletedBySender = false")
+    int markDeletedBySenderForThread(@Param("threadId") Long threadId, @Param("userId") Long userId);
+
+    @Modifying
+    @Query("UPDATE MessageEntity m SET m.deletedByRecipient = true " +
+           "WHERE m.thread.id = :threadId AND m.recipient.id = :userId AND m.deletedByRecipient = false")
+    int markDeletedByRecipientForThread(@Param("threadId") Long threadId, @Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM MessageEntity m WHERE m.thread.id = :threadId " +
+           "AND m.deletedBySender = true AND m.deletedByRecipient = true")
+    int deleteFullyDeletedMessagesInThread(@Param("threadId") Long threadId);
 }

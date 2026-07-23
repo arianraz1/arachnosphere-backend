@@ -51,27 +51,49 @@ class CollectionEntryControllerTest {
     }
 
     @Test
-    void getByUser_shouldReturnListOfEntries() {
+    void getById_shouldReturnEntry() {
         CollectionEntryResponse entry = new CollectionEntryResponse();
         entry.setId(1L);
-        List<CollectionEntryResponse> entries = List.of(entry);
 
-        when(collectionEntryService.getEntriesByUser(1L)).thenReturn(entries);
+        when(collectionEntryService.getEntryById(1L)).thenReturn(entry);
 
-        ResponseEntity<List<CollectionEntryResponse>> response = collectionEntryController.getByUser(1L);
+        ResponseEntity<CollectionEntryResponse> response = collectionEntryController.getById(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(entry);
+    }
+
+    @Test
+    void getById_shouldThrowWhenEntryNotFound() {
+        when(collectionEntryService.getEntryById(99L))
+                .thenThrow(new GlobalExceptionHandler.CollectionEntryNotFoundException(99L));
+
+        assertThrows(GlobalExceptionHandler.CollectionEntryNotFoundException.class,
+                () -> collectionEntryController.getById(99L));
+    }
+
+    @Test
+    void getByUser_shouldReturnPageOfEntries() {
+        CollectionEntryResponse entry = new CollectionEntryResponse();
+        entry.setId(1L);
+        Page<CollectionEntryResponse> page = new PageImpl<>(List.of(entry), PageRequest.of(0, 20), 1);
+
+        when(collectionEntryService.getEntriesByUser(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        ResponseEntity<Page<CollectionEntryResponse>> response = collectionEntryController.getByUser(1L, PageRequest.of(0, 20));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().getFirst()).isEqualTo(entry);
+        assertThat(response.getBody().getContent().getFirst()).isEqualTo(entry);
     }
 
     @Test
     void getByUser_shouldThrowWhenUserNotFound() {
-        when(collectionEntryService.getEntriesByUser(99L))
+        when(collectionEntryService.getEntriesByUser(eq(99L), any(Pageable.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(99L));
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
-                () -> collectionEntryController.getByUser(99L));
+                () -> collectionEntryController.getByUser(99L, PageRequest.of(0, 20)));
     }
 
     @Test
@@ -227,6 +249,17 @@ class CollectionEntryControllerTest {
     }
 
     @Test
+    void create_shouldThrowWhenAllTarantulaCountsAreZero() {
+        CreateCollectionEntryRequest request = new CreateCollectionEntryRequest();
+
+        when(collectionEntryService.createEntry(eq(1L), any(CreateCollectionEntryRequest.class)))
+                .thenThrow(new GlobalExceptionHandler.BadRequestException("At least one tarantula must be owned to assert ownership of the species"));
+
+        assertThrows(GlobalExceptionHandler.BadRequestException.class,
+                () -> collectionEntryController.create(userDetailsOf(1L), request));
+    }
+
+    @Test
     void update_shouldReturnUpdatedEntry() {
         UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
         CollectionEntryResponse expectedResponse = new CollectionEntryResponse();
@@ -262,6 +295,17 @@ class CollectionEntryControllerTest {
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> collectionEntryController.update(1L, userDetailsOf(99L), request));
+    }
+
+    @Test
+    void update_shouldThrowWhenAllTarantulaCountsAreZero() {
+        UpdateCollectionEntryRequest request = new UpdateCollectionEntryRequest();
+
+        when(collectionEntryService.updateEntry(eq(1L), eq(1L), any(UpdateCollectionEntryRequest.class)))
+                .thenThrow(new GlobalExceptionHandler.BadRequestException("At least one tarantula must be owned to assert ownership of the species"));
+
+        assertThrows(GlobalExceptionHandler.BadRequestException.class,
+                () -> collectionEntryController.update(1L, userDetailsOf(1L), request));
     }
 
     @Test
@@ -333,7 +377,7 @@ class CollectionEntryControllerTest {
         MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
 
         when(collectionImageService.uploadImage(eq(1L), eq(10L), eq(file), isNull()))
-                .thenThrow(new GlobalExceptionHandler.ImageLimitExceededException("Maximum of 5 images per collection entry reached"));
+                .thenThrow(new GlobalExceptionHandler.ImageLimitExceededException("Maximum of 6 images per collection entry reached"));
 
         assertThrows(GlobalExceptionHandler.ImageLimitExceededException.class,
                 () -> collectionEntryController.uploadImage(10L, file, null, userDetailsOf(1L)));
@@ -396,5 +440,37 @@ class CollectionEntryControllerTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> collectionEntryController.setFeatured(10L, 5L, userDetailsOf(99L)));
+    }
+
+    @Test
+    void updateCaption_shouldReturnUpdatedImage() {
+        CollectionImageResponse expected = new CollectionImageResponse(5L, "https://cdn/img.jpg", "new caption", false, 0);
+
+        when(collectionImageService.updateCaption(eq(1L), eq(10L), eq(5L), eq("new caption")))
+                .thenReturn(expected);
+
+        org.springframework.http.ResponseEntity<CollectionImageResponse> response =
+                collectionEntryController.updateCaption(10L, 5L, "new caption", userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getCaption()).isEqualTo("new caption");
+    }
+
+    @Test
+    void updateCaption_shouldThrowWhenUnauthorized() {
+        doThrow(new AccessDeniedException("You do not have permission to modify this collection entry"))
+                .when(collectionImageService).updateCaption(eq(99L), eq(10L), eq(5L), anyString());
+
+        assertThrows(AccessDeniedException.class,
+                () -> collectionEntryController.updateCaption(10L, 5L, "caption", userDetailsOf(99L)));
+    }
+
+    @Test
+    void updateCaption_shouldThrowWhenImageNotFound() {
+        doThrow(new GlobalExceptionHandler.ImageNotFoundException("Image not found in this collection entry"))
+                .when(collectionImageService).updateCaption(eq(1L), eq(10L), eq(99L), anyString());
+
+        assertThrows(GlobalExceptionHandler.ImageNotFoundException.class,
+                () -> collectionEntryController.updateCaption(10L, 99L, "caption", userDetailsOf(1L)));
     }
 }

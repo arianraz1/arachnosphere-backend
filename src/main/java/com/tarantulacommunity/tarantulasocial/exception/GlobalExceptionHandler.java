@@ -78,6 +78,12 @@ public class GlobalExceptionHandler {
         }
     }
 
+    public static class BadRequestException extends RuntimeException {
+        public BadRequestException(String message) {
+            super(message);
+        }
+    }
+
     public static class UsernameAlreadyTakenException extends RuntimeException {
         public UsernameAlreadyTakenException(String username) {
             super("Username already taken: " + username);
@@ -235,6 +241,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiError(e.getMessage(), "UNAUTHORIZED"));
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiError> handleBadRequest(BadRequestException e) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError(e.getMessage(), "BAD_REQUEST"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

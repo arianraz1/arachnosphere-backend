@@ -9,13 +9,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/messages")
@@ -43,10 +42,11 @@ public class MessageController {
 
     // Open a thread: all messages in it
     @GetMapping("/inbox/thread/{threadId}")
-    public ResponseEntity<List<MessageResponse>> getThread(
+    public ResponseEntity<Page<MessageResponse>> getThread(
             @PathVariable Long threadId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(messageService.getThreadMessages(threadId, userDetails.getId()));
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(messageService.getThreadMessages(threadId, userDetails.getId(), pageable));
     }
 
     // Soft delete a message from your view

@@ -242,13 +242,14 @@ public class MessageServiceTest {
     void getThreadMessages_returnsMessages_whenUserIsPartOfThread() {
         MessageResponse expectedResponse = new MessageResponse();
         when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(message)));
         when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
 
-        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
+        Page<MessageResponse> result = messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 20));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst()).isEqualTo(expectedResponse);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst()).isEqualTo(expectedResponse);
     }
 
     @Test
@@ -256,52 +257,40 @@ public class MessageServiceTest {
         when(messageRepository.hasVisibleMessageInThread(1L, 99L)).thenReturn(false);
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageService.getThreadMessages(1L, 99L));
+                () -> messageService.getThreadMessages(1L, 99L, PageRequest.of(0, 20)));
     }
 
     @Test
-    void getThreadMessages_returnsEmptyList_whenNoMessages() {
+    void getThreadMessages_returnsEmptyPage_whenNoMessages() {
         when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 20)))
+                .thenReturn(Page.empty());
 
-        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
+        Page<MessageResponse> result = messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 20));
 
-        assertThat(result).isEmpty();
+        assertThat(result.isEmpty()).isTrue();
     }
 
     @Test
-    void getThreadMessages_filtersSenderDeletedMessages() {
-        message.setDeletedBySender(true);
+    void getThreadMessages_respectsPagination() {
+        MessageEntity message1 = new MessageEntity();
+        message1.setId(1L);
+        message1.setSender(sender);
+        message1.setRecipient(recipient);
+
+        MessageEntity message2 = new MessageEntity();
+        message2.setId(2L);
+        message2.setSender(sender);
+        message2.setRecipient(recipient);
+
         when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
+        when(messageRepository.findVisibleMessagesByThreadId(1L, 1L, PageRequest.of(0, 2)))
+                .thenReturn(new PageImpl<>(List.of(message1, message2)));
+        when(messageMapper.toResponse(any())).thenReturn(new MessageResponse());
 
-        List<MessageResponse> result = messageService.getThreadMessages(1L, 1L);
+        Page<MessageResponse> result = messageService.getThreadMessages(1L, 1L, PageRequest.of(0, 2));
 
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getThreadMessages_filtersRecipientDeletedMessages() {
-        message.setDeletedByRecipient(true);
-        when(messageRepository.hasVisibleMessageInThread(1L, 2L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
-
-        List<MessageResponse> result = messageService.getThreadMessages(1L, 2L);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getThreadMessages_doesNotFilterMessageDeletedByOtherSide() {
-        message.setDeletedBySender(true);
-        MessageResponse expectedResponse = new MessageResponse();
-        when(messageRepository.hasVisibleMessageInThread(1L, 2L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(message));
-        when(messageMapper.toResponse(message)).thenReturn(expectedResponse);
-
-        List<MessageResponse> result = messageService.getThreadMessages(1L, 2L);
-
-        assertThat(result).hasSize(1);
+        assertThat(result.getContent()).hasSize(2);
     }
 
     // --- deleteMessage ---
@@ -356,42 +345,18 @@ public class MessageServiceTest {
     // --- deleteThreadForUser ---
 
     @Test
-    void deleteThreadForUser_softDeletesAllMySide_andDeletesFullyDeletedOnes() {
-        // Prepare two messages in the same thread
-        MessageEntity mine = new MessageEntity();
-        mine.setId(10L);
-        mine.setSender(sender); // I am sender
-        mine.setRecipient(recipient);
-        mine.setThread(thread);
-
-        MessageEntity theirsButToMe = new MessageEntity();
-        theirsButToMe.setId(11L);
-        UserEntity other = new UserEntity();
-        other.setId(3L);
-        theirsButToMe.setSender(other); // other sent to me
-        theirsButToMe.setRecipient(sender); // I am recipient
-        theirsButToMe.setThread(thread);
-        // Simulate that the other side already deleted this message on their side
-        theirsButToMe.setDeletedBySender(true);
-
+    void deleteThreadForUser_callsBulkQueries() {
         when(messageRepository.isUserParticipantInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(mine, theirsButToMe));
+        when(messageRepository.markDeletedBySenderForThread(1L, 1L)).thenReturn(1);
+        when(messageRepository.markDeletedByRecipientForThread(1L, 1L)).thenReturn(1);
+        when(messageRepository.deleteFullyDeletedMessagesInThread(1L)).thenReturn(0);
+        when(messageRepository.existsByThreadId(1L)).thenReturn(true);
 
         messageService.deleteThreadForUser(1L, 1L);
 
-        // After operation: 'mine' should be soft-deleted by sender only -> saved, not deleted
-        assertTrue(mine.isDeletedBySender());
-        assertFalse(mine.isDeletedByRecipient());
-        // 'theirsButToMe' should be deleted by both sides -> hard-deleted
-        assertTrue(theirsButToMe.isDeletedByRecipient());
-
-        ArgumentCaptor<List<MessageEntity>> saveAllCaptor = ArgumentCaptor.forClass(List.class);
-        verify(messageRepository).saveAll(saveAllCaptor.capture());
-        assertThat(saveAllCaptor.getValue()).contains(mine).doesNotContain(theirsButToMe);
-
-        ArgumentCaptor<List<MessageEntity>> deleteAllCaptor = ArgumentCaptor.forClass(List.class);
-        verify(messageRepository).deleteAll(deleteAllCaptor.capture());
-        assertThat(deleteAllCaptor.getValue()).contains(theirsButToMe);
+        verify(messageRepository).markDeletedBySenderForThread(1L, 1L);
+        verify(messageRepository).markDeletedByRecipientForThread(1L, 1L);
+        verify(messageRepository).deleteFullyDeletedMessagesInThread(1L);
     }
 
     @Test
@@ -401,75 +366,47 @@ public class MessageServiceTest {
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageService.deleteThreadForUser(1L, 99L));
 
-        verify(messageRepository, never()).findByThreadIdOrderByCreatedAtAsc(anyLong());
-        verify(messageRepository, never()).saveAll(any());
-        verify(messageRepository, never()).deleteAll(any());
+        verify(messageRepository, never()).markDeletedBySenderForThread(anyLong(), anyLong());
+        verify(messageRepository, never()).markDeletedByRecipientForThread(anyLong(), anyLong());
+        verify(messageRepository, never()).deleteFullyDeletedMessagesInThread(anyLong());
     }
 
     @Test
-    void deleteThreadForUser_noOp_whenNoMessages() {
+    void deleteThreadForUser_callsQueriesEvenWhenNoMessages() {
         when(messageRepository.isUserParticipantInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
-
-        messageService.deleteThreadForUser(1L, 1L);
-
-        verify(messageRepository, never()).saveAll(any());
-        verify(messageRepository, never()).deleteAll(any());
-    }
-
-    @Test
-    void deleteThreadForUser_deletesThread_whenNoMessagesRemain() {
-        // Given two messages that will become fully deleted after my delete
-        MessageEntity m1 = new MessageEntity();
-        m1.setId(21L);
-        m1.setSender(sender);
-        m1.setRecipient(recipient);
-        m1.setThread(thread);
-        // Other side had already deleted
-        m1.setDeletedByRecipient(true);
-
-        MessageEntity m2 = new MessageEntity();
-        m2.setId(22L);
-        m2.setSender(new UserEntity());
-        m2.getSender().setId(3L);
-        m2.setRecipient(sender);
-        m2.setThread(thread);
-        // Other side had already deleted
-        m2.setDeletedBySender(true);
-
-        when(messageRepository.isUserParticipantInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(m1, m2));
-        // After deletes, repository reports no messages remain for the thread
+        when(messageRepository.markDeletedBySenderForThread(1L, 1L)).thenReturn(0);
+        when(messageRepository.markDeletedByRecipientForThread(1L, 1L)).thenReturn(0);
+        when(messageRepository.deleteFullyDeletedMessagesInThread(1L)).thenReturn(0);
         when(messageRepository.existsByThreadId(1L)).thenReturn(false);
 
         messageService.deleteThreadForUser(1L, 1L);
 
-        // Verify hard deletes were attempted for fully-deleted messages
-        ArgumentCaptor<Iterable<MessageEntity>> delCaptor = ArgumentCaptor.forClass(Iterable.class);
-        verify(messageRepository).deleteAll(delCaptor.capture());
-        List<MessageEntity> deleted = (delCaptor.getValue() instanceof List)
-                ? (List<MessageEntity>) delCaptor.getValue()
-                : (delCaptor.getValue() != null)
-                    ? (delCaptor.getValue() instanceof Iterable)
-                        ? (java.util.stream.StreamSupport.stream(delCaptor.getValue().spliterator(), false).toList())
-                        : List.of()
-                    : List.of();
-        assertThat(deleted).contains(m1, m2);
-        // And thread cleanup performed
+        verify(messageRepository).markDeletedBySenderForThread(1L, 1L);
+        verify(messageRepository).markDeletedByRecipientForThread(1L, 1L);
+        verify(messageRepository).deleteFullyDeletedMessagesInThread(1L);
+        verify(threadRepository).deleteById(1L);
+    }
+
+    @Test
+    void deleteThreadForUser_deletesThread_whenNoMessagesRemain() {
+        when(messageRepository.isUserParticipantInThread(1L, 1L)).thenReturn(true);
+        when(messageRepository.markDeletedBySenderForThread(1L, 1L)).thenReturn(2);
+        when(messageRepository.markDeletedByRecipientForThread(1L, 1L)).thenReturn(2);
+        when(messageRepository.deleteFullyDeletedMessagesInThread(1L)).thenReturn(2);
+        when(messageRepository.existsByThreadId(1L)).thenReturn(false);
+
+        messageService.deleteThreadForUser(1L, 1L);
+
+        verify(messageRepository).deleteFullyDeletedMessagesInThread(1L);
         verify(threadRepository).deleteById(1L);
     }
 
     @Test
     void deleteThreadForUser_doesNotDeleteThread_whenMessagesRemain() {
-        MessageEntity m1 = new MessageEntity();
-        m1.setId(31L);
-        m1.setSender(sender);
-        m1.setRecipient(recipient);
-        m1.setThread(thread);
-
         when(messageRepository.isUserParticipantInThread(1L, 1L)).thenReturn(true);
-        when(messageRepository.findByThreadIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(m1));
-        // Still at least one message remains afterwards
+        when(messageRepository.markDeletedBySenderForThread(1L, 1L)).thenReturn(1);
+        when(messageRepository.markDeletedByRecipientForThread(1L, 1L)).thenReturn(0);
+        when(messageRepository.deleteFullyDeletedMessagesInThread(1L)).thenReturn(0);
         when(messageRepository.existsByThreadId(1L)).thenReturn(true);
 
         messageService.deleteThreadForUser(1L, 1L);

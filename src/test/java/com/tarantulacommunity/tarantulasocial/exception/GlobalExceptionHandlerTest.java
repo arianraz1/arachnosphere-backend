@@ -98,6 +98,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void testBadRequestException() {
+        GlobalExceptionHandler.BadRequestException exception =
+                new GlobalExceptionHandler.BadRequestException("Bad request");
+
+        assertEquals("Bad request", exception.getMessage());
+    }
+
+    @Test
     void testUsernameAlreadyTakenException() {
         GlobalExceptionHandler.UsernameAlreadyTakenException exception =
                 new GlobalExceptionHandler.UsernameAlreadyTakenException("testuser");
@@ -226,6 +234,18 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals("Not authorized", response.getBody().message());
         assertEquals("UNAUTHORIZED", response.getBody().code());
+    }
+
+    @Test
+    void testHandleBadRequest() {
+        GlobalExceptionHandler.BadRequestException exception =
+                new GlobalExceptionHandler.BadRequestException("Bad request");
+
+        ResponseEntity<ApiError> response = handler.handleBadRequest(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Bad request", response.getBody().message());
+        assertEquals("BAD_REQUEST", response.getBody().code());
     }
 
     @Test
