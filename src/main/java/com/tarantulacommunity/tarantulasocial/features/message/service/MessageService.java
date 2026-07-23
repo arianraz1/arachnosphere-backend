@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -117,10 +118,10 @@ public class MessageService {
                 .stream()
                 .collect(Collectors.toMap(m -> m.getThread().getId(), m -> m));
 
-        Map<Long, LocalDateTime> lastReadByThread = threadParticipantRepository
-                .findReadStatesForThreads(threadIds, userId)
-                .stream()
-                .collect(Collectors.toMap(ThreadReadState::getThreadId, ThreadReadState::getLastReadAt));
+        Map<Long, LocalDateTime> lastReadByThread = new HashMap<>();
+        for (ThreadReadState state : threadParticipantRepository.findReadStatesForThreads(threadIds, userId)) {
+            lastReadByThread.put(state.getThreadId(), state.getLastReadAt());
+        }
 
         return threads.map(thread -> {
             MessageEntity latest = latestByThread.get(thread.getId());
