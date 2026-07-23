@@ -157,6 +157,7 @@ public class MessageService {
         });
     }
 
+    @Transactional
     public Page<MessageResponse> getThreadMessages(Long threadId, Long userId, Pageable pageable) {
         if (!messageRepository.hasVisibleMessageInThread(threadId, userId)) {
             throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
