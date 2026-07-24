@@ -38,30 +38,30 @@ public class EmailService {
         String htmlContent = """
         <!DOCTYPE html>
                <html lang="en">
-               <head>.
+               <head>
                    <meta charset="UTF-8" />
                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                    <title>Verify your Arachnosphere account 🕸️</title>
                </head>
-               <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
-                   <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+               <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
+                   <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0; background-color: #0a0a0a;">
                        <tr>
                            <td align="center">
-                               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
-        
+                               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171412; border: 1px solid #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
+
                                    <!-- Header -->
                                    <tr>
-                                       <td style="background-color: #1b1918; padding: 40px 40px 24px 40px; text-align: center;">
-                                           <h1 style="margin: 0; color: #4A90E2; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+                                       <td style="background-color: #0a0a0a; padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #292524;">
+                                           <h1 style="margin: 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
                                                🕷️ Arachnosphere
                                            </h1>
                                        </td>
                                    </tr>
-        
+
                                    <!-- Body -->
                                    <tr>
                                        <td style="padding: 24px 40px 40px 40px;">
-                                           <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-size: 20px; font-weight: bold;">
+                                           <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: bold;">
                                                Welcome, %s!
                                            </h2>
                                            <p style="margin: 0 0 12px 0; color: #a8a29e; font-size: 15px; line-height: 1.6;">
@@ -70,52 +70,52 @@ public class EmailService {
                                            <p style="margin: 0 0 24px 0; color: #a8a29e; font-size: 15px; line-height: 1.6;">
                                                Tap below to verify your email and join the community.
                                            </p>
-        
+
                                            <!-- CTA Button -->
                                            <table cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
                                                <tr>
-                                                   <td style="border-radius: 8px; background-color: #4A90E2;">
-                                                       <a href="%s" style="display: inline-block; padding: 14px 32px; color: #0B0B0C; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+                                                   <td style="border-radius: 8px; background-color: #f97316;">
+                                                       <a href="%s" style="display: inline-block; padding: 14px 32px; color: #1c1917; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
                                                            Verify My Email
                                                        </a>
                                                    </td>
                                                </tr>
                                            </table>
-        
-                                           <p style="margin: 0 0 8px 0; color: #94908c; font-size: 13px;">
+
+                                           <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px;">
                                                Or copy and paste this link into your browser:
                                            </p>
                                            <p style="margin: 0 0 32px 0;">
-                                               <a href="%s" style="color: #4A90E2; font-size: 13px; word-break: break-all;">
+                                               <a href="%s" style="color: #f97316; font-size: 13px; word-break: break-all;">
                                                    %s
                                                </a>
                                            </p>
-        
+
                                            <!-- Divider -->
-                                           <hr style="border: none; border-top: 1px solid #1b1918; margin: 0 0 24px 0;" />
-        
-                                           <p style="margin: 0 0 8px 0; color: #94908c; font-size: 13px; line-height: 1.5;">
+                                           <hr style="border: none; border-top: 1px solid #292524; margin: 0 0 24px 0;" />
+
+                                           <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px; line-height: 1.5;">
                                                ⏱ This link expires in <strong style="color: #a8a29e;">24 hours</strong>.
                                            </p>
-                                           <p style="margin: 0; color: #94908c; font-size: 13px; line-height: 1.5;">
+                                           <p style="margin: 0; color: #78716c; font-size: 13px; line-height: 1.5;">
                                                If you didn't create an account with Arachnosphere, you can safely ignore this email.
                                            </p>
                                        </td>
                                    </tr>
-        
+
                                    <!-- Footer -->
                                    <tr>
-                                       <td style="background-color: #1b1918; padding: 24px 40px; text-align: center;">
-                                           <p style="margin: 0; color: #94908c; font-size: 12px;">
+                                       <td style="background-color: #0a0a0a; padding: 24px 40px; text-align: center; border-top: 1px solid #292524;">
+                                           <p style="margin: 0; color: #78716c; font-size: 12px;">
                                                © 2026 Arachnosphere. All rights reserved.
                                            </p>
-                                           <p style="margin: 8px 0 0 0; color: #94908c; font-size: 12px;">
+                                           <p style="margin: 8px 0 0 0; color: #78716c; font-size: 12px;">
                                                You're receiving this email because you signed up at\s
                                                <a href="%s" style="color: #a8a29e; text-decoration: none;">arachnosphere.com</a>
                                            </p>
                                        </td>
                                    </tr>
-        
+
                                </table>
                            </td>
                        </tr>
@@ -159,16 +159,16 @@ public class EmailService {
                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                <title>Your Arachnosphere account will be deleted tomorrow 🕸️</title>
            </head>
-           <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
-               <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+           <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
+               <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0; background-color: #0a0a0a;">
                    <tr>
                        <td align="center">
-                           <table width="600" cellpadding="0" cellspacing="0" style="background-color: #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
+                           <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171412; border: 1px solid #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
 
                                <!-- Header -->
                                <tr>
-                                   <td style="background-color: #1b1918; padding: 40px 40px 24px 40px; text-align: center;">
-                                       <h1 style="margin: 0; color: #4A90E2; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+                                   <td style="background-color: #0a0a0a; padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #292524;">
+                                       <h1 style="margin: 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
                                            🕷️ Arachnosphere
                                        </h1>
                                    </td>
@@ -177,7 +177,7 @@ public class EmailService {
                                <!-- Body -->
                                <tr>
                                    <td style="padding: 24px 40px 40px 40px;">
-                                       <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-size: 20px; font-weight: bold;">
+                                       <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: bold;">
                                            Hi %s, your account is about to be removed
                                        </h2>
                                        <p style="margin: 0 0 12px 0; color: #a8a29e; font-size: 15px; line-height: 1.6;">
@@ -190,27 +190,27 @@ public class EmailService {
                                        <!-- CTA Button -->
                                        <table cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
                                            <tr>
-                                               <td style="border-radius: 8px; background-color: #4A90E2;">
-                                                   <a href="%s" style="display: inline-block; padding: 14px 32px; color: #0B0B0C; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+                                               <td style="border-radius: 8px; background-color: #f97316;">
+                                                   <a href="%s" style="display: inline-block; padding: 14px 32px; color: #1c1917; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
                                                        Verify My Email
                                                    </a>
                                                </td>
                                            </tr>
                                        </table>
 
-                                       <p style="margin: 0 0 8px 0; color: #94908c; font-size: 13px;">
+                                       <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px;">
                                            Or copy and paste this link into your browser:
                                        </p>
                                        <p style="margin: 0 0 32px 0;">
-                                           <a href="%s" style="color: #4A90E2; font-size: 13px; word-break: break-all;">
+                                           <a href="%s" style="color: #f97316; font-size: 13px; word-break: break-all;">
                                                %s
                                            </a>
                                        </p>
 
                                        <!-- Divider -->
-                                       <hr style="border: none; border-top: 1px solid #1b1918; margin: 0 0 24px 0;" />
+                                       <hr style="border: none; border-top: 1px solid #292524; margin: 0 0 24px 0;" />
 
-                                       <p style="margin: 0; color: #94908c; font-size: 13px; line-height: 1.5;">
+                                       <p style="margin: 0; color: #78716c; font-size: 13px; line-height: 1.5;">
                                            If you didn't create this account, no action is needed — it will be removed automatically.
                                        </p>
                                    </td>
@@ -218,11 +218,11 @@ public class EmailService {
 
                                <!-- Footer -->
                                <tr>
-                                   <td style="background-color: #1b1918; padding: 24px 40px; text-align: center;">
-                                       <p style="margin: 0; color: #94908c; font-size: 12px;">
+                                   <td style="background-color: #0a0a0a; padding: 24px 40px; text-align: center; border-top: 1px solid #292524;">
+                                       <p style="margin: 0; color: #78716c; font-size: 12px;">
                                            © 2026 Arachnosphere. All rights reserved.
                                        </p>
-                                       <p style="margin: 8px 0 0 0; color: #94908c; font-size: 12px;">
+                                       <p style="margin: 8px 0 0 0; color: #78716c; font-size: 12px;">
                                            You're receiving this email because you signed up at\s
                                            <a href="%s" style="color: #a8a29e; text-decoration: none;">arachnosphere.com</a>
                                        </p>
@@ -272,16 +272,16 @@ public class EmailService {
                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                <title>Reset your Arachnosphere password 🕸️</title>
            </head>
-           <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
-               <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+           <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
+               <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0; background-color: #0a0a0a;">
                    <tr>
                        <td align="center">
-                           <table width="600" cellpadding="0" cellspacing="0" style="background-color: #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
+                           <table width="600" cellpadding="0" cellspacing="0" style="background-color: #171412; border: 1px solid #292524; border-radius: 12px; overflow: hidden; max-width: 600px; width: 100%%;">
 
                                <!-- Header -->
                                <tr>
-                                   <td style="background-color: #1b1918; padding: 40px 40px 24px 40px; text-align: center;">
-                                       <h1 style="margin: 0; color: #4A90E2; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+                                   <td style="background-color: #0a0a0a; padding: 40px 40px 24px 40px; text-align: center; border-bottom: 1px solid #292524;">
+                                       <h1 style="margin: 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
                                            🕷️ Arachnosphere
                                        </h1>
                                    </td>
@@ -290,7 +290,7 @@ public class EmailService {
                                <!-- Body -->
                                <tr>
                                    <td style="padding: 24px 40px 40px 40px;">
-                                       <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-size: 20px; font-weight: bold;">
+                                       <h2 style="margin: 0 0 16px 0; color: #fafaf9; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: bold;">
                                            Password Reset Request
                                        </h2>
                                        <p style="margin: 0 0 12px 0; color: #a8a29e; font-size: 15px; line-height: 1.6;">
@@ -303,30 +303,30 @@ public class EmailService {
                                        <!-- CTA Button -->
                                        <table cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
                                            <tr>
-                                               <td style="border-radius: 8px; background-color: #4A90E2;">
-                                                   <a href="%s" style="display: inline-block; padding: 14px 32px; color: #0B0B0C; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+                                               <td style="border-radius: 8px; background-color: #f97316;">
+                                                   <a href="%s" style="display: inline-block; padding: 14px 32px; color: #1c1917; font-size: 15px; font-weight: bold; text-decoration: none; border-radius: 8px;">
                                                        Reset Password
                                                    </a>
                                                </td>
                                            </tr>
                                        </table>
 
-                                       <p style="margin: 0 0 8px 0; color: #94908c; font-size: 13px;">
+                                       <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px;">
                                            Or copy and paste this link into your browser:
                                        </p>
                                        <p style="margin: 0 0 32px 0;">
-                                           <a href="%s" style="color: #4A90E2; font-size: 13px; word-break: break-all;">
+                                           <a href="%s" style="color: #f97316; font-size: 13px; word-break: break-all;">
                                                %s
                                            </a>
                                        </p>
 
                                        <!-- Divider -->
-                                       <hr style="border: none; border-top: 1px solid #1b1918; margin: 0 0 24px 0;" />
+                                       <hr style="border: none; border-top: 1px solid #292524; margin: 0 0 24px 0;" />
 
-                                       <p style="margin: 0 0 8px 0; color: #94908c; font-size: 13px; line-height: 1.5;">
+                                       <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px; line-height: 1.5;">
                                            ⏱ This link expires in <strong style="color: #a8a29e;">1 hour</strong>.
                                        </p>
-                                       <p style="margin: 0; color: #94908c; font-size: 13px; line-height: 1.5;">
+                                       <p style="margin: 0; color: #78716c; font-size: 13px; line-height: 1.5;">
                                            If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
                                        </p>
                                    </td>
@@ -334,11 +334,11 @@ public class EmailService {
 
                                <!-- Footer -->
                                <tr>
-                                   <td style="background-color: #1b1918; padding: 24px 40px; text-align: center;">
-                                       <p style="margin: 0; color: #94908c; font-size: 12px;">
+                                   <td style="background-color: #0a0a0a; padding: 24px 40px; text-align: center; border-top: 1px solid #292524;">
+                                       <p style="margin: 0; color: #78716c; font-size: 12px;">
                                            © 2026 Arachnosphere. All rights reserved.
                                        </p>
-                                       <p style="margin: 8px 0 0 0; color: #94908c; font-size: 12px;">
+                                       <p style="margin: 8px 0 0 0; color: #78716c; font-size: 12px;">
                                            You're receiving this email because you requested a password reset at\s
                                            <a href="%s" style="color: #a8a29e; text-decoration: none;">arachnosphere.com</a>
                                        </p>
