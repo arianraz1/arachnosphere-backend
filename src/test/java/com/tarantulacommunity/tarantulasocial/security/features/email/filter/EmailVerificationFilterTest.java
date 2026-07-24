@@ -12,10 +12,10 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 
 import java.util.List;
 
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;

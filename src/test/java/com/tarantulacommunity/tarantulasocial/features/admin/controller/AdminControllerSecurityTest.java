@@ -4,13 +4,13 @@ import com.tarantulacommunity.tarantulasocial.features.admin.gbif.SpeciesSyncSer
 import com.tarantulacommunity.tarantulasocial.features.admin.inat.PhotoSyncService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;

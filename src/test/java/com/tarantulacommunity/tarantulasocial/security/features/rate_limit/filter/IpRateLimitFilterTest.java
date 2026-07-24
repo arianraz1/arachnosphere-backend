@@ -16,11 +16,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.servlet.HandlerExceptionResolver;
-import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 
 import java.time.Duration;
 import java.util.List;
 
+import static com.tarantulacommunity.tarantulasocial.TestUtilities.apiBasePath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;

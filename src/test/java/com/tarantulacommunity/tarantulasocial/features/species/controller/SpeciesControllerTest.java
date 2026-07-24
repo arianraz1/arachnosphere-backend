@@ -3,7 +3,6 @@ package com.tarantulacommunity.tarantulasocial.features.species.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.dto.response.CollectionEntryOwnerResponse;
 import com.tarantulacommunity.tarantulasocial.features.collection_entry.service.CollectionEntryService;
-import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesDetailResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.dto.response.SpeciesSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.species.mapper.SpeciesMapper;
