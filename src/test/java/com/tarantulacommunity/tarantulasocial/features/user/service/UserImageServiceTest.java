@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,7 +46,7 @@ class UserImageServiceTest {
     // ---- uploadProfilePicture ----
 
     @Test
-    void uploadProfilePicture_savesNewKeyAndPublishesEvent() throws IOException {
+    void uploadProfilePicture_updatesKeyViaRepositoryAndPublishesEvent() throws IOException {
         UserEntity user = new UserEntity();
         user.setId(1L);
         user.setProfilePicKey("old-key.jpg");
@@ -56,8 +57,8 @@ class UserImageServiceTest {
 
         userImageService.uploadProfilePicture(1L, file);
 
-        assertEquals("new-key.jpg", user.getProfilePicKey());
-        verify(userRepository).save(user);
+        verify(userRepository).updateProfilePicKey(eq(1L), eq("new-key.jpg"), any(LocalDateTime.class));
+        verify(userRepository, never()).save(any());
 
         ArgumentCaptor<ProfileImageReplacedEvent> captor = ArgumentCaptor.forClass(ProfileImageReplacedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -78,7 +79,7 @@ class UserImageServiceTest {
         assertThrows(GlobalExceptionHandler.ImageUploadException.class,
                 () -> userImageService.uploadProfilePicture(1L, file));
 
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).updateProfilePicKey(any(), any(), any());
         verifyNoInteractions(eventPublisher);
     }
 
@@ -96,7 +97,7 @@ class UserImageServiceTest {
     // ---- uploadFavoriteImage ----
 
     @Test
-    void uploadFavoriteImage_savesNewKeyAndPublishesEvent() throws IOException {
+    void uploadFavoriteImage_updatesKeyViaRepositoryAndPublishesEvent() throws IOException {
         UserEntity user = new UserEntity();
         user.setId(1L);
         user.setFavoriteImageKey("old-fav-key.jpg");
@@ -107,8 +108,8 @@ class UserImageServiceTest {
 
         userImageService.uploadFavoriteImage(1L, file);
 
-        assertEquals("new-fav-key.jpg", user.getFavoriteImageKey());
-        verify(userRepository).save(user);
+        verify(userRepository).updateFavoriteImageKey(eq(1L), eq("new-fav-key.jpg"), any(LocalDateTime.class));
+        verify(userRepository, never()).save(any());
 
         ArgumentCaptor<FavoriteImageReplacedEvent> captor = ArgumentCaptor.forClass(FavoriteImageReplacedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -129,7 +130,7 @@ class UserImageServiceTest {
         assertThrows(GlobalExceptionHandler.ImageUploadException.class,
                 () -> userImageService.uploadFavoriteImage(1L, file));
 
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).updateFavoriteImageKey(any(), any(), any());
         verifyNoInteractions(eventPublisher);
     }
 
@@ -158,7 +159,6 @@ class UserImageServiceTest {
 
     @Test
     void onProfileImageReplaced_skipsDeleteWhenNewKeyWasNotCommitted() {
-        // simulates a concurrent update overwriting this upload before we could confirm the commit
         ProfileImageReplacedEvent event = new ProfileImageReplacedEvent(1L, "old-key.jpg", "new-key.jpg");
         when(userRepository.existsByIdAndProfilePicKey(1L, "new-key.jpg")).thenReturn(false);
 

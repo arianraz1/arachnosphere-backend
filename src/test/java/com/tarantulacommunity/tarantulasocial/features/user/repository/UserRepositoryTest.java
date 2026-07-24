@@ -77,7 +77,6 @@ public class UserRepositoryTest {
         user.setProfilePicKey("profile-pictures/current.jpg");
         em.persistAndFlush(user);
 
-        // simulates a concurrent upload having already moved the key past what we expect
         assertFalse(userRepository.existsByIdAndProfilePicKey(user.getId(), "profile-pictures/stale.jpg"));
     }
 
@@ -97,6 +96,77 @@ public class UserRepositoryTest {
         em.persistAndFlush(user);
 
         assertFalse(userRepository.existsByIdAndFavoriteImageKey(user.getId(), "favorite-images/stale.jpg"));
+    }
+
+    // ---- new: @Modifying query methods ----
+
+    @Test
+    void updateBio_updatesOnlyBioAndUpdatedAt_leavesVersionUnchanged() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        Long originalVersion = user.getVersion();
+
+        LocalDateTime now = LocalDateTime.now();
+        int rowsAffected = userRepository.updateBio(user.getId(), "New bio", now);
+        em.clear();
+
+        assertEquals(1, rowsAffected);
+        UserEntity reloaded = em.find(UserEntity.class, user.getId());
+        assertEquals("New bio", reloaded.getBio());
+        assertEquals(originalVersion, reloaded.getVersion());
+    }
+
+    @Test
+    void updateBio_returnsZero_whenUserDoesNotExist() {
+        int rowsAffected = userRepository.updateBio(999L, "New bio", LocalDateTime.now());
+        assertEquals(0, rowsAffected);
+    }
+
+    @Test
+    void updateFavoriteCaption_updatesOnlyCaption_leavesOtherFieldsUnchanged() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setFavoriteImageKey("favorite-images/existing.jpg");
+        em.persistAndFlush(user);
+        Long originalVersion = user.getVersion();
+
+        int rowsAffected = userRepository.updateFavoriteCaption(user.getId(), "New caption", LocalDateTime.now());
+        em.clear();
+
+        assertEquals(1, rowsAffected);
+        UserEntity reloaded = em.find(UserEntity.class, user.getId());
+        assertEquals("New caption", reloaded.getFavoriteCaption());
+        assertEquals("favorite-images/existing.jpg", reloaded.getFavoriteImageKey());
+        assertEquals(originalVersion, reloaded.getVersion());
+    }
+
+    @Test
+    void updateProfilePicKey_updatesOnlyProfilePicKey_leavesVersionUnchanged() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        Long originalVersion = user.getVersion();
+
+        int rowsAffected = userRepository.updateProfilePicKey(user.getId(), "profile-pictures/new.jpg", LocalDateTime.now());
+        em.clear();
+
+        assertEquals(1, rowsAffected);
+        UserEntity reloaded = em.find(UserEntity.class, user.getId());
+        assertEquals("profile-pictures/new.jpg", reloaded.getProfilePicKey());
+        assertEquals(originalVersion, reloaded.getVersion());
+    }
+
+    @Test
+    void updateFavoriteImageKey_updatesOnlyImageKey_leavesCaptionUnchanged() {
+        UserEntity user = em.persistFlushFind(TestUtilities.verifiedUser("1", "1"));
+        user.setFavoriteCaption("Existing caption");
+        em.persistAndFlush(user);
+        Long originalVersion = user.getVersion();
+
+        int rowsAffected = userRepository.updateFavoriteImageKey(user.getId(), "favorite-images/new.jpg", LocalDateTime.now());
+        em.clear();
+
+        assertEquals(1, rowsAffected);
+        UserEntity reloaded = em.find(UserEntity.class, user.getId());
+        assertEquals("favorite-images/new.jpg", reloaded.getFavoriteImageKey());
+        assertEquals("Existing caption", reloaded.getFavoriteCaption());
+        assertEquals(originalVersion, reloaded.getVersion());
     }
 
     private UserEntity persistUnverifiedUserWithCreatedAt(String suffix, LocalDateTime createdAt) {

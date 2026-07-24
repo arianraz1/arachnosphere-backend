@@ -9,7 +9,6 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserPro
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -154,24 +154,31 @@ public class UserServiceTest {
     }
 
     @Test
-    void updateProfile_updatesAndReturnsResponse() {
+    void updateProfile_updatesBioViaModifyingQueryAndReturnsFreshResponse() {
         UpdateUserProfileRequest request = new UpdateUserProfileRequest("My bio");
 
-        UserEntity user = new UserEntity();
-        user.setId(1L);
+        UserEntity existingUser = new UserEntity();
+        existingUser.setId(1L);
+        existingUser.setBio("Old bio");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
+        UserEntity refreshedUser = new UserEntity();
+        refreshedUser.setId(1L);
+        refreshedUser.setBio("My bio");
+
+        // first findById is the existence check, second is the post-update re-fetch
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser), Optional.of(refreshedUser));
 
         UserProfileResponse expectedResponse = new UserProfileResponse(1L, "testuser",
                 null, "My bio", null, null, null);
-        when(userMapper.toProfileResponse(user)).thenReturn(expectedResponse);
+        when(userMapper.toProfileResponse(refreshedUser)).thenReturn(expectedResponse);
 
         UserProfileResponse result = userService.updateProfile(1L, request);
 
         assertEquals(expectedResponse, result);
-        verify(userMapper).updateProfileFromRequest(request, user);
-        verify(userRepository).save(user);
+        verify(userRepository).updateBio(eq(1L), eq("My bio"), any(LocalDateTime.class));
+        verify(userRepository, times(2)).findById(1L);
+        verify(userRepository, never()).save(any());
+        verify(userMapper, never()).updateProfileFromRequest(any(), any());
     }
 
     @Test
@@ -180,27 +187,35 @@ public class UserServiceTest {
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 userService.updateProfile(99L, new UpdateUserProfileRequest(null)));
+
+        verify(userRepository, never()).updateBio(any(), any(), any());
     }
 
     @Test
-    void updateFavorite_updatesAndReturnsResponse() {
+    void updateFavorite_updatesCaptionViaModifyingQueryAndReturnsFreshResponse() {
         UpdateUserFavoriteTarantulaRequest request = new UpdateUserFavoriteTarantulaRequest("My favorite GBB");
 
-        UserEntity user = new UserEntity();
-        user.setId(1L);
+        UserEntity existingUser = new UserEntity();
+        existingUser.setId(1L);
+        existingUser.setFavoriteCaption("Old caption");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
+        UserEntity refreshedUser = new UserEntity();
+        refreshedUser.setId(1L);
+        refreshedUser.setFavoriteCaption("My favorite GBB");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser), Optional.of(refreshedUser));
 
         UserProfileResponse expectedResponse = new UserProfileResponse(1L, "testuser", null, null,
                 null, "My favorite GBB", null);
-        when(userMapper.toProfileResponse(user)).thenReturn(expectedResponse);
+        when(userMapper.toProfileResponse(refreshedUser)).thenReturn(expectedResponse);
 
         UserProfileResponse result = userService.updateFavorite(1L, request);
 
         assertEquals(expectedResponse, result);
-        verify(userMapper).updateFavoriteFromRequest(request, user);
-        verify(userRepository).save(user);
+        verify(userRepository).updateFavoriteCaption(eq(1L), eq("My favorite GBB"), any(LocalDateTime.class));
+        verify(userRepository, times(2)).findById(1L);
+        verify(userRepository, never()).save(any());
+        verify(userMapper, never()).updateFavoriteFromRequest(any(), any());
     }
 
     @Test
@@ -209,6 +224,8 @@ public class UserServiceTest {
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class, () ->
                 userService.updateFavorite(99L, new UpdateUserFavoriteTarantulaRequest(null)));
+
+        verify(userRepository, never()).updateFavoriteCaption(any(), any(), any());
     }
 
     @Test

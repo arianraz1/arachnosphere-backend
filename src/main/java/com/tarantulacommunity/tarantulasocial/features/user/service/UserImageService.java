@@ -15,6 +15,26 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class UserImageService {
@@ -29,8 +49,7 @@ public class UserImageService {
         String oldKey = user.getProfilePicKey();
 
         String newKey = uploadToS3(file, "profile-pictures");
-        user.setProfilePicKey(newKey);
-        userRepository.save(user);
+        userRepository.updateProfilePicKey(userId, newKey, LocalDateTime.now());
 
         eventPublisher.publishEvent(new ProfileImageReplacedEvent(userId, oldKey, newKey));
     }
@@ -41,8 +60,7 @@ public class UserImageService {
         String oldKey = user.getFavoriteImageKey();
 
         String newKey = uploadToS3(file, "favorite-images");
-        user.setFavoriteImageKey(newKey);
-        userRepository.save(user);
+        userRepository.updateFavoriteImageKey(userId, newKey, LocalDateTime.now());
 
         eventPublisher.publishEvent(new FavoriteImageReplacedEvent(userId, oldKey, newKey));
     }
@@ -52,8 +70,6 @@ public class UserImageService {
         if (event.oldKey() == null || event.oldKey().isBlank()) {
             return;
         }
-        // Only delete the old object if the new key is confirmed persisted —
-        // guards against deleting oldKey after a concurrent update already moved past us.
         boolean committed = userRepository.existsByIdAndProfilePicKey(event.userId(), event.newKey());
         if (committed) {
             s3StorageService.deleteImage(event.oldKey());

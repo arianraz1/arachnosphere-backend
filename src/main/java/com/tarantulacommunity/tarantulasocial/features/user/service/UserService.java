@@ -9,12 +9,12 @@ import com.tarantulacommunity.tarantulasocial.features.user.dto.response.UserPro
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.mapper.UserMapper;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.dto.response.UserSignupResponse;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -55,16 +55,16 @@ public class UserService {
 
     @Transactional
     public UserProfileResponse updateProfile(Long userId, UpdateUserProfileRequest request) {
-        UserEntity user = findUserOrThrow(userId);
-        userMapper.updateProfileFromRequest(request, user);
-        return userMapper.toProfileResponse(userRepository.save(user));
+        findUserOrThrow(userId); // 404 check
+        userRepository.updateBio(userId, request.getBio(), LocalDateTime.now());
+        return userMapper.toProfileResponse(findUserOrThrow(userId));
     }
 
     @Transactional
     public UserProfileResponse updateFavorite(Long userId, UpdateUserFavoriteTarantulaRequest request) {
-        UserEntity user = findUserOrThrow(userId);
-        userMapper.updateFavoriteFromRequest(request, user);
-        return userMapper.toProfileResponse(userRepository.save(user));
+        findUserOrThrow(userId); // 404 check
+        userRepository.updateFavoriteCaption(userId, request.getFavoriteCaption(), LocalDateTime.now());
+        return userMapper.toProfileResponse(findUserOrThrow(userId));
     }
 
     private UserEntity findUserOrThrow(Long userId) {
