@@ -1,17 +1,19 @@
 package com.tarantulacommunity.tarantulasocial.security.features.email.service;
 
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
-import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,7 +25,16 @@ import static org.mockito.Mockito.when;
 class EmailServiceTest {
 
     @Mock
-    private SendGrid sendGrid;
+    private RestClient restClient;
+
+    @Mock
+    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private RestClient.RequestBodySpec requestBodySpec;
+
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
 
     private EmailService emailService;
 
@@ -35,60 +46,87 @@ class EmailServiceTest {
                 "Arachnosphere"
         );
 
-        ReflectionTestUtils.setField(emailService, "sendGrid", sendGrid);
+        // EmailService builds its own RestClient internally in the constructor,
+        // so we inject our mock in place of the real one.
+        ReflectionTestUtils.setField(emailService, "restClient", restClient);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mockSuccessChain() {
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mockErrorChain(RuntimeException toThrow) {
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenThrow(toThrow);
     }
 
     @Test
-    void sendVerificationEmail_shouldCallSendGridApi() throws Exception {
+    void sendVerificationEmail_shouldCallResendApi() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        Response response = new Response();
-        response.setStatusCode(202);
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockSuccessChain();
 
         emailService.sendVerificationEmail(toEmail, username, verificationLink);
 
-        verify(sendGrid).api(any(Request.class));
+        verify(restClient).post();
+        verify(requestBodySpec).retrieve();
     }
 
     @Test
-    void sendVerificationEmail_shouldBuildCorrectEmailContent() throws Exception {
+    @SuppressWarnings("unchecked")
+    void sendVerificationEmail_shouldBuildCorrectEmailContent() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        Response response = new Response();
-        response.setStatusCode(202);
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockSuccessChain();
 
-        ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
+        ArgumentCaptor<Map<String, Object>> bodyCaptor = ArgumentCaptor.forClass(Map.class);
 
         emailService.sendVerificationEmail(toEmail, username, verificationLink);
 
-        verify(sendGrid).api(requestCaptor.capture());
+        verify(requestBodyUriSpec).body(bodyCaptor.capture());
 
-        Request capturedRequest = requestCaptor.getValue();
-        assertThat(capturedRequest.getMethod()).isEqualTo(com.sendgrid.Method.POST);
-        assertThat(capturedRequest.getEndpoint()).isEqualTo("mail/send");
+        Map<String, Object> body = bodyCaptor.getValue();
 
-        String body = capturedRequest.getBody();
-        assertThat(body).contains(username);
-        assertThat(body).contains(verificationLink);
-        assertThat(body).contains("Verify your Arachnosphere account");
+        assertThat(body).isNotNull();
+        assertThat(body.get("to")).isEqualTo(List.of(toEmail));
+        assertThat(body.get("from")).isEqualTo("Arachnosphere <noreply@arachnosphere.com>");
+        assertThat((String) body.get("subject")).contains("Verify your Arachnosphere account");
+        assertThat((String) body.get("html")).contains(username);
+        assertThat((String) body.get("html")).contains(verificationLink);
     }
 
     @Test
-    void sendVerificationEmail_shouldThrowException_whenSendGridReturnsError() throws Exception {
+    void sendVerificationEmail_shouldThrowException_whenResendReturnsError() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        Response response = new Response();
-        response.setStatusCode(400);
-        response.setBody("Invalid API key");
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockErrorChain(new RestClientResponseException(
+                "400 Bad Request", 400, "Bad Request", HttpHeaders.EMPTY, "Invalid API key".getBytes(), null));
+
+        assertThatThrownBy(() ->
+                emailService.sendVerificationEmail(toEmail, username, verificationLink)
+        ).isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to send verification email");
+    }
+    @Test
+    void sendVerificationEmail_shouldThrowException_whenRestClientExceptionOccurs() {
+        String toEmail = "test@example.com";
+        String username = "testuser";
+        String verificationLink = "https://arachnosphere.com/verify?token=abc123";
+
+        mockErrorChain(new ResourceAccessException("Network error"));
 
         assertThatThrownBy(() ->
                 emailService.sendVerificationEmail(toEmail, username, verificationLink)
@@ -97,70 +135,50 @@ class EmailServiceTest {
     }
 
     @Test
-    void sendVerificationEmail_shouldThrowException_whenIOExceptionOccurs() throws Exception {
+    void sendDeletionWarningEmail_shouldCallResendApi() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        when(sendGrid.api(any(Request.class))).thenThrow(new IOException("Network error"));
-
-        assertThatThrownBy(() ->
-                emailService.sendVerificationEmail(toEmail, username, verificationLink)
-        ).isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Failed to send verification email");
-    }
-
-    @Test
-    void sendDeletionWarningEmail_shouldCallSendGridApi() throws Exception {
-        String toEmail = "test@example.com";
-        String username = "testuser";
-        String verificationLink = "https://arachnosphere.com/verify?token=abc123";
-
-        Response response = new Response();
-        response.setStatusCode(202);
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockSuccessChain();
 
         emailService.sendDeletionWarningEmail(toEmail, username, verificationLink);
 
-        verify(sendGrid).api(any(Request.class));
+        verify(restClient).post();
+        verify(requestBodySpec).retrieve();
     }
 
     @Test
-    void sendDeletionWarningEmail_shouldBuildCorrectEmailContent() throws Exception {
+    @SuppressWarnings("unchecked")
+    void sendDeletionWarningEmail_shouldBuildCorrectEmailContent() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        Response response = new Response();
-        response.setStatusCode(202);
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockSuccessChain();
 
-        ArgumentCaptor<Request> requestCaptor = ArgumentCaptor.forClass(Request.class);
+        ArgumentCaptor<Map<String, Object>> bodyCaptor = ArgumentCaptor.forClass(Map.class);
 
         emailService.sendDeletionWarningEmail(toEmail, username, verificationLink);
 
-        verify(sendGrid).api(requestCaptor.capture());
+        verify(requestBodyUriSpec).body(bodyCaptor.capture());
 
-        Request capturedRequest = requestCaptor.getValue();
-        assertThat(capturedRequest.getMethod()).isEqualTo(com.sendgrid.Method.POST);
-        assertThat(capturedRequest.getEndpoint()).isEqualTo("mail/send");
+        Map<String, Object> body = bodyCaptor.getValue();
 
-        String body = capturedRequest.getBody();
-        assertThat(body).contains(username);
-        assertThat(body).contains(verificationLink);
-        assertThat(body).contains("will be deleted");
+        assertThat(body).isNotNull();
+        assertThat((String) body.get("html")).contains(username);
+        assertThat((String) body.get("html")).contains(verificationLink);
+        assertThat((String) body.get("html")).contains("will be deleted");
     }
 
     @Test
-    void sendDeletionWarningEmail_shouldThrowException_whenSendGridReturnsError() throws Exception {
+    void sendDeletionWarningEmail_shouldThrowException_whenResendReturnsError() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        Response response = new Response();
-        response.setStatusCode(400);
-        response.setBody("Invalid API key");
-        when(sendGrid.api(any(Request.class))).thenReturn(response);
+        mockErrorChain(new RestClientResponseException(
+                "400 Bad Request", 400, "Bad Request", HttpHeaders.EMPTY, "Invalid API key".getBytes(), null));
 
         assertThatThrownBy(() ->
                 emailService.sendDeletionWarningEmail(toEmail, username, verificationLink)
@@ -169,12 +187,12 @@ class EmailServiceTest {
     }
 
     @Test
-    void sendDeletionWarningEmail_shouldThrowException_whenIOExceptionOccurs() throws Exception {
+    void sendDeletionWarningEmail_shouldThrowException_whenRestClientExceptionOccurs() {
         String toEmail = "test@example.com";
         String username = "testuser";
         String verificationLink = "https://arachnosphere.com/verify?token=abc123";
 
-        when(sendGrid.api(any(Request.class))).thenThrow(new IOException("Network error"));
+        mockErrorChain(new ResourceAccessException("Network error"));
 
         assertThatThrownBy(() ->
                 emailService.sendDeletionWarningEmail(toEmail, username, verificationLink)
