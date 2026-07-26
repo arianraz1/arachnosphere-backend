@@ -35,4 +35,4 @@ COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 
 # 7. Start the application
-ENTRYPOINT ["java", "-Xmx350m", "-Xss512k", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Xss512k", "-jar", "app.jar"]
