@@ -451,21 +451,24 @@ class UserRateLimitFilterTest {
         assertThat(cache.asMap()).hasSize(2);
     }
 
-    // --- reset header behavior (documented, not a bug) ---
+    // --- reset header behavior ---
 
     @Test
-    void shouldReportZeroResetHeader_onSuccessfulConsumption() throws Exception {
+    void shouldReportFutureResetTimestamp_onSuccessfulConsumption() throws Exception {
         setAuthentication(1L, "USER");
         request.setMethod("POST");
         request.setRequestURI("/api/v1/messages");
 
         filter.doFilterInternal(request, response, filterChain);
 
-        assertThat(response.getHeader("X-RateLimit-Reset-User")).isEqualTo("0");
+        // Reset header should be a future timestamp (current time + refill period)
+        long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-User"));
+        long currentTime = System.currentTimeMillis() / 1000;
+        assertThat(reset).isGreaterThan(currentTime);
     }
 
     @Test
-    void shouldReportPositiveResetHeader_whenRejected() throws Exception {
+    void shouldReportFutureResetTimestamp_whenRejected() throws Exception {
         setAuthentication(1L, "USER");
         request.setMethod("POST");
         request.setRequestURI("/api/v1/messages");
@@ -476,7 +479,24 @@ class UserRateLimitFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-User"));
-        assertThat(reset).isGreaterThan(0);
+        long currentTime = System.currentTimeMillis() / 1000;
+        assertThat(reset).isGreaterThan(currentTime);
+    }
+
+    @Test
+    void shouldSetRetryAfterHeader_whenRejected() throws Exception {
+        setAuthentication(1L, "USER");
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/messages");
+
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getHeader("Retry-After")).isNotNull();
+        long retryAfter = Long.parseLong(response.getHeader("Retry-After"));
+        assertThat(retryAfter).isGreaterThan(0);
     }
 
     private void setAuthentication(Long userId, String role) {

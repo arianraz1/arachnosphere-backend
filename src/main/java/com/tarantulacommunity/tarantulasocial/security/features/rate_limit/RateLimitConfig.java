@@ -93,7 +93,9 @@ public class RateLimitConfig {
     @Bean
     public List<RateLimitRule> userRateLimitRules(RateLimitProperties props) {
         return List.of(
-                new RateLimitRule("message-send", HttpMethod.POST, "/api/v1/messages",
+                new RateLimitRule("thread-creation", HttpMethod.POST, "/api/v1/messages/threads",
+                        props.getThreadCreation().getCapacity(), props.getThreadCreation().getRefillPeriod()),
+                new RateLimitRule("message-send", HttpMethod.POST, "/api/v1/messages/*/replies",
                         props.getMessageSend().getCapacity(), props.getMessageSend().getRefillPeriod()),
 
                 // All entries below share the SAME name -> same bucket per user, so a
@@ -121,12 +123,6 @@ public class RateLimitConfig {
                 new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**",
                         props.getAdminSpeciesSync().getCapacity(), props.getAdminSpeciesSync().getRefillPeriod())
         );
-    }
-
-    @Bean
-    public RateLimitRule threadCreationRateLimitRule(RateLimitProperties props) {
-        return new RateLimitRule("thread-creation", HttpMethod.POST, "/api/v1/messages",
-                props.getThreadCreation().getCapacity(), props.getThreadCreation().getRefillPeriod());
     }
 
     @Bean

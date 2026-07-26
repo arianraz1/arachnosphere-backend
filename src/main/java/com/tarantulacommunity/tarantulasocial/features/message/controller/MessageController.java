@@ -1,6 +1,7 @@
 package com.tarantulacommunity.tarantulasocial.features.message.controller;
 
-import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.CreateThreadRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.ReplyRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
@@ -26,12 +27,21 @@ public class MessageController {
     private final MessageService messageService;
 
     // Send a new message or reply to an existing thread
-    @PostMapping
-    public ResponseEntity<MessageResponse> send(
+    @PostMapping("/threads")
+    public ResponseEntity<MessageResponse> createThread(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody SendMessageRequest request) {
+            @Valid @RequestBody CreateThreadRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(messageService.sendMessage(userDetails.getId(), request));
+                .body(messageService.createThread(userDetails.getId(), request));
+    }
+
+    @PostMapping("/{threadId}/replies")
+    public ResponseEntity<MessageResponse> reply(
+            @PathVariable Long threadId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ReplyRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(messageService.replyToThread(userDetails.getId(), threadId, request));
     }
 
     // Inbox: list of threads

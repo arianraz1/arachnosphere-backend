@@ -70,19 +70,21 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
 
         ConsumptionProbe probe = rateLimiterService.tryConsume(ipRateLimitCache, key, rule);
 
-        // Reset header: nanosToWaitForRefill is only meaningful when the bucket is
-        // exhausted (isConsumed() == false); Bucket4j returns 0 for it on a successful
-        // consume, so on the happy path this reports "0s" rather than a real refill ETA.
-        // Treated here as "seconds until this bucket is empty resets to full availability
-        // on failure" — not accurate as a general-purpose reset time on success.
+        // Set rate limit headers with consistent values
         response.setHeader("X-RateLimit-Limit-IP", String.valueOf(rule.capacity()));
         response.setHeader("X-RateLimit-Remaining-IP", String.valueOf(probe.getRemainingTokens()));
-        response.setHeader("X-RateLimit-Reset-IP", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
 
         if (probe.isConsumed()) {
+            // On success, set reset to current time + refill period (when bucket will be full again)
+            long resetTimeSeconds = (System.currentTimeMillis() / 1000) + (rule.refillPeriod().getSeconds());
+            response.setHeader("X-RateLimit-Reset-IP", String.valueOf(resetTimeSeconds));
             filterChain.doFilter(request, response);
         } else {
+            // On failure, set reset to when next token will be available and add Retry-After
             long waitSeconds = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000);
+            long resetTimeSeconds = (System.currentTimeMillis() / 1000) + waitSeconds;
+            response.setHeader("X-RateLimit-Reset-IP", String.valueOf(resetTimeSeconds));
+            response.setHeader("Retry-After", String.valueOf(waitSeconds));
             exceptionResolver.resolveException(request, response, null,
                     new GlobalExceptionHandler.RateLimitExceededException("Too many requests. Please try again later.", waitSeconds));
         }

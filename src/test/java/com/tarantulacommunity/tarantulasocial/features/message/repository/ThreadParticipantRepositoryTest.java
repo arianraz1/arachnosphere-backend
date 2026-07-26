@@ -178,4 +178,31 @@ class ThreadParticipantRepositoryTest {
 
         assertFalse(threadParticipantRepository.existsUnreadForUser(userB.getId()));
     }
+
+    @Test
+    void findOtherParticipant_returnsOtherUser_whenBothParticipantsExist() {
+        em.persistFlushFind(new ThreadParticipantEntity(thread, userA, LocalDateTime.now()));
+        em.persistFlushFind(new ThreadParticipantEntity(thread, userB, null));
+
+        Optional<UserEntity> result = threadParticipantRepository.findOtherParticipant(thread.getId(), userA.getId());
+
+        assertTrue(result.isPresent());
+        assertEquals(userB.getId(), result.get().getId());
+    }
+
+    @Test
+    void findOtherParticipant_returnsEmpty_whenOnlyRequestingUserExists() {
+        em.persistFlushFind(new ThreadParticipantEntity(thread, userA, LocalDateTime.now()));
+
+        Optional<UserEntity> result = threadParticipantRepository.findOtherParticipant(thread.getId(), userA.getId());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findOtherParticipant_returnsEmpty_whenThreadHasNoParticipants() {
+        Optional<UserEntity> result = threadParticipantRepository.findOtherParticipant(thread.getId(), userA.getId());
+
+        assertTrue(result.isEmpty());
+    }
 }

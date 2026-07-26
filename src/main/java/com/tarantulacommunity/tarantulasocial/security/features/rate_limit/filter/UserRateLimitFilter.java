@@ -77,16 +77,21 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
         String key = "user:" + userId + ":" + rule.name();
         ConsumptionProbe probe = rateLimiterService.tryConsume(userRateLimitCache, key, rule);
 
-        // See IpRateLimitFilter for a note on why this reset header is only a
-        // reliable value on the failure branch, not the success branch.
+        // Set rate limit headers with consistent values
         response.setHeader("X-RateLimit-Limit-User", String.valueOf(rule.capacity()));
         response.setHeader("X-RateLimit-Remaining-User", String.valueOf(probe.getRemainingTokens()));
-        response.setHeader("X-RateLimit-Reset-User", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));
 
         if (probe.isConsumed()) {
+            // On success, set reset to current time + refill period (when bucket will be full again)
+            long resetTimeSeconds = (System.currentTimeMillis() / 1000) + (rule.refillPeriod().getSeconds());
+            response.setHeader("X-RateLimit-Reset-User", String.valueOf(resetTimeSeconds));
             filterChain.doFilter(request, response);
         } else {
+            // On failure, set reset to when next token will be available and add Retry-After
             long waitSeconds = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000);
+            long resetTimeSeconds = (System.currentTimeMillis() / 1000) + waitSeconds;
+            response.setHeader("X-RateLimit-Reset-User", String.valueOf(resetTimeSeconds));
+            response.setHeader("Retry-After", String.valueOf(waitSeconds));
             exceptionResolver.resolveException(request, response, null,
                     new GlobalExceptionHandler.RateLimitExceededException("Too many requests. Please slow down.", waitSeconds));
         }

@@ -1,7 +1,8 @@
 package com.tarantulacommunity.tarantulasocial.features.message.controller;
 
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
-import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.CreateThreadRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.ReplyRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
@@ -45,76 +46,109 @@ class MessageControllerTest {
         return new CustomUserDetails(user, null);
     }
 
+    // --- createThread ---
+
     @Test
-    void send_shouldReturnCreatedMessageResponse() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
+    void createThread_shouldReturnCreatedMessageResponse() {
+        CreateThreadRequest request = new CreateThreadRequest(2L, "Hello", null);
         MessageResponse expectedResponse = new MessageResponse();
         expectedResponse.setId(1L);
         expectedResponse.setContent("Hello");
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.createThread(eq(1L), any(CreateThreadRequest.class)))
                 .thenReturn(expectedResponse);
 
-        ResponseEntity<MessageResponse> response = messageController.send(userDetailsOf(1L), request);
+        ResponseEntity<MessageResponse> response = messageController.createThread(userDetailsOf(1L), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isEqualTo(expectedResponse);
     }
 
     @Test
-    void send_shouldThrowWhenSenderNotFound() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
+    void createThread_shouldThrowWhenSenderNotFound() {
+        CreateThreadRequest request = new CreateThreadRequest(2L, "Hello", null);
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.createThread(eq(1L), any(CreateThreadRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(1L));
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.send(userDetailsOf(1L), request));
+                () -> messageController.createThread(userDetailsOf(1L), request));
     }
 
     @Test
-    void send_shouldThrowWhenRecipientNotFound() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, null);
+    void createThread_shouldThrowWhenRecipientNotFound() {
+        CreateThreadRequest request = new CreateThreadRequest(2L, "Hello", null);
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.createThread(eq(1L), any(CreateThreadRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UserNotFoundException(2L));
 
         assertThrows(GlobalExceptionHandler.UserNotFoundException.class,
-                () -> messageController.send(userDetailsOf(1L), request));
+                () -> messageController.createThread(userDetailsOf(1L), request));
     }
 
     @Test
-    void send_shouldThrowWhenSendingToSelf() {
-        SendMessageRequest request = new SendMessageRequest(1L, "Hello", null, null);
+    void createThread_shouldThrowWhenSendingToSelf() {
+        CreateThreadRequest request = new CreateThreadRequest(1L, "Hello", null);
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.createThread(eq(1L), any(CreateThreadRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.InvalidMessageException("You cannot send a message to yourself"));
 
         assertThrows(GlobalExceptionHandler.InvalidMessageException.class,
-                () -> messageController.send(userDetailsOf(1L), request));
+                () -> messageController.createThread(userDetailsOf(1L), request));
+    }
+
+    // --- reply ---
+
+    @Test
+    void reply_shouldReturnCreatedMessageResponse() {
+        ReplyRequest request = new ReplyRequest("Hello");
+        MessageResponse expectedResponse = new MessageResponse();
+        expectedResponse.setId(1L);
+        expectedResponse.setContent("Hello");
+
+        when(messageService.replyToThread(eq(1L), eq(1L), any(ReplyRequest.class)))
+                .thenReturn(expectedResponse);
+
+        ResponseEntity<MessageResponse> response = messageController.reply(1L, userDetailsOf(1L), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(expectedResponse);
     }
 
     @Test
-    void send_shouldThrowWhenThreadNotFound() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, 99L);
+    void reply_shouldThrowWhenThreadNotFound() {
+        ReplyRequest request = new ReplyRequest("Hello");
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.replyToThread(eq(1L), eq(99L), any(ReplyRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.ThreadNotFoundException(99L));
 
         assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
-                () -> messageController.send(userDetailsOf(1L), request));
+                () -> messageController.reply(99L, userDetailsOf(1L), request));
     }
 
     @Test
-    void send_shouldThrowWhenNotPartOfThread() {
-        SendMessageRequest request = new SendMessageRequest(2L, "Hello", null, 1L);
+    void reply_shouldThrowWhenNotPartOfThread() {
+        ReplyRequest request = new ReplyRequest("Hello");
 
-        when(messageService.sendMessage(eq(1L), any(SendMessageRequest.class)))
+        when(messageService.replyToThread(eq(99L), eq(1L), any(ReplyRequest.class)))
                 .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"));
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
-                () -> messageController.send(userDetailsOf(1L), request));
+                () -> messageController.reply(1L, userDetailsOf(99L), request));
     }
+
+    @Test
+    void reply_shouldThrowWhenThreadInactive() {
+        ReplyRequest request = new ReplyRequest("Hello");
+
+        when(messageService.replyToThread(eq(1L), eq(1L), any(ReplyRequest.class)))
+                .thenThrow(new GlobalExceptionHandler.InvalidMessageException("This thread is no longer active"));
+
+        assertThrows(GlobalExceptionHandler.InvalidMessageException.class,
+                () -> messageController.reply(1L, userDetailsOf(1L), request));
+    }
+
+    // --- inbox ---
 
     @Test
     void inbox_shouldReturnPageOfThreadSummaries() {
@@ -142,6 +176,8 @@ class MessageControllerTest {
         assertThat(response.getBody()).isEmpty();
     }
 
+    // --- getThread ---
+
     @Test
     void getThread_shouldReturnMessagesInThread() {
         MessageResponse msg = new MessageResponse();
@@ -168,6 +204,8 @@ class MessageControllerTest {
                 () -> messageController.getThread(1L, userDetailsOf(99L), PageRequest.of(0, 20)));
     }
 
+    // --- deleteMessage ---
+
     @Test
     void deleteMessage_shouldReturnNoContent() {
         ResponseEntity<Void> response = messageController.deleteMessage(1L, userDetailsOf(1L));
@@ -192,6 +230,25 @@ class MessageControllerTest {
 
         assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
                 () -> messageController.deleteMessage(1L, userDetailsOf(99L)));
+    }
+
+    // --- deleteThreadForMe ---
+
+    @Test
+    void deleteThreadForMe_shouldReturnNoContent() {
+        ResponseEntity<Void> response = messageController.deleteThreadForMe(1L, userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).deleteThreadForUser(1L, 1L);
+    }
+
+    @Test
+    void deleteThreadForMe_shouldThrowWhenUnauthorized() {
+        doThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"))
+                .when(messageService).deleteThreadForUser(1L, 99L);
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.deleteThreadForMe(1L, userDetailsOf(99L)));
     }
 
     // --- hasUnread ---

@@ -1,7 +1,6 @@
 package com.tarantulacommunity.tarantulasocial.features.message.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,17 +11,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SendMessageRequest {
+public class ReplyRequest {
 
-    @NotNull
-    private Long recipientId;
-
-    @NotBlank
-    @Size(max = 2000)
+    @NotBlank(message = "Message content cannot be empty")
+    @Size(max = 2000, message = "Message content cannot exceed 2000 characters")
     private String content;
-
-    @Size(max = 255)
-    private String subject;
-
-    private Long threadId;
 }

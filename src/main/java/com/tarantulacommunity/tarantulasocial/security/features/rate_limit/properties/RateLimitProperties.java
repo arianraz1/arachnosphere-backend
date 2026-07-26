@@ -32,8 +32,6 @@ public class RateLimitProperties {
     private Limit profileUpdate = new Limit(8, Duration.ofMinutes(1));
     private Limit imageUpload = new Limit(5, Duration.ofMinutes(1));
     private Limit adminSpeciesSync = new Limit(5, Duration.ofMinutes(5));
-
-    // --- Service based limits ---
     private Limit threadCreation = new Limit(18, Duration.ofHours(1));
 
     // --- Default limit ---

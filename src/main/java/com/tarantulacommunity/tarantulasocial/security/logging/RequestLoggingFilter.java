@@ -15,6 +15,8 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class RequestLoggingFilter extends OncePerRequestFilter {
@@ -22,6 +24,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
     private static final String CORRELATION_ID_MDC_KEY = "correlationId";
+
+    private static final Pattern SANITIZE_PATTERN = Pattern.compile(
+            "(?i)(\"password\"\\s*:\\s*\")([^\"]*)(\")|(password\\s*=\\s*)([^&\\s]*)"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -63,7 +69,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         try {
             String method = request.getMethod();
             String uri = request.getRequestURI();
-            String queryString = request.getQueryString();
+            String queryString = sanitizePayload(request.getQueryString()); // Scrub query string
             String fullUri = queryString != null ? uri + "?" + queryString : uri;
             int status = response.getStatus();
             String clientIp = request.getRemoteAddr();
@@ -76,7 +82,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             if (!"GET".equals(method) && request.getContentAsByteArray().length > 0) {
                 String requestBody = new String(request.getContentAsByteArray(), StandardCharsets.UTF_8);
                 if (requestBody.length() < 1000) {
-                    log.debug("Request Body: {}", requestBody);
+                    String cleanBody = sanitizePayload(requestBody); // Scrub request body
+                    log.debug("Request Body: {}", cleanBody);
                 }
             }
 
@@ -90,5 +97,27 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             log.error("Error logging request/response", e);
         }
+    }
+
+    private String sanitizePayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return payload;
+        }
+
+        Matcher matcher = SANITIZE_PATTERN.matcher(payload);
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            if (matcher.group(1) != null) {
+                // JSON: "password":"secret"
+                matcher.appendReplacement(sb, matcher.group(1) + "[REDACTED]" + matcher.group(3));
+            } else {
+                // Form/query: password=secret
+                matcher.appendReplacement(sb, matcher.group(4) + "[REDACTED]");
+            }
+        }
+
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }

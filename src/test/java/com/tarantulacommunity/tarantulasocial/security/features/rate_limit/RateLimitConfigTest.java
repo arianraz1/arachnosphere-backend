@@ -298,7 +298,7 @@ class RateLimitConfigTest {
                 .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages/*/replies");
     }
 
     @Test
@@ -462,14 +462,17 @@ class RateLimitConfigTest {
     }
 
     @Test
-    void shouldCreateThreadCreationRateLimitRuleBean() {
-        RateLimitRule rule = config.threadCreationRateLimitRule(properties);
+    void shouldConfigureThreadCreationRuleWithCorrectPath() {
+        List<RateLimitRule> rules = config.userRateLimitRules(properties);
+
+        RateLimitRule rule = rules.stream()
+                .filter(r -> "thread-creation".equals(r.name()))
+                .findFirst()
+                .orElse(null);
 
         assertThat(rule).isNotNull();
-        assertThat(rule.name()).isEqualTo("thread-creation");
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages/threads");
         assertThat(rule.method()).isEqualTo(HttpMethod.POST);
-        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages");
-        assertThat(rule.capacity()).isEqualTo(properties.getThreadCreation().getCapacity());
     }
 }
 

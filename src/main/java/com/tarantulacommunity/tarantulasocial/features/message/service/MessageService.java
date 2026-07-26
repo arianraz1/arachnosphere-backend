@@ -1,8 +1,8 @@
 package com.tarantulacommunity.tarantulasocial.features.message.service;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
-import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.CreateThreadRequest;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.request.ReplyRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
@@ -16,10 +16,7 @@ import com.tarantulacommunity.tarantulasocial.features.message.repository.Thread
 import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
-import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.ConsumptionProbe;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -46,12 +43,8 @@ public class MessageService {
     private final ThreadRepository threadRepository;
     private final ThreadParticipantRepository threadParticipantRepository;
 
-    private final RateLimitService rateLimiterService;
-    private final Cache<String, Bucket> userRateLimitCache;
-    private final RateLimitRule threadCreationRateLimitRule;
-
     @Transactional
-    public MessageResponse sendMessage(Long senderId, SendMessageRequest request) {
+    public MessageResponse createThread(Long senderId, CreateThreadRequest request) {
         UserEntity sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(senderId));
         UserEntity recipient = userRepository.findById(request.getRecipientId())
@@ -61,41 +54,17 @@ public class MessageService {
             throw new GlobalExceptionHandler.InvalidMessageException("You cannot send a message to yourself");
         }
 
-        ThreadEntity thread;
-        boolean newThread = request.getThreadId() == null;
-
-        if (!newThread) {
-            thread = threadRepository.findById(request.getThreadId())
-                    .orElseThrow(() -> new GlobalExceptionHandler.ThreadNotFoundException(request.getThreadId()));
-
-            if (!thread.isActive()) {
-                throw new GlobalExceptionHandler.InvalidMessageException("This thread is no longer active");
-            }
-
-            if (!messageRepository.hasVisibleMessageInThread(thread.getId(), senderId)) {
-                throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
-            }
+        ThreadEntity thread = new ThreadEntity();
+        thread.setCreatedBy(sender);
+        if (request.getSubject() != null && !request.getSubject().isBlank()) {
+            thread.setSubject(request.getSubject());
         } else {
-            String key = "user:" + senderId + ":thread-creation";
-            ConsumptionProbe probe = rateLimiterService.tryConsume(userRateLimitCache, key, threadCreationRateLimitRule);
-            if (!probe.isConsumed()) {
-                long waitSeconds = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000);
-                throw new GlobalExceptionHandler.RateLimitExceededException(
-                        "You're starting new conversations too quickly. Please slow down.", waitSeconds);
-            }
-
-            thread = new ThreadEntity();
-            thread.setCreatedBy(sender);
-            if (request.getSubject() != null && !request.getSubject().isBlank()) {
-                thread.setSubject(request.getSubject());
-            } else {
-                String preview = request.getContent().length() > 50
-                        ? request.getContent().substring(0, 50) + "..."
-                        : request.getContent();
-                thread.setSubject(preview);
-            }
-            thread = threadRepository.save(thread);
+            String preview = request.getContent().length() > 50
+                    ? request.getContent().substring(0, 50) + "..."
+                    : request.getContent();
+            thread.setSubject(preview);
         }
+        thread = threadRepository.save(thread);
 
         MessageEntity message = new MessageEntity();
         message.setSender(sender);
@@ -108,17 +77,46 @@ public class MessageService {
         thread.setUpdatedAt(LocalDateTime.now());
         threadRepository.save(thread);
 
-        // Sender has implicitly "read" up to the message they just sent.
-        if (newThread) {
-            threadParticipantRepository.save(new ThreadParticipantEntity(thread, sender, LocalDateTime.now()));
+        threadParticipantRepository.save(new ThreadParticipantEntity(thread, sender, LocalDateTime.now()));
+        threadParticipantRepository.save(new ThreadParticipantEntity(thread, recipient, null));
+
+        return messageMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public MessageResponse replyToThread(Long senderId, Long threadId, ReplyRequest request) {
+        UserEntity sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new GlobalExceptionHandler.UserNotFoundException(senderId));
+
+        ThreadEntity thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new GlobalExceptionHandler.ThreadNotFoundException(threadId));
+
+        if (!thread.isActive()) {
+            throw new GlobalExceptionHandler.InvalidMessageException("This thread is no longer active");
+        }
+
+        if (!messageRepository.hasVisibleMessageInThread(thread.getId(), senderId)) {
+            throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
+        }
+
+        UserEntity recipient = threadParticipantRepository.findOtherParticipant(threadId, senderId)
+                .orElseThrow(() -> new GlobalExceptionHandler.UnauthorizedException(
+                        "Could not determine the other participant in this conversation"));
+
+        MessageEntity message = new MessageEntity();
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setContent(request.getContent());
+        message.setThread(thread);
+
+        MessageEntity saved = messageRepository.save(message);
+
+        thread.setUpdatedAt(LocalDateTime.now());
+        threadRepository.save(thread);
+
+        threadParticipantRepository.markRead(thread.getId(), senderId, LocalDateTime.now());
+        if (!threadParticipantRepository.existsByThread_IdAndUser_Id(thread.getId(), recipient.getId())) {
             threadParticipantRepository.save(new ThreadParticipantEntity(thread, recipient, null));
-        } else {
-            threadParticipantRepository.markRead(thread.getId(), senderId, LocalDateTime.now());
-            // Defensive: recipient may not have a row yet (e.g. thread predates this feature
-            // and backfill somehow missed them). Ensure it exists without touching last_read_at.
-            if (!threadParticipantRepository.existsByThread_IdAndUser_Id(thread.getId(), recipient.getId())) {
-                threadParticipantRepository.save(new ThreadParticipantEntity(thread, recipient, null));
-            }
         }
 
         return messageMapper.toResponse(saved);

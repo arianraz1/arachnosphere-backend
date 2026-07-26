@@ -500,23 +500,24 @@ class IpRateLimitFilterTest {
                 .contains("resend-verification");
     }
 
-    // --- reset header behavior (documented, not a bug — see RateLimitService discussion) ---
+    // --- reset header behavior ---
 
     @Test
-    void shouldReportZeroResetHeader_onSuccessfulConsumption() throws Exception {
+    void shouldReportFutureResetTimestamp_onSuccessfulConsumption() throws Exception {
         request.setMethod("POST");
         request.setRequestURI(base + "/auth/login");
         request.setRemoteAddr("192.168.1.1");
 
         filter.doFilterInternal(request, response, filterChain);
 
-        // nanosToWaitForRefill is only meaningful on the rejection branch; Bucket4j
-        // returns 0 unconditionally on a successful consume, by design.
-        assertThat(response.getHeader("X-RateLimit-Reset-IP")).isEqualTo("0");
+        // Reset header should be a future timestamp (current time + refill period)
+        long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-IP"));
+        long currentTime = System.currentTimeMillis() / 1000;
+        assertThat(reset).isGreaterThan(currentTime);
     }
 
     @Test
-    void shouldReportPositiveResetHeader_whenRejected() throws Exception {
+    void shouldReportFutureResetTimestamp_whenRejected() throws Exception {
         request.setMethod("POST");
         request.setRequestURI(base + "/auth/register");
         request.setRemoteAddr("192.168.1.1");
@@ -527,6 +528,23 @@ class IpRateLimitFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-IP"));
-        assertThat(reset).isGreaterThan(0);
+        long currentTime = System.currentTimeMillis() / 1000;
+        assertThat(reset).isGreaterThan(currentTime);
+    }
+
+    @Test
+    void shouldSetRetryAfterHeader_whenRejected() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI(base + "/auth/register");
+        request.setRemoteAddr("192.168.1.1");
+
+        for (int i = 0; i < 3; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getHeader("Retry-After")).isNotNull();
+        long retryAfter = Long.parseLong(response.getHeader("Retry-After"));
+        assertThat(retryAfter).isGreaterThan(0);
     }
 }

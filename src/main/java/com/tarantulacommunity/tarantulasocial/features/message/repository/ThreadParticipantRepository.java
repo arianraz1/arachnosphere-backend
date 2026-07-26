@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.repository;
 
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadParticipantEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadParticipantId;
+import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -36,4 +37,7 @@ public interface ThreadParticipantRepository extends JpaRepository<ThreadPartici
             "  AND m.deletedByRecipient = false " +
             "  AND (tp.lastReadAt IS NULL OR m.createdAt > tp.lastReadAt))")
     boolean existsUnreadForUser(@Param("userId") Long userId);
+
+    @Query("SELECT tp.user FROM ThreadParticipantEntity tp WHERE tp.thread.id = :threadId AND tp.user.id <> :senderId")
+    Optional<UserEntity> findOtherParticipant(@Param("threadId") Long threadId, @Param("senderId") Long senderId);
 }
