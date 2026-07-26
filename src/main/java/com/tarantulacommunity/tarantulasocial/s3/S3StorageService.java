@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.s3;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -9,6 +10,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -24,6 +27,8 @@ public class S3StorageService {
     private static final String[] ALLOWED_CONTENT_TYPES = {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
     };
+    private static final float JPEG_QUALITY = 0.82f; // tune to taste
+    private static final int MAX_DIMENSION = 2000;   // px, longest side
 
     public String uploadImage(MultipartFile file, String folder) throws IOException {
         byte[] content = file.getBytes();
@@ -34,20 +39,58 @@ public class S3StorageService {
                 ? originalFilename.substring(originalFilename.lastIndexOf("."))
                 : "";
 
-        String uniqueFilename = UUID.randomUUID() + extension;
+        CompressedImage compressed = compressIfSupported(content, file.getContentType(), extension);
+
+        String uniqueFilename = UUID.randomUUID() + compressed.extension();
         String key = folder + "/" + uniqueFilename;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(s3Config.getBucket())
                 .key(key)
-                .contentType(file.getContentType())
-                .contentLength(file.getSize())
+                .contentType(compressed.contentType())
+                .contentLength((long) compressed.bytes().length)
                 .build();
 
-        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(content));
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(compressed.bytes()));
 
-        log.info("Successfully uploaded image to S3: {}", key);
+        log.info("Successfully uploaded image to S3: {} ({} -> {} bytes)",
+                key, content.length, compressed.bytes().length);
         return key;
+    }
+
+    private record CompressedImage(byte[] bytes, String contentType, String extension) {}
+
+    private CompressedImage compressIfSupported(byte[] original, String contentType, String originalExtension) {
+        // Skip compression for formats Thumbnailator/ImageIO can't safely handle:
+        // GIF (would flatten animation), WebP (no built-in ImageIO support)
+        if (contentType == null
+                || contentType.equalsIgnoreCase("image/gif")
+                || contentType.equalsIgnoreCase("image/webp")) {
+            return new CompressedImage(original, contentType, originalExtension);
+        }
+
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            Thumbnails.of(new ByteArrayInputStream(original))
+                    .size(MAX_DIMENSION, MAX_DIMENSION)   // no upscaling, caps longest side
+                    .outputQuality(JPEG_QUALITY)
+                    .outputFormat("jpg")
+                    .toOutputStream(out);
+
+            byte[] compressedBytes = out.toByteArray();
+
+            // Only use the compressed version if it's actually smaller —
+            // small/already-optimized images can occasionally grow slightly.
+            if (compressedBytes.length < original.length) {
+                return new CompressedImage(compressedBytes, "image/jpeg", ".jpg");
+            }
+            return new CompressedImage(original, contentType, originalExtension);
+
+        } catch (IOException e) {
+            log.warn("Image compression failed, uploading original: {}", e.getMessage());
+            return new CompressedImage(original, contentType, originalExtension);
+        }
     }
 
     public void deleteImage(String key) {

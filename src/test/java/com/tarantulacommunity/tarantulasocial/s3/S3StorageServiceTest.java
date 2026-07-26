@@ -13,7 +13,12 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -178,6 +183,80 @@ class S3StorageServiceTest {
         assertNotEquals(key1, key2);
     }
 
+    // ---- uploadImage compression ----
+    // These use real, decodable images (not just magic-byte stubs) since
+    // Thumbnailator needs to actually decode the image to compress it.
+    // The magic-byte-only fixtures above are undecodable, so compression
+    // silently no-ops and falls back to the original bytes for those tests
+    // -- which is intentional and already covered by the assertions above.
+
+    @Test
+    void uploadImage_compressesLargeJpeg_reducesSizeAndCapsDimensions() throws IOException {
+        byte[] largeJpeg = realJpegBytes(3000, 3000);
+        MultipartFile file = new MockMultipartFile("file", "big.jpg", "image/jpeg", largeJpeg);
+
+        s3StorageService.uploadImage(file, "profile-pictures");
+
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+
+        assertEquals("image/jpeg", captor.getValue().contentType());
+        assertTrue(captor.getValue().contentLength() < largeJpeg.length,
+                "compressed/resized image should be smaller than the original 3000x3000 source");
+    }
+
+    @Test
+    void uploadImage_convertsNoisyPngToJpeg_whenCompressionShrinksIt() throws IOException {
+        // Random-noise PNGs compress poorly under PNG's lossless filter but
+        // shrink significantly under JPEG's lossy quantization -- this
+        // deterministically exercises the "compressed is smaller" branch.
+        byte[] noisyPng = realNoisyPngBytes(400, 400);
+        MultipartFile file = new MockMultipartFile("file", "pic.png", "image/png", noisyPng);
+
+        String key = s3StorageService.uploadImage(file, "favorite-images");
+
+        assertTrue(key.endsWith(".jpg"), "compression should switch the stored extension to .jpg");
+
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+        assertEquals("image/jpeg", captor.getValue().contentType());
+        assertTrue(captor.getValue().contentLength() < noisyPng.length);
+    }
+
+    @Test
+    void uploadImage_skipsCompression_forGif_evenWithRealDecodableImage() throws IOException {
+        byte[] realGif = realGifBytes(200, 200);
+        MultipartFile file = new MockMultipartFile("file", "pic.gif", "image/gif", realGif);
+
+        String key = s3StorageService.uploadImage(file, "favorite-images");
+
+        assertTrue(key.endsWith(".gif"));
+
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+        assertEquals("image/gif", captor.getValue().contentType());
+        assertEquals(realGif.length, captor.getValue().contentLength());
+    }
+
+    @Test
+    void uploadImage_fallsBackToOriginal_whenCompressedResultIsNotSmaller() throws IOException {
+        // A tiny 2x2 solid-color image: JPEG's per-block overhead makes the
+        // "compressed" output larger than the trivial original, so the
+        // original bytes/content-type/extension should be kept as-is.
+        byte[] tinyJpeg = realJpegBytes(2, 2);
+        MultipartFile file = new MockMultipartFile("file", "tiny.jpg", "image/jpeg", tinyJpeg);
+
+        String key = s3StorageService.uploadImage(file, "profile-pictures");
+
+        assertTrue(key.endsWith(".jpg"));
+
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+        assertEquals("image/jpeg", captor.getValue().contentType());
+        assertEquals(tinyJpeg.length, captor.getValue().contentLength(),
+                "original should be kept when 'compression' wouldn't shrink it");
+    }
+
     // ---- deleteImage ----
 
     @Test
@@ -222,6 +301,7 @@ class S3StorageServiceTest {
     @Test
     void getImageUrl_usesCustomEndpoint_whenPublicEndpointNotSet() {
         s3Config.setEndpointUrl("http://localstack:4566");
+        s3Config.setPublicUrlIncludesBucket(true);
 
         String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
 
@@ -232,6 +312,7 @@ class S3StorageServiceTest {
     void getImageUrl_prefersPublicEndpoint_whenBothEndpointsSet() {
         s3Config.setEndpointUrl("http://localstack:4566");
         s3Config.setPublicEndpointUrl("http://localhost:4566");
+        s3Config.setPublicUrlIncludesBucket(true);
 
         String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
 
@@ -242,6 +323,7 @@ class S3StorageServiceTest {
     void getImageUrl_ignoresBlankPublicEndpoint_fallsBackToEndpointUrl() {
         s3Config.setEndpointUrl("http://localstack:4566");
         s3Config.setPublicEndpointUrl("   ");
+        s3Config.setPublicUrlIncludesBucket(true);
 
         String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
 
@@ -260,6 +342,17 @@ class S3StorageServiceTest {
     }
 
     @Test
+    void getImageUrl_r2Style_omitsBucketFromPath_whenFlagIsFalse() {
+        s3Config.setEndpointUrl("https://account-id.r2.cloudflarestorage.com");
+        s3Config.setPublicEndpointUrl("https://pub-xxxx.r2.dev");
+        s3Config.setPublicUrlIncludesBucket(false);
+
+        String url = s3StorageService.getImageUrl("profile-pictures/abc.jpg");
+
+        assertEquals("https://pub-xxxx.r2.dev/profile-pictures/abc.jpg", url);
+    }
+
+    @Test
     void getImageUrl_returnsNullWhenKeyIsNull() {
         assertNull(s3StorageService.getImageUrl(null));
     }
@@ -267,5 +360,45 @@ class S3StorageServiceTest {
     @Test
     void getImageUrl_returnsNullWhenKeyIsBlank() {
         assertNull(s3StorageService.getImageUrl("   "));
+    }
+
+    // ---- test image fixtures ----
+
+    private static byte[] realJpegBytes(int width, int height) throws IOException {
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.RED);
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "jpg", baos);
+        return baos.toByteArray();
+    }
+
+    private static byte[] realNoisyPngBytes(int width, int height) throws IOException {
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Random rnd = new Random(42); // fixed seed for deterministic test results
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                img.setRGB(x, y, rnd.nextInt(0xFFFFFF));
+            }
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", baos);
+        return baos.toByteArray();
+    }
+
+    private static byte[] realGifBytes(int width, int height) throws IOException {
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.BLUE);
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "gif", baos);
+        return baos.toByteArray();
     }
 }
