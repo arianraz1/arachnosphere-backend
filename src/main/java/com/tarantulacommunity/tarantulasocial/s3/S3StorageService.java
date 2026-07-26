@@ -80,10 +80,9 @@ public class S3StorageService {
                     ? s3Config.getPublicEndpointUrl()
                     : s3Config.getEndpointUrl();
 
-            return String.format("%s/%s/%s",
-                    base,
-                    s3Config.getBucket(),
-                    key);
+            return s3Config.isPublicUrlIncludesBucket()
+                    ? String.format("%s/%s/%s", base, s3Config.getBucket(), key)
+                    : String.format("%s/%s", base, key);
         }
 
         return String.format("https://%s.s3.%s.amazonaws.com/%s",
