@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class IpRateLimitFilterTest {
     private Cache<String, Bucket> cache;
     private List<RateLimitRule> rules;
     private RateLimitRule defaultRateLimitRule;
+    private RateLimitService rateLimitService;
 
     @Mock
     private FilterChain filterChain;
@@ -63,8 +65,9 @@ class IpRateLimitFilterTest {
                 new RateLimitRule("verify-email", HttpMethod.GET, base + "/auth/verify-email", 10, Duration.ofHours(1))
         );
         defaultRateLimitRule = new RateLimitRule("default", null, "/**", 300, Duration.ofMinutes(1));
+        rateLimitService = new RateLimitService();
 
-        filter = new IpRateLimitFilter(cache, rules, defaultRateLimitRule, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, rules, defaultRateLimitRule, exceptionResolver, rateLimitService);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
     }
@@ -232,7 +235,7 @@ class IpRateLimitFilterTest {
     void shouldEnforceDefaultRuleCapacityWhenExceeded() throws Exception {
         List<RateLimitRule> emptyRules = List.of();
         RateLimitRule strictDefault = new RateLimitRule("default", null, "/**", 1, Duration.ofMinutes(1));
-        filter = new IpRateLimitFilter(cache, emptyRules, strictDefault, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, emptyRules, strictDefault, exceptionResolver, rateLimitService);
 
         request.setMethod("GET");
         request.setRequestURI(base + "/species/search/all");
@@ -298,7 +301,7 @@ class IpRateLimitFilterTest {
         List<RateLimitRule> rulesWithWildcard = List.of(
                 new RateLimitRule("collection", HttpMethod.DELETE, base + "/collection/*", 5, Duration.ofMinutes(1))
         );
-        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver, rateLimitService);
 
         request.setMethod("DELETE");
         request.setRequestURI(base + "/collection/123");
@@ -314,7 +317,7 @@ class IpRateLimitFilterTest {
         List<RateLimitRule> adminRules = List.of(
                 new RateLimitRule("admin-sync", HttpMethod.POST, base + "/admin/species/sync/**", 5, Duration.ofMinutes(5))
         );
-        filter = new IpRateLimitFilter(cache, adminRules, defaultRateLimitRule, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, adminRules, defaultRateLimitRule, exceptionResolver, rateLimitService);
 
         request.setMethod("POST");
         request.setRemoteAddr("192.168.1.1");
@@ -337,7 +340,7 @@ class IpRateLimitFilterTest {
         List<RateLimitRule> rulesWithWildcard = List.of(
                 new RateLimitRule("collection", HttpMethod.DELETE, base + "/collection/*", 5, Duration.ofMinutes(1))
         );
-        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, rulesWithWildcard, defaultRateLimitRule, exceptionResolver, rateLimitService);
 
         request.setMethod("DELETE");
         request.setRequestURI(base + "/user/123");
@@ -426,7 +429,7 @@ class IpRateLimitFilterTest {
         List<RateLimitRule> strictRules = List.of(
                 new RateLimitRule("strict", HttpMethod.POST, base + "/auth/login", 1, Duration.ofMinutes(1))
         );
-        filter = new IpRateLimitFilter(cache, strictRules, defaultRateLimitRule, exceptionResolver);
+        filter = new IpRateLimitFilter(cache, strictRules, defaultRateLimitRule, exceptionResolver, rateLimitService);
 
         request.setMethod("POST");
         request.setRequestURI(base + "/auth/login");
@@ -496,6 +499,34 @@ class IpRateLimitFilterTest {
         assertThat(cache.asMap().keySet().stream().findFirst().get())
                 .contains("resend-verification");
     }
+
+    // --- reset header behavior (documented, not a bug — see RateLimitService discussion) ---
+
+    @Test
+    void shouldReportZeroResetHeader_onSuccessfulConsumption() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI(base + "/auth/login");
+        request.setRemoteAddr("192.168.1.1");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        // nanosToWaitForRefill is only meaningful on the rejection branch; Bucket4j
+        // returns 0 unconditionally on a successful consume, by design.
+        assertThat(response.getHeader("X-RateLimit-Reset-IP")).isEqualTo("0");
+    }
+
+    @Test
+    void shouldReportPositiveResetHeader_whenRejected() throws Exception {
+        request.setMethod("POST");
+        request.setRequestURI(base + "/auth/register");
+        request.setRemoteAddr("192.168.1.1");
+
+        for (int i = 0; i < 3; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-IP"));
+        assertThat(reset).isGreaterThan(0);
+    }
 }
-
-

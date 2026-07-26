@@ -124,6 +124,12 @@ public class RateLimitConfig {
     }
 
     @Bean
+    public RateLimitRule threadCreationRateLimitRule(RateLimitProperties props) {
+        return new RateLimitRule("thread-creation", HttpMethod.POST, "/api/v1/messages",
+                props.getThreadCreation().getCapacity(), props.getThreadCreation().getRefillPeriod());
+    }
+
+    @Bean
     public RateLimitRule defaultRateLimitRule(RateLimitProperties props) {
         return new RateLimitRule("default", null, "/**",
                 props.getDefaultLimit().getCapacity(), props.getDefaultLimit().getRefillPeriod());

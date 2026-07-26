@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.security.features.rate_limit.filt
 import com.github.benmanes.caffeine.cache.Cache;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.util.ClientIpResolver;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
@@ -40,17 +41,20 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
     private final List<RateLimitRule> ipRateLimitRules;
     private final RateLimitRule defaultRateLimitRule;
     private final HandlerExceptionResolver exceptionResolver;
+    private final RateLimitService rateLimiterService;
 
     public IpRateLimitFilter(
             @Qualifier("ipRateLimitCache") Cache<String, Bucket> ipRateLimitCache,
             @Qualifier("ipRateLimitRules") List<RateLimitRule> ipRateLimitRules,
             @Qualifier("defaultRateLimitRule") RateLimitRule defaultRateLimitRule,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver,
+            RateLimitService rateLimiterService
     ) {
         this.ipRateLimitCache = ipRateLimitCache;
         this.ipRateLimitRules = ipRateLimitRules;
         this.defaultRateLimitRule = defaultRateLimitRule;
         this.exceptionResolver = exceptionResolver;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @Override
@@ -64,13 +68,13 @@ public class IpRateLimitFilter extends OncePerRequestFilter {
         String clientIp = ClientIpResolver.resolve(request);
         String key = "ip:" + clientIp + ":" + rule.name();
 
-        Bucket bucket = ipRateLimitCache.get(key, k -> Bucket.builder()
-                .addLimit(rule.toBandwidth())
-                .build());
+        ConsumptionProbe probe = rateLimiterService.tryConsume(ipRateLimitCache, key, rule);
 
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-
-        // Add rate limit headers to response
+        // Reset header: nanosToWaitForRefill is only meaningful when the bucket is
+        // exhausted (isConsumed() == false); Bucket4j returns 0 for it on a successful
+        // consume, so on the happy path this reports "0s" rather than a real refill ETA.
+        // Treated here as "seconds until this bucket is empty resets to full availability
+        // on failure" — not accurate as a general-purpose reset time on success.
         response.setHeader("X-RateLimit-Limit-IP", String.valueOf(rule.capacity()));
         response.setHeader("X-RateLimit-Remaining-IP", String.valueOf(probe.getRemainingTokens()));
         response.setHeader("X-RateLimit-Reset-IP", String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000));

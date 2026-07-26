@@ -6,6 +6,7 @@ import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.security.auth.model.CustomUserDetails;
 import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,7 @@ class UserRateLimitFilterTest {
     private Cache<String, Bucket> cache;
     private List<RateLimitRule> rules;
     private RateLimitRule defaultRateLimitRule;
+    private RateLimitService rateLimitService;
 
     @Mock
     private FilterChain filterChain;
@@ -68,8 +70,9 @@ class UserRateLimitFilterTest {
                 new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**", 5, Duration.ofMinutes(5))
         );
         defaultRateLimitRule = new RateLimitRule("default", null, "/**", 300, Duration.ofMinutes(1));
+        rateLimitService = new RateLimitService();
 
-        filter = new UserRateLimitFilter(cache, rules, defaultRateLimitRule, exceptionResolver);
+        filter = new UserRateLimitFilter(cache, rules, defaultRateLimitRule, exceptionResolver, rateLimitService);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
         SecurityContextHolder.clearContext();
@@ -446,6 +449,34 @@ class UserRateLimitFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         assertThat(cache.asMap()).hasSize(2);
+    }
+
+    // --- reset header behavior (documented, not a bug) ---
+
+    @Test
+    void shouldReportZeroResetHeader_onSuccessfulConsumption() throws Exception {
+        setAuthentication(1L, "USER");
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/messages");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getHeader("X-RateLimit-Reset-User")).isEqualTo("0");
+    }
+
+    @Test
+    void shouldReportPositiveResetHeader_whenRejected() throws Exception {
+        setAuthentication(1L, "USER");
+        request.setMethod("POST");
+        request.setRequestURI("/api/v1/messages");
+
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        filter.doFilterInternal(request, response, filterChain);
+
+        long reset = Long.parseLong(response.getHeader("X-RateLimit-Reset-User"));
+        assertThat(reset).isGreaterThan(0);
     }
 
     private void setAuthentication(Long userId, String role) {

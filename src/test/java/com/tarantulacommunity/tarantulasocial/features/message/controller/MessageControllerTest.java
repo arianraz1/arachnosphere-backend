@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.UnreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
@@ -213,5 +214,38 @@ class MessageControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().unread()).isFalse();
+    }
+
+    // --- getThreadStatus ---
+
+    @Test
+    void getThreadStatus_shouldReturnActiveStatus() {
+        ThreadStatusResponse expectedResponse = new ThreadStatusResponse(true);
+
+        when(messageService.getThreadStatus(1L, 1L)).thenReturn(expectedResponse);
+
+        ResponseEntity<ThreadStatusResponse> response =
+                messageController.getThreadStatus(1L, userDetailsOf(1L));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().isActive()).isTrue();
+    }
+
+    @Test
+    void getThreadStatus_shouldThrowWhenNotPartOfThread() {
+        when(messageService.getThreadStatus(1L, 99L))
+                .thenThrow(new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation"));
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageController.getThreadStatus(1L, userDetailsOf(99L)));
+    }
+
+    @Test
+    void getThreadStatus_shouldThrowWhenThreadNotFound() {
+        when(messageService.getThreadStatus(99L, 1L))
+                .thenThrow(new GlobalExceptionHandler.ThreadNotFoundException(99L));
+
+        assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
+                () -> messageController.getThreadStatus(99L, userDetailsOf(1L)));
     }
 }

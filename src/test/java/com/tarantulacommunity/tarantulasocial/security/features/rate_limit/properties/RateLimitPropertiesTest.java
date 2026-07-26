@@ -48,7 +48,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultRefreshLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getRefresh().getCapacity()).isEqualTo(30);
+        assertThat(props.getRefresh().getCapacity()).isEqualTo(15);
         assertThat(props.getRefresh().getRefillPeriod()).isEqualTo(Duration.ofHours(1));
     }
 
@@ -56,7 +56,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultMessageSendLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getMessageSend().getCapacity()).isEqualTo(30);
+        assertThat(props.getMessageSend().getCapacity()).isEqualTo(8);
         assertThat(props.getMessageSend().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
     }
 
@@ -64,7 +64,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultCollectionWriteLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getCollectionWrite().getCapacity()).isEqualTo(60);
+        assertThat(props.getCollectionWrite().getCapacity()).isEqualTo(20);
         assertThat(props.getCollectionWrite().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
     }
 
@@ -72,7 +72,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultProfileUpdateLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getProfileUpdate().getCapacity()).isEqualTo(20);
+        assertThat(props.getProfileUpdate().getCapacity()).isEqualTo(8);
         assertThat(props.getProfileUpdate().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
     }
 
@@ -143,6 +143,9 @@ class RateLimitPropertiesTest {
         assertThat(props.getMessageSend()).isNotNull();
         assertThat(props.getCollectionWrite()).isNotNull();
         assertThat(props.getProfileUpdate()).isNotNull();
+        assertThat(props.getImageUpload()).isNotNull();
+        assertThat(props.getAdminSpeciesSync()).isNotNull();
+        assertThat(props.getThreadCreation()).isNotNull();
     }
 
     @Test
@@ -178,7 +181,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultVerifyEmailLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getVerifyEmail().getCapacity()).isEqualTo(10);
+        assertThat(props.getVerifyEmail().getCapacity()).isEqualTo(5);
         assertThat(props.getVerifyEmail().getRefillPeriod()).isEqualTo(Duration.ofHours(1));
     }
 
@@ -186,7 +189,7 @@ class RateLimitPropertiesTest {
     void shouldHaveDefaultDefaultLimit() {
         RateLimitProperties props = new RateLimitProperties();
 
-        assertThat(props.getDefaultLimit().getCapacity()).isEqualTo(300);
+        assertThat(props.getDefaultLimit().getCapacity()).isEqualTo(150);
         assertThat(props.getDefaultLimit().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
     }
 
@@ -205,7 +208,34 @@ class RateLimitPropertiesTest {
         assertThat(props.getCsrf()).isNotNull();
         assertThat(props.getResendVerification()).isNotNull();
         assertThat(props.getVerifyEmail()).isNotNull();
+        assertThat(props.getImageUpload()).isNotNull();
+        assertThat(props.getAdminSpeciesSync()).isNotNull();
+        assertThat(props.getThreadCreation()).isNotNull();
         assertThat(props.getDefaultLimit()).isNotNull();
+    }
+
+    @Test
+    void shouldHaveDefaultImageUploadLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getImageUpload().getCapacity()).isEqualTo(5);
+        assertThat(props.getImageUpload().getRefillPeriod()).isEqualTo(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void shouldHaveDefaultAdminSpeciesSyncLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getAdminSpeciesSync().getCapacity()).isEqualTo(5);
+        assertThat(props.getAdminSpeciesSync().getRefillPeriod()).isEqualTo(Duration.ofMinutes(5));
+    }
+
+    @Test
+    void shouldHaveDefaultThreadCreationLimit() {
+        RateLimitProperties props = new RateLimitProperties();
+
+        assertThat(props.getThreadCreation().getCapacity()).isEqualTo(18);
+        assertThat(props.getThreadCreation().getRefillPeriod()).isEqualTo(Duration.ofHours(1));
     }
 }
 

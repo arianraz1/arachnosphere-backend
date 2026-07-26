@@ -21,20 +21,23 @@ public class RateLimitProperties {
     private Limit register = new Limit(3, Duration.ofHours(1));
     private Limit forgotPassword = new Limit(5, Duration.ofHours(1));
     private Limit resetPassword = new Limit(10, Duration.ofHours(1));
-    private Limit refresh = new Limit(30, Duration.ofHours(1));
+    private Limit refresh = new Limit(15, Duration.ofHours(1));
     private Limit resendVerification = new Limit(5, Duration.ofHours(1));
     private Limit csrf = new Limit(20, Duration.ofMinutes(1));
-    private Limit verifyEmail = new Limit(10, Duration.ofHours(1));
+    private Limit verifyEmail = new Limit(5, Duration.ofHours(1));
 
     // --- User-based limits (authenticated endpoints) ---
-    private Limit messageSend = new Limit(30, Duration.ofMinutes(1));
-    private Limit collectionWrite = new Limit(60, Duration.ofMinutes(1));
-    private Limit profileUpdate = new Limit(20, Duration.ofMinutes(1));
-    private Limit imageUpload = new Limit(10, Duration.ofMinutes(1));
+    private Limit messageSend = new Limit(8, Duration.ofMinutes(1));
+    private Limit collectionWrite = new Limit(20, Duration.ofMinutes(1));
+    private Limit profileUpdate = new Limit(8, Duration.ofMinutes(1));
+    private Limit imageUpload = new Limit(5, Duration.ofMinutes(1));
     private Limit adminSpeciesSync = new Limit(5, Duration.ofMinutes(5));
 
+    // --- Service based limits ---
+    private Limit threadCreation = new Limit(18, Duration.ofHours(1));
+
     // --- Default limit ---
-    private Limit defaultLimit = new Limit(300, Duration.ofMinutes(1));
+    private Limit defaultLimit = new Limit(150, Duration.ofMinutes(1));
 
     @Getter
     @Setter

@@ -3,6 +3,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.service;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
@@ -14,6 +15,9 @@ import com.tarantulacommunity.tarantulasocial.features.message.repository.Thread
 import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
+
+import io.github.bucket4j.ConsumptionProbe;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +37,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +48,7 @@ public class MessageServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private ThreadRepository threadRepository;
     @Mock private ThreadParticipantRepository threadParticipantRepository;
-
+    @Mock private RateLimitService rateLimiterService;
     @InjectMocks
     private MessageService messageService;
 
@@ -81,6 +86,10 @@ public class MessageServiceTest {
         SendMessageRequest request = new SendMessageRequest(2L, "hello", "Subject", null);
         MessageResponse expectedResponse = new MessageResponse();
 
+        ConsumptionProbe probe = mock(ConsumptionProbe.class);
+        when(probe.isConsumed()).thenReturn(true);
+        when(rateLimiterService.tryConsume(any(), any(), any())).thenReturn(probe);
+
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
         when(threadRepository.save(any())).thenReturn(thread);
@@ -96,6 +105,10 @@ public class MessageServiceTest {
     @Test
     void sendMessage_usesContentAsSubject_whenSubjectNotProvided() {
         SendMessageRequest request = new SendMessageRequest(2L, "hello", null, null);
+
+        ConsumptionProbe probe = mock(ConsumptionProbe.class);
+        when(probe.isConsumed()).thenReturn(true);
+        when(rateLimiterService.tryConsume(any(), any(), any())).thenReturn(probe);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
@@ -114,6 +127,10 @@ public class MessageServiceTest {
     void sendMessage_truncatesSubjectFromContent_whenContentExceeds50Chars() {
         String longContent = "a".repeat(60);
         SendMessageRequest request = new SendMessageRequest(2L, longContent, null, null);
+
+        ConsumptionProbe probe = mock(ConsumptionProbe.class);
+        when(probe.isConsumed()).thenReturn(true);
+        when(rateLimiterService.tryConsume(any(), any(), any())).thenReturn(probe);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
@@ -424,6 +441,10 @@ public class MessageServiceTest {
     void sendMessage_createsParticipantRowsForBothUsers_whenNewThread() {
         SendMessageRequest request = new SendMessageRequest(2L, "hello", "Subject", null);
 
+        ConsumptionProbe probe = mock(ConsumptionProbe.class);
+        when(probe.isConsumed()).thenReturn(true);
+        when(rateLimiterService.tryConsume(any(), any(), any())).thenReturn(probe);
+
         when(userRepository.findById(1L)).thenReturn(Optional.of(sender));
         when(userRepository.findById(2L)).thenReturn(Optional.of(recipient));
         when(threadRepository.save(any())).thenReturn(thread);
@@ -632,5 +653,47 @@ public class MessageServiceTest {
         when(threadParticipantRepository.existsUnreadForUser(1L)).thenReturn(false);
 
         assertFalse(messageService.hasUnreadMessages(1L));
+    }
+
+    // --- getThreadStatus ---
+
+    @Test
+    void getThreadStatus_returnsActiveTrue_whenThreadIsActive() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+
+        ThreadStatusResponse result = messageService.getThreadStatus(1L, 1L);
+
+        assertThat(result.isActive()).isTrue();
+    }
+
+    @Test
+    void getThreadStatus_returnsActiveFalse_whenThreadIsInactive() {
+        thread.setActive(false);
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(threadRepository.findById(1L)).thenReturn(Optional.of(thread));
+
+        ThreadStatusResponse result = messageService.getThreadStatus(1L, 1L);
+
+        assertThat(result.isActive()).isFalse();
+    }
+
+    @Test
+    void getThreadStatus_throwsUnauthorized_whenUserNotPartOfThread() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 99L)).thenReturn(false);
+
+        assertThrows(GlobalExceptionHandler.UnauthorizedException.class,
+                () -> messageService.getThreadStatus(1L, 99L));
+
+        verify(threadRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void getThreadStatus_throwsThreadNotFoundException_whenThreadMissing() {
+        when(messageRepository.hasVisibleMessageInThread(1L, 1L)).thenReturn(true);
+        when(threadRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(GlobalExceptionHandler.ThreadNotFoundException.class,
+                () -> messageService.getThreadStatus(1L, 1L));
     }
 }

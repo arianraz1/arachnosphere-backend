@@ -2,6 +2,7 @@ package com.tarantulacommunity.tarantulasocial.features.message.controller;
 
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.UnreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.service.MessageService;
@@ -48,6 +49,14 @@ public class MessageController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(messageService.getThreadMessages(threadId, userDetails.getId(), pageable));
+    }
+
+    // Check if a thread is active
+    @GetMapping("/inbox/thread/{threadId}/status")
+    public ResponseEntity<ThreadStatusResponse> getThreadStatus(
+            @PathVariable Long threadId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(messageService.getThreadStatus(threadId, userDetails.getId()));
     }
 
     // Soft delete a message from your view

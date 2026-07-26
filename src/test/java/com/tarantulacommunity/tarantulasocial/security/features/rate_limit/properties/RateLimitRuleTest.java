@@ -146,6 +146,33 @@ class RateLimitRuleTest {
 
         assertThat(rule.refillPeriod()).isEqualTo(period);
     }
+
+    @Test
+    void shouldMatchDoubleWildcardPath() {
+        RateLimitRule rule = new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**", 5, Duration.ofMinutes(5));
+
+        boolean matches = rule.matches(HttpMethod.POST, "/api/v1/admin/species/sync/123", PATH_MATCHER);
+
+        assertThat(matches).isTrue();
+    }
+
+    @Test
+    void shouldMatchDoubleWildcardPathWithMultipleSegments() {
+        RateLimitRule rule = new RateLimitRule("image-upload", HttpMethod.POST, "/api/v1/collection/**/images", 5, Duration.ofMinutes(1));
+
+        boolean matches = rule.matches(HttpMethod.POST, "/api/v1/collection/123/images", PATH_MATCHER);
+
+        assertThat(matches).isTrue();
+    }
+
+    @Test
+    void shouldNotMatchDoubleWildcardPathOutsidePattern() {
+        RateLimitRule rule = new RateLimitRule("admin-sync", HttpMethod.POST, "/api/v1/admin/species/sync/**", 5, Duration.ofMinutes(5));
+
+        boolean matches = rule.matches(HttpMethod.POST, "/api/v1/admin/species/123", PATH_MATCHER);
+
+        assertThat(matches).isFalse();
+    }
 }
 
 

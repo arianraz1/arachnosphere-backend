@@ -138,7 +138,7 @@ class RateLimitConfigTest {
 
         assertThat(rules)
                 .filteredOn(r -> "collection-write".equals(r.name()))
-                .hasSize(5); // POST, PUT, DELETE
+                .hasSize(5); // POST, PUT on /api/v1/collection/*, DELETE on /api/v1/collection/*, PUT on /api/v1/collection/*/images/*/featured, DELETE on /api/v1/collection/*/images/*
     }
 
     @Test
@@ -408,6 +408,15 @@ class RateLimitConfigTest {
     }
 
     @Test
+    void shouldIncludeImageUploadRulesInUserRules() {
+        List<RateLimitRule> rules = config.userRateLimitRules(properties);
+
+        assertThat(rules)
+                .filteredOn(r -> "image-upload".equals(r.name()))
+                .hasSize(3); // POST on profile image, POST on favorite image, POST on collection images
+    }
+
+    @Test
     void shouldIncludeCsrfRuleInIpRules() {
         List<RateLimitRule> rules = config.ipRateLimitRules(properties);
 
@@ -450,6 +459,17 @@ class RateLimitConfigTest {
         assertThat(rule.method()).isNull();
         assertThat(rule.pathPattern()).isEqualTo("/**");
         assertThat(rule.capacity()).isEqualTo(properties.getDefaultLimit().getCapacity());
+    }
+
+    @Test
+    void shouldCreateThreadCreationRateLimitRuleBean() {
+        RateLimitRule rule = config.threadCreationRateLimitRule(properties);
+
+        assertThat(rule).isNotNull();
+        assertThat(rule.name()).isEqualTo("thread-creation");
+        assertThat(rule.method()).isEqualTo(HttpMethod.POST);
+        assertThat(rule.pathPattern()).isEqualTo("/api/v1/messages");
+        assertThat(rule.capacity()).isEqualTo(properties.getThreadCreation().getCapacity());
     }
 }
 

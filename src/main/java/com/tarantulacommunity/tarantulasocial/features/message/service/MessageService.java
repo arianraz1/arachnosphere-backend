@@ -1,8 +1,10 @@
 package com.tarantulacommunity.tarantulasocial.features.message.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.tarantulacommunity.tarantulasocial.exception.GlobalExceptionHandler;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.request.SendMessageRequest;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.MessageResponse;
+import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadStatusResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.dto.response.ThreadSummaryResponse;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.MessageEntity;
 import com.tarantulacommunity.tarantulasocial.features.message.entity.ThreadEntity;
@@ -14,6 +16,10 @@ import com.tarantulacommunity.tarantulasocial.features.message.repository.Thread
 import com.tarantulacommunity.tarantulasocial.features.message.repository.ThreadRepository;
 import com.tarantulacommunity.tarantulasocial.features.user.entity.UserEntity;
 import com.tarantulacommunity.tarantulasocial.features.user.repository.UserRepository;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.properties.RateLimitRule;
+import com.tarantulacommunity.tarantulasocial.security.features.rate_limit.service.RateLimitService;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +45,10 @@ public class MessageService {
     private final UserRepository userRepository;
     private final ThreadRepository threadRepository;
     private final ThreadParticipantRepository threadParticipantRepository;
+
+    private final RateLimitService rateLimiterService;
+    private final Cache<String, Bucket> userRateLimitCache;
+    private final RateLimitRule threadCreationRateLimitRule;
 
     @Transactional
     public MessageResponse sendMessage(Long senderId, SendMessageRequest request) {
@@ -66,6 +76,14 @@ public class MessageService {
                 throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
             }
         } else {
+            String key = "user:" + senderId + ":thread-creation";
+            ConsumptionProbe probe = rateLimiterService.tryConsume(userRateLimitCache, key, threadCreationRateLimitRule);
+            if (!probe.isConsumed()) {
+                long waitSeconds = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000);
+                throw new GlobalExceptionHandler.RateLimitExceededException(
+                        "You're starting new conversations too quickly. Please slow down.", waitSeconds);
+            }
+
             thread = new ThreadEntity();
             thread.setCreatedBy(sender);
             if (request.getSubject() != null && !request.getSubject().isBlank()) {
@@ -234,9 +252,25 @@ public class MessageService {
         messageRepository.markDeletedByRecipientForThread(threadId, userId);
         messageRepository.deleteFullyDeletedMessagesInThread(threadId);
 
-        if (!messageRepository.existsByThreadId(threadId)) {
+        if (messageRepository.existsByThreadId(threadId)) {
+            threadRepository.findById(threadId).ifPresent(t -> {
+                t.setActive(false);
+                threadRepository.save(t);
+            });
+        } else {
             threadRepository.deleteById(threadId);
         }
+    }
+
+    public ThreadStatusResponse getThreadStatus(Long threadId, Long userId) {
+        if (!messageRepository.hasVisibleMessageInThread(threadId, userId)) {
+            throw new GlobalExceptionHandler.UnauthorizedException("You are not part of this conversation");
+        }
+
+        ThreadEntity thread = threadRepository.findById(threadId)
+                .orElseThrow(() -> new GlobalExceptionHandler.ThreadNotFoundException(threadId));
+
+        return new ThreadStatusResponse(thread.isActive());
     }
 
     public boolean hasUnreadMessages(Long userId) {
