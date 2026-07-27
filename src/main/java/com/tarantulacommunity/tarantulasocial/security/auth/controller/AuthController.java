@@ -124,7 +124,10 @@ public class AuthController {
                     .orElse(null);
         }
 
+        log.info("Refresh endpoint called | Cookie name: {} | Token received: {}", refreshTokenName, rawRefreshToken);
+
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            log.warn("Refresh token missing or blank");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 

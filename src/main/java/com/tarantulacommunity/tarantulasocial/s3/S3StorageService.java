@@ -27,7 +27,7 @@ public class S3StorageService {
     private static final String[] ALLOWED_CONTENT_TYPES = {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
     };
-    private static final float JPEG_QUALITY = 0.82f; // tune to taste
+    private static final float JPEG_QUALITY = 0.75f; // tune to taste
     private static final int MAX_DIMENSION = 2000;   // px, longest side
 
     public String uploadImage(MultipartFile file, String folder) throws IOException {

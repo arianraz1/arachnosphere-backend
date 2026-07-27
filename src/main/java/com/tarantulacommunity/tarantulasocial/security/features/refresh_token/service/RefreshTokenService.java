@@ -29,25 +29,34 @@ public class RefreshTokenService {
     @Transactional
     public String issue(UserEntity user) {
         String raw = UUID.randomUUID().toString();
+        String tokenHash = hash(raw);
+
+        log.info("Issuing refresh token for user {} | Raw: {} | Hash: {}", user.getId(), raw, tokenHash);
 
         RefreshTokenEntity entity = new RefreshTokenEntity();
         entity.setUser(user);
-        entity.setTokenHash(hash(raw));
+        entity.setTokenHash(tokenHash);
         entity.setExpiresAt(Instant.now().plus(jwtProperties.refreshTokenExpiration()));
         entity.setRevoked(false); // Explicit initialization best practice
 
-        refreshTokenRepository.save(entity);
+        RefreshTokenEntity saved = refreshTokenRepository.save(entity);
+        log.info("Saved refresh token to DB | ID: {} | Hash: {}", saved.getId(), saved.getTokenHash());
+        
         return raw;
     }
 
     @Transactional
     public RotationResult rotate(String rawToken) {
         String tokenHash = hash(rawToken);
+        log.info("Refresh attempt | Raw token: {} | Hash: {}", rawToken, tokenHash);
+        
         RefreshTokenEntity stored = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> {
-                    log.warn("Refresh token signature lookup failed");
+                    log.warn("Refresh token signature lookup failed | Hash: {} | Raw: {}", tokenHash, rawToken);
                     return new GlobalExceptionHandler.InvalidRefreshTokenException("Invalid refresh token");
                 });
+
+        log.info("Found token in DB | ID: {} | User: {} | Hash: {}", stored.getId(), stored.getUser().getId(), stored.getTokenHash());
 
         UserEntity user = stored.getUser();
 
