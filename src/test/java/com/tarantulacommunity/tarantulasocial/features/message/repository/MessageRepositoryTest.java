@@ -40,10 +40,22 @@ public class MessageRepositoryTest {
 
     @Test
     void findVisibleMessagesByThreadId_returnsVisibleMessagesInDescendingOrder() {
-        MessageEntity first = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "First", thread));
-        MessageEntity second = em.persistFlushFind(TestUtilities.validMessage(sender, recipient, "Second", thread));
+        MessageEntity first = em.persistFlushFind(
+                TestUtilities.validMessage(sender, recipient, "First", thread)
+        );
 
-        Page<MessageEntity> result = messageRepository.findVisibleMessagesByThreadId(thread.getId(), sender.getId(), PageRequest.of(0, 10));
+        em.flush();
+        em.getEntityManager().clear();
+
+        MessageEntity second = em.persistFlushFind(
+                TestUtilities.validMessage(sender, recipient, "Second", thread)
+        );
+
+        Page<MessageEntity> result = messageRepository.findVisibleMessagesByThreadId(
+                thread.getId(),
+                sender.getId(),
+                PageRequest.of(0, 10)
+        );
 
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent().get(0).getId()).isEqualTo(second.getId());

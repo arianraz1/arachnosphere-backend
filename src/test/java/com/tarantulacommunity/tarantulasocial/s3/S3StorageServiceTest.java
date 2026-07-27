@@ -210,7 +210,7 @@ class S3StorageServiceTest {
         // Random-noise PNGs compress poorly under PNG's lossless filter but
         // shrink significantly under JPEG's lossy quantization -- this
         // deterministically exercises the "compressed is smaller" branch.
-        byte[] noisyPng = realNoisyPngBytes(400, 400);
+        byte[] noisyPng = realNoisyPngBytes(800, 800);
         MultipartFile file = new MockMultipartFile("file", "pic.png", "image/png", noisyPng);
 
         String key = s3StorageService.uploadImage(file, "favorite-images");
