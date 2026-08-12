@@ -47,6 +47,11 @@ class RefreshTokenServiceTest {
         user = new UserEntity();
         user.setId(1L);
         lenient().when(jwtProperties.refreshTokenExpiration()).thenReturn(Duration.ofDays(7));
+        // Mimic real JPA save() behavior: return the same entity passed in.
+        // Without this, Mockito returns null by default, which breaks any
+        // service code that calls .getId() (or anything else) on the saved result.
+        lenient().when(refreshTokenRepository.save(any(RefreshTokenEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
