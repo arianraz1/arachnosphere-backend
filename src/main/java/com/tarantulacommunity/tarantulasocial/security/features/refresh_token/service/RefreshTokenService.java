@@ -31,7 +31,7 @@ public class RefreshTokenService {
         String raw = UUID.randomUUID().toString();
         String tokenHash = hash(raw);
 
-        log.info("Issuing refresh token for user {} | Raw: {} | Hash: {}", user.getId(), raw, tokenHash);
+        log.info("Issuing refresh token for user {}", user.getId());
 
         RefreshTokenEntity entity = new RefreshTokenEntity();
         entity.setUser(user);
@@ -48,12 +48,11 @@ public class RefreshTokenService {
     @Transactional
     public RotationResult rotate(String rawToken) {
         String tokenHash = hash(rawToken);
-        log.info("Refresh attempt | Raw token: {} | Hash: {}", rawToken, tokenHash);
-        
+        log.debug("Refresh attempt");
+
         RefreshTokenEntity stored = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> {
-                    log.warn("Refresh token signature lookup failed | Hash: {} | Raw: {}", tokenHash, rawToken);
-                    return new GlobalExceptionHandler.InvalidRefreshTokenException("Invalid refresh token");
+                    log.warn("Refresh token lookup failed (unknown or already-deleted token)");                    return new GlobalExceptionHandler.InvalidRefreshTokenException("Invalid refresh token");
                 });
 
         log.info("Found token in DB | ID: {} | User: {} | Hash: {}", stored.getId(), stored.getUser().getId(), stored.getTokenHash());
