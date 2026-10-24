@@ -40,8 +40,7 @@ public class RefreshTokenService {
         entity.setRevoked(false); // Explicit initialization best practice
 
         RefreshTokenEntity saved = refreshTokenRepository.save(entity);
-        log.info("Saved refresh token to DB | ID: {} | Hash: {}", saved.getId(), saved.getTokenHash());
-        
+
         return raw;
     }
 
@@ -52,10 +51,9 @@ public class RefreshTokenService {
 
         RefreshTokenEntity stored = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> {
-                    log.warn("Refresh token lookup failed (unknown or already-deleted token)");                    return new GlobalExceptionHandler.InvalidRefreshTokenException("Invalid refresh token");
+                    log.warn("Refresh token lookup failed (unknown or already-deleted token)");
+                    return new GlobalExceptionHandler.InvalidRefreshTokenException("Invalid refresh token");
                 });
-
-        log.info("Found token in DB | ID: {} | User: {} | Hash: {}", stored.getId(), stored.getUser().getId(), stored.getTokenHash());
 
         UserEntity user = stored.getUser();
 
