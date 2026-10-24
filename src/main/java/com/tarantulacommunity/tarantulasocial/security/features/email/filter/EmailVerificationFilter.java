@@ -21,7 +21,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
 
     private static final Set<String> MUTATING_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
-    @Value("${app.base-url:http://localhost:8080/api/v1}")
+    @Value("${app.base-url:http://localhost:8080}")
     private String appBaseUrl;
 
     private String basePath() {

@@ -21,17 +21,6 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Runs BEFORE authentication. Keyed by client IP. Only guards the handful of
- * public/auth endpoints listed in ipRateLimitRules — every other request
- * passes through untouched.
- *
- * Exceptions thrown here are NOT caught by @ControllerAdvice on their own,
- * since this runs outside the DispatcherServlet. We hand the exception to
- * Spring's own "handlerExceptionResolver" bean so it gets routed through the
- * existing GlobalExceptionHandler and comes back in the same ErrorResponse
- * shape as every other error in the app.
- */
 @Component
 public class IpRateLimitFilter extends OncePerRequestFilter {
 

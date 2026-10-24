@@ -23,12 +23,6 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Runs AFTER JwtAuthFilter, so SecurityContextHolder already has the
- * resolved principal. Keyed by userId. Skips entirely for unauthenticated
- * requests (nothing to key on — the IP filter or downstream 401/403 already
- * covers those) and for ROLE_ADMIN, per your admin-bypass requirement.
- */
 @Component
 public class UserRateLimitFilter extends OncePerRequestFilter {
 
